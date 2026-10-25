@@ -43,7 +43,7 @@ class ManagementCandidateTests(unittest.TestCase):
             'include':['refs/heads/develop','refs/heads/main'],'exclude':[]}},'rules':[{'type':'workflows',
             'parameters':{'workflows':[{'repository_id':m.ROOT_ID,'path':m.control.WORKFLOW,
                 'ref':'refs/heads/main','sha':self.source}]}}]}
-        self.workflow={'concurrency':{'group':m.GROUP,'cancel-in-progress':False},'jobs':{
+        self.workflow={'concurrency':{'group':m.CONCURRENCY,'cancel-in-progress':False},'jobs':{
             'collaboration-publish':{'name':self.entry['job'],'permissions':{
                 'contents':'read','actions':'read','id-token':'write'}}}}
         self.private={'id':m.MANAGEMENT_ID,'full_name':m.MANAGEMENT,'visibility':'private','private':True,
@@ -196,7 +196,7 @@ class ManagementCandidateTests(unittest.TestCase):
         self.assertEqual([],self.writes)
 
     def test_single_native_writer_contract_required(self):
-        for value in [None,{'group':'other','cancel-in-progress':False},{'group':m.GROUP,'cancel-in-progress':True}]:
+        for value in [None,{'group':'other','cancel-in-progress':False},{'group':m.CONCURRENCY,'cancel-in-progress':True}]:
             self.workflow['concurrency']=value;self.blocked()
 
     def test_prior_open_or_closed_exact_subject_blocks(self):
@@ -271,5 +271,77 @@ class ManagementCandidateTests(unittest.TestCase):
                 old=self.journal_rule[field];self.journal_rule[field]=value;self.blocked();self.journal_rule[field]=old
         self.assertEqual([],self.writes)
 
+
+    def credential_flow(self, *, extra=False, unknown=False, drift=False):
+        from cryptography.hazmat.primitives import serialization
+        from collaboration_app_credential import AppIdentity
+        pem=self.key.private_bytes(serialization.Encoding.PEM,serialization.PrivateFormat.PKCS8,
+                                   serialization.NoEncryption())
+        self.key_getter=Mock(return_value=pem);self.network=[]
+        expiry=datetime.fromtimestamp(self.now+3600,timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+        values={'/app':{'id':100,'slug':'offline-publisher'},
+            '/app/installations/200':{'id':200,'app_id':100,'suspended_at':None,
+                'account':{'id':m.control.ORGANIZATION_ID,'login':'ltn-it','type':'Organization'},
+                'permissions':{'pull_requests':'write'}},
+            '/users/offline-publisher%5Bbot%5D':{'id':84,'login':'offline-publisher[bot]','type':'Bot'},
+            '/app/installations/200/access_tokens':{'token':'ghs_'+'x'*80,'expires_at':expiry,
+                'permissions':{'pull_requests':'write','metadata':'read'}},
+            '/installation/repositories?per_page=100&page=1':{'total_count':1,
+                'repositories':[{'id':m.ROOT_ID,'full_name':m.ROOT,'private':False}]},
+            '/repos/ltn-it/.github/pulls':{'id':1000}}
+        if extra:values['/app/installations/200/access_tokens']['permissions']['contents']='write'
+        def connect(host,**kwargs):
+            self.assertEqual('api.github.com',host);self.assertTrue(kwargs['context'].check_hostname)
+            conn=Mock()
+            def response():
+                method,path=conn.request.call_args.args;params=conn.request.call_args.kwargs
+                self.network.append((method,path,params))
+                if path.endswith('/access_tokens') and unknown:raise TimeoutError('not disclosed')
+                if path.startswith('/installation/repositories') and drift:self.main='9'*40
+                return Mock(status=201 if method=='POST' else 200,
+                            read=Mock(return_value=json_bytes(values[path])))
+            conn.getresponse.side_effect=response
+            return conn
+        def execute():
+            return m.prepare_and_publish_owned(self.service,self.api,AppIdentity(100,200,84),
+                self.key_getter,self.wire,self.inventory,self.policy)
+        return execute,connect
+
+    def test_real_preparer_and_https_sender_composed_with_private_intents(self):
+        execute,connect=self.credential_flow()
+        with patch.object(m.http.client,'HTTPSConnection',side_effect=connect):
+            self.assertEqual('response-observed',execute()['disposition'])
+            self.assertEqual({'disposition':'blocked-before-publication'},execute())
+        posts=[n for n in self.network if n[0]=='POST']
+        self.assertEqual(['/app/installations/200/access_tokens','/repos/ltn-it/.github/pulls'],
+                         [n[1] for n in posts])
+        self.assertEqual({'repository_ids':[m.ROOT_ID],'permissions':{'pull_requests':'write'}},
+                         m.document(posts[0][2]['body']))
+        self.assertEqual(self.wire,posts[1][2]['body']);self.assertEqual(3,len(self.writes))
+
+    def test_real_credential_extra_permission_never_reaches_public_sender(self):
+        execute,connect=self.credential_flow(extra=True)
+        with patch.object(m.http.client,'HTTPSConnection',side_effect=connect):
+            self.assertEqual({'disposition':'blocked-before-publication'},execute())
+        self.assertEqual(1,len(self.writes));self.assertFalse(any('/repos/' in n[1] for n in self.network))
+
+    def test_unknown_mint_has_no_retry_or_publication(self):
+        execute,connect=self.credential_flow(unknown=True)
+        with patch.object(m.http.client,'HTTPSConnection',side_effect=connect):
+            execute();execute()
+        self.assertEqual(1,len([n for n in self.network if n[0]=='POST']))
+        self.assertEqual(1,len(self.writes));self.assertFalse(any('/repos/' in n[1] for n in self.network))
+
+    def test_native_drift_after_all_token_reads_blocks_original_publication(self):
+        execute,connect=self.credential_flow(drift=True)
+        with patch.object(m.http.client,'HTTPSConnection',side_effect=connect):
+            self.assertEqual({'disposition':'blocked-before-publication'},execute())
+        self.assertEqual(5,len(self.network));self.assertEqual(1,len(self.writes))
+
+    def test_unregistered_owned_candidate_never_reads_app_key(self):
+        execute,connect=self.credential_flow();self.missing=True
+        with patch.object(m.http.client,'HTTPSConnection',side_effect=connect):
+            self.assertEqual({'disposition':'blocked-before-publication'},execute())
+        self.key_getter.assert_not_called();self.assertEqual([],self.network);self.assertEqual([],self.writes)
 
 if __name__=='__main__':unittest.main()

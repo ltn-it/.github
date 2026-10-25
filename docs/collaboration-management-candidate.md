@@ -10,6 +10,10 @@ host. This candidate uses the existing private Management Actions boundary and
 its existing `terraform-github-management-state` concurrency group, with
 `cancel-in-progress: false`. It adds no timer or independent controller. The
 native artifact is operation evidence, not a distributed lock.
+The real Main workflow uses an expression that selects this group for ordinary
+dispatches and a separate group for Root preparation. The candidate preserves
+and verifies that complete expression; it does not replace it with a global
+constant or change the separate Root preparation route.
 
 ## Bound execution
 
@@ -71,9 +75,15 @@ document supplies no deployment, Ready, provider-request or Main approval.
    and read-only job token plus OIDC permission. Observe its actual OIDC subject
    before binding that subject in a newly admitted immutable registration.
 2. Assign real process and custody owners. Admit separate least-privilege read,
-   private journal and public Root PR publisher credentials. Wire the existing
-   `AppTokenPreparer` and `HTTPSOnceSender` after current authorization; this
-   module's transport input does not itself prove token custody or narrowing.
+   private journal and public Root PR publisher credentials. The executable
+   `prepare_and_publish_owned` composition uses the existing `AppTokenPreparer`
+   and `HTTPSOnceSender` after current authorization. The preparer's existing
+   default remains review creation; this trusted composition explicitly selects
+   PR creation. It consumes a separate durable mint intent, authenticates the
+   App/installation/bot, mints only Root PR-write scope, and checks actual token
+   permissions and repository scope. It then requires the identical original
+   authorization before public publication. Key getters and journal credentials
+   are still trusted deployment inputs, not evidence of installed custody.
    Producers receive no public write key. Constrain credential access and
    network egress, and prove alternate direct writes are denied.
 3. Explicitly approve and provision the journal ref and exact rule through the

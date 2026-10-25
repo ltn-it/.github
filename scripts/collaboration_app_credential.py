@@ -101,11 +101,12 @@ class AppTokenPreparer:
     passed to HTTPSOnceSender. Native attestation must follow all token I/O.
     """
 
-    def __init__(self, identity, key_source, attest, ledger, *, clock=time.time):
+    def __init__(self, identity, key_source, attest, ledger, *, clock=time.time, operation="review.create"):
         require(type(identity) is AppIdentity and all(positive(v) for v in asdict(identity).values())
-                and callable(key_source) and callable(attest), "publisher-credential-config")
+                and callable(key_source) and callable(attest)
+                and operation in {"review.create", "pull.create"}, "publisher-credential-config")
         self.identity, self.key_source, self.attest, self.ledger = identity, key_source, attest, ledger
-        self.clock = clock
+        self.clock, self.operation = clock, operation
 
     def prepare(self, auth):
         try:
@@ -115,7 +116,7 @@ class AppTokenPreparer:
 
     def _prepare(self, auth):
         expected = self.identity
-        require(type(auth) is Authorization and auth.operation == "review.create"
+        require(type(auth) is Authorization and auth.operation == self.operation
                 and auth.facts.repository == ROOT and auth.facts.repository_id == ROOT_ID
                 and auth.facts.publisher_actor_id == expected.actor_id, "publisher-credential-subject")
         with self.ledger.serialize():

@@ -23,6 +23,8 @@ import workflow_control as control
 from collaboration_content import AdmissionError, guarded_payload, inventory_repositories, require, validate_policy
 from collaboration_inventory import organization_inventory
 from collaboration_native_issuer import document, numeric, signing_keys, verified_claims
+from collaboration_app_credential import AppTokenPreparer
+from collaboration_https import HTTPSOnceSender
 from collaboration_publisher import Authorization, BoundedTransport, Facts, Publisher, ROOT, ROOT_ID
 from collaboration_publisher import digest, fixed_hash, json_bytes, positive, shape
 
@@ -35,6 +37,12 @@ REGISTRY = ".lit/collaboration-owned-publisher.json"
 POLICY = ".lit/collaboration-content-policy.json"
 JOURNAL_BRANCH = "operation-data/collaboration-journal"
 GROUP = "terraform-github-management-state"
+# Preserve the actual Main expression, including its separate Root preparation
+# branch; owned workflow_dispatch selects GROUP without changing those routes.
+CONCURRENCY = ("${{ (inputs.operation == 'native-promotion-prepare' || inputs.operation == 'namespace-recovery-prepare') "
+    "&& inputs.repository == '.github' && 'native-root-promotion-preparation' || "
+    "github.event_name == 'workflow_dispatch' && 'terraform-github-management-state' || "
+    "format('terraform-github-management-validation-{0}', github.ref) }}")
 AUDIENCE = "urn:ltn-it:owned-collaboration:v1:"
 MAXIMUM = 262144
 
@@ -67,7 +75,7 @@ def selected_registration(api):
             and positive(entry["journal_rule_id"]),
             "owned-registration")
     workflow = yaml.safe_load(api.file(MANAGEMENT, WORKFLOW, entry["management_main"]))
-    require(workflow.get("concurrency") == {"group": GROUP, "cancel-in-progress": False},
+    require(workflow.get("concurrency") == {"group": CONCURRENCY, "cancel-in-progress": False},
             "owned-single-writer-definition")
     job = workflow.get("jobs", {}).get("collaboration-publish", {})
     require(job.get("name") == entry["job"] and job.get("permissions") ==
@@ -343,13 +351,14 @@ class PrivateActionsJournal:
             digest(json_bytes(auth.__dict__ | {"facts": auth.facts.__dict__})), "result": result})
 
 
-def publish_owned(issuer, journal_api, transport, wire, inventory, policy, *, clock=None):
+def publish_owned(issuer, journal_api, transport, wire, inventory, policy, *, clock=None, authorization=None):
     """Executable local composition; deployment roles/clients are not admitted."""
     started = False
     auth = None
     try:
         require(type(transport) is BoundedTransport, "owned-fixed-transport")
         auth = issuer.issue()
+        require(authorization is None or authorization == auth, "owned-prepared-subject-drift")
         journal = PrivateActionsJournal(journal_api, issuer, auth)
         def once(method, url, final):
             nonlocal started
@@ -364,3 +373,25 @@ def publish_owned(issuer, journal_api, transport, wire, inventory, policy, *, cl
         return result
     except Exception:
         return {"disposition": "unknown-readback-required" if started else "blocked-before-publication"}
+
+
+def prepare_and_publish_owned(issuer, journal_api, app_identity, key_source, wire, inventory, policy):
+    """Real credential/sender composition; no environment lookup or live grant.
+
+    Trusted private process construction owns read API, journal credential, App
+    identity and key getter. These never come from producer payloads. A separate
+    durable journal intent consumes the only token mint before its POST. The
+    original authorization must remain identical after every credential read.
+    """
+    try:
+        auth = issuer.issue()
+        journal = PrivateActionsJournal(journal_api, issuer, auth)
+        prepared = AppTokenPreparer(app_identity, key_source, issuer.attest, journal,
+            clock=issuer.clock, operation="pull.create").prepare(auth)
+        issuer.attest(auth)
+        transport = BoundedTransport(HTTPSOnceSender(prepared.credential),
+                                     publisher_actor_id=auth.facts.publisher_actor_id)
+    except Exception:
+        return {"disposition": "blocked-before-publication"}
+    return publish_owned(issuer, journal_api, transport, wire, inventory, policy,
+        clock=lambda: datetime.fromtimestamp(issuer.clock(), timezone.utc), authorization=auth)
