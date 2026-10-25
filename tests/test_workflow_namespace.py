@@ -17,6 +17,13 @@ import workflow_control as control
 
 
 class NamespaceIdentityTests(unittest.TestCase):
+    def test_correction_preserves_the_independently_seeded_judge_in_proof_lineage(self):
+        value = {"version": 1, "repository": "ltn-it/.github", "mode": "reference",
+                 "quality": [{"workflow": ".github/workflows/repository-quality.yml", "job": "quality"}],
+                 "accepted_sources": ["c292909ca4f90b79d2b2fef404f10d42c7184e00"]}
+        result = control.policy_value(value, "ltn-it/.github", "a" * 40)
+        self.assertIn("c292909ca4f90b79d2b2fef404f10d42c7184e00", result["accepted_sources"])
+
     def test_actual_frozen_delivery_helpers_admit_current_consumers(self):
         import yaml
         root = Path(__file__).resolve().parents[1]
