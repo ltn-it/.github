@@ -30,7 +30,7 @@ class NamespaceIdentityTests(unittest.TestCase):
         workflow = yaml.safe_load((root / ".github/workflows/delivery-operations.yml").read_bytes())
         revisions = {workflow["jobs"][job]["steps"][0]["with"]["ref"] for job in ("refresh", "prepare")}
         for revision in revisions:
-            source = "39a5f49b0a21d498c6f4a7a19699ec441e24b1e0"
+            source = "530b8fb175b7fccf238b03aab652bd5ee2ad2a41"
             changes = subprocess.check_output(["git", "-c", f"safe.directory={root}", "diff",
                 "--name-only", source, revision], cwd=root, text=True).splitlines()
             self.assertEqual([".lit/promotion-event-targets.json", "scripts/workflow_promotion_event.py"], changes)
@@ -128,6 +128,64 @@ for repository in ("ltn-it/shared-assets-lit", "ltn-it/ansible-collection-supple
             with self.subTest(name=name), self.assertRaises(control.ControlError):
                 control.current_repository(api, name)
             api.call.assert_not_called()
+
+    def invalid_repository_states(self, name=".github"):
+        for field in ("archived", "disabled"):
+            missing = self.repository(name)
+            del missing[field]
+            yield field, "missing", missing
+            for invalid in (None, 0, "", [], {}, True, 1, "false"):
+                yield field, repr(invalid), self.repository(name) | {field: invalid}
+
+    def test_unknown_repository_state_is_rejected_for_every_fixed_identity(self):
+        for name in control.RENAMED_REPOSITORIES:
+            for field, invalid, value in self.invalid_repository_states(name):
+                api = Mock(); api.call.return_value = value
+                with self.subTest(name=name, field=field, invalid=invalid), \
+                        self.assertRaisesRegex(control.ControlError, "current-repository-identity"):
+                    control.current_repository(api, f"ltn-it/{name}")
+
+    def test_unknown_repository_state_cannot_authenticate_a_historical_rename(self):
+        from test_workflow_control import pull
+        subject = pull(state="closed", merged=True, merge_commit_sha="d" * 40)
+        for side in ("base", "head"):
+            subject[side]["repo"]["id"] = control.RENAMED_REPOSITORIES[".github"]
+        recorded = control.binding(subject) | {"head_repository": "lightning-it/.github"}
+        original = control.canonical(recorded)
+        for field, invalid, value in self.invalid_repository_states():
+            api = Mock(); api.call.return_value = value
+            with self.subTest(field=field, invalid=invalid), \
+                    self.assertRaisesRegex(control.ControlError, "current-repository-identity"):
+                control.historical_binding_matches(api, "ltn-it/.github", subject, recorded)
+            self.assertEqual(original, control.canonical(recorded))
+
+    def test_unknown_repository_state_blocks_protected_policy_rename(self):
+        original = {"version": 1, "repository": "lightning-it/.github", "mode": "reference",
+                    "quality": [{"workflow": ".github/workflows/quality.yml", "job": "quality"}],
+                    "accepted_sources": []}
+        raw = json.dumps(original).encode()
+        for field, invalid, value in self.invalid_repository_states():
+            api = Mock(); api.file.return_value = raw; api.call.return_value = value
+            with self.subTest(field=field, invalid=invalid), \
+                    self.assertRaisesRegex(control.ControlError, "current-repository-identity"):
+                control.policy(api, "ltn-it/.github", "b" * 40, "a" * 40)
+            self.assertEqual(raw, api.file.return_value)
+
+    def test_unknown_repository_state_blocks_classification_before_event_or_funding(self):
+        job = {"workflow_repository": "ltn-it/.github", "workflow_file_path": control.WORKFLOW,
+               "workflow_sha": "a" * 40, "check_run_id": 123}
+        for field, invalid, value in self.invalid_repository_states():
+            api = Mock(); api.call.return_value = value
+            with self.subTest(field=field, invalid=invalid), \
+                    patch.dict(os.environ, {"GITHUB_REPOSITORY": "ltn-it/.github",
+                        "NATIVE_JOB": json.dumps(job)}, clear=True), \
+                    patch.object(sys, "argv", ["control", "classify"]), \
+                    patch.object(control, "API", return_value=api), \
+                    patch.object(control, "reserve_request") as reserve, \
+                    self.assertRaisesRegex(control.ControlError, "current-repository-identity"):
+                control.main()
+            reserve.assert_not_called()
+            api.call.assert_called_once_with("repos/ltn-it/.github")
 
     def test_recreated_repository_foreign_owner_boolean_and_disabled_targets_block(self):
         original = self.repository()
