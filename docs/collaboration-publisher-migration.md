@@ -28,6 +28,7 @@ native trust decision; a valid content receipt never supplies that decision.
 | --- | --- | --- |
 | Controlled PR/comment publishers | Call the shared validator at the last transport boundary, with the actual final JSON bytes. Keep current source, actor, scope, approval and at-most-once rules. | Actual allowed and rejected create/edit attempts for every installed route; no direct alternate transport. |
 | Hosted native AI reviewer | Replace the unmediated publication capability with a provider route that returns its complete result to a protected preparation step before any GitHub review/comment write. | A separately approved review-source/proof contract, actual private result capture and complete mediation, with existing review authority independently migrated. |
+| Installed automatic security-review App | Include PR-opened/ready triggers, findings and editable summary comments in the mediated provider transition. Disabling a merge gate does not disable publication. | Actual installed-App configuration and credential readback, denied alternate writes, and verified final-payload admission before every review or summary mutation. |
 | Hosted dependency service | Prepare an owner-controlled execution path whose worker cannot post PRs/issues/comments directly. Only its narrowly scoped publisher can issue those mutations after admission. | Real dependency discovery/branch/PR/dashboard flow, malicious generated metadata tests and denied direct-write attempts. |
 | Interactive managed AI/tool actions | Submit final payloads through the admitted publishing transport; do not give the agent an independent public collaboration-write capability. | The actual tool/credential surface prevents alternate writes; a written instruction alone is insufficient. |
 | Human content | Retain GitHub's human submission interface and detect changes through a bounded private read-only monitoring path. | Complete declared event coverage, actual owner notification and private remediation record, with known latency and explicit exclusions. |
@@ -68,6 +69,15 @@ requires its own exact, reviewed operating change. No such change is applied by
 this proposal.
 
 ## Inventory, monitoring and private handling
+
+An actual PR-opened observation on public Root PR #962 identified an additional
+publisher: `chatgpt-codex-connector[bot]` created summary comment 6393073275
+for head `c292909ca4f90b79d2b2fef404f10d42c7184e00`. Its native comment
+declares an automatically triggered security review and `mergeGateEnabled=false`.
+This proves an installed publication path, not guard coverage. Include the
+provider's findings and summary edits even when that review is not a required
+merge check. This observation is not a complete organization App inventory and
+does not authorize another scan or provider request.
 
 Enumerate installed live publishers and their defining protected revisions;
 canonical template presence is not an installed-path inventory. Include active
