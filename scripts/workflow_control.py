@@ -74,8 +74,8 @@ def current_repository(api, repository):
     owner = value.get("owner") or {}
     require(type(identifier) is int and identifier > 0 and value.get("full_name") == repository
             and owner.get("login") == "ltn-it" and type(owner.get("id")) is int
-            and owner["id"] == ORGANIZATION_ID and not value.get("archived")
-            and not value.get("disabled"), "current-repository-identity")
+            and owner["id"] == ORGANIZATION_ID and value.get("archived") is False
+            and value.get("disabled") is False, "current-repository-identity")
     expected = RENAMED_REPOSITORIES.get(repository.split("/", 1)[1])
     require(expected is None or identifier == expected, "renamed-repository-id-drift")
     return identifier
