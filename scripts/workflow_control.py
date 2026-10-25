@@ -275,7 +275,8 @@ def native_required(run, repo):
     workflow = run.get("workflow_id")
     return (type(workflow) is int and workflow > 0
             and run.get("workflow_url") == f"https://api.github.com/repos/{repo}/actions/required_workflows/{workflow}"
-            and run.get("path", "").split("@", 1)[0] in {WORKFLOW, f"{SOURCE}/{WORKFLOW}"})
+            and run.get("path", "").split("@", 1)[0] in {
+                WORKFLOW, f"{SOURCE}/{WORKFLOW}", f"lightning-it/.github/{WORKFLOW}"})
 
 
 def artifact_record(api, repo, run, name, filename):

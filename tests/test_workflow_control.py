@@ -290,6 +290,19 @@ class NativeAPIReadTests(unittest.TestCase):
 
 
 class NativeGenerationReaderTests(unittest.TestCase):
+    def test_historical_qualified_path_keeps_native_required_url_and_strict_live_source_identity(self):
+        historical = run() | {'path': 'lightning-it/.github/' + control.WORKFLOW + '@' + SOURCE,
+            'repository': {'id': 1112629689, 'full_name': REPO, 'owner': {'id': 54334171}}}
+        self.assertTrue(control.native_required(historical, REPO))
+        for change in ({'workflow_id': True}, {'workflow_url': 'https://api.github.com/repos/foreign/.github/actions/required_workflows/77'},
+                       {'workflow_url': f'https://api.github.com/repos/{REPO}/actions/workflows/77'},
+                       {'path': 'foreign/.github/' + control.WORKFLOW + '@' + SOURCE}):
+            with self.subTest(change=change):
+                self.assertFalse(control.native_required(historical | change, REPO))
+        with self.assertRaisesRegex(control.ControlError, 'untrusted-source-repository'):
+            control.source_identity({'workflow_repository': 'lightning-it/.github',
+                'workflow_file_path': control.WORKFLOW, 'workflow_sha': SOURCE, 'check_run_id': 5})
+
     def test_shared_reader_keeps_final_selector_read_only_and_last(self):
         value, observed, api, cache = pull(), run() | {'status': 'completed', 'conclusion': 'success'}, Mock(), {}
         api.call.return_value = observed
