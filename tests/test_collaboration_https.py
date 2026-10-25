@@ -104,11 +104,17 @@ class HTTPSOnceTests(unittest.TestCase):
                 self.assertIsNone(self.send().object_id)
 
     def test_invalid_credential_never_opens_socket(self):
-        for token in (None, "short", "bad\r\nheader" + "x" * 30):
+        for token in (None, "short", "bad\r\nheader" + "x" * 30, "x" * 8193, "space " + "x" * 30):
             self.credential.return_value = token
             result = self.send()
             self.assertEqual((0, None), (result.status, result.object_id))
         self.factory_mock.assert_not_called()
+
+    def test_stateless_installation_token_format_is_not_mistaken_for_header_injection(self):
+        token = "ghs_123456_" + "eyJhbGciOiJSUzI1NiJ9." + "a" * 600 + ".offline-signature_with-dashes"
+        self.credential.return_value = token
+        self.assertEqual(123, self.send().object_id)
+        self.assertEqual("Bearer " + token, self.connection.request.call_args.kwargs["headers"]["Authorization"])
 
 
 if __name__ == "__main__":

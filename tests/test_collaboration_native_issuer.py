@@ -8,10 +8,11 @@ from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
+from cryptography.hazmat.primitives import serialization
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 import collaboration_native_issuer as issuer
@@ -20,6 +21,8 @@ from collaboration_content import AdmissionError, policy_from
 from collaboration_publisher import digest, json_bytes
 import collaboration_publisher as publisher
 import tempfile
+import collaboration_app_credential as app_credential
+import collaboration_https as https
 
 
 def encoded(value):
@@ -305,7 +308,6 @@ class NativeIssuerTests(unittest.TestCase):
         self.rejected()
 
     def test_real_jwks_fetch_is_bounded_and_does_not_follow_redirects(self):
-        from unittest.mock import Mock
         connection = Mock()
         response = connection.getresponse.return_value
         response.status = 200
@@ -322,6 +324,56 @@ class NativeIssuerTests(unittest.TestCase):
                 issuer.signing_keys()
             connection.request.assert_called_once()
             response.read.assert_not_called()
+
+    def credential_chain(self, *, generation_after_mint=False):
+        expires = datetime.fromtimestamp(self.now + 3600, timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        responses = {"/app": {"id": 100, "slug": "offline-publisher"},
+            "/app/installations/200": {"id": 200, "app_id": 100, "suspended_at": None,
+                "account": {"id": 54334171, "login": "ltn-it", "type": "Organization"},
+                "permissions": {"pull_requests": "write"}},
+            "/users/offline-publisher%5Bbot%5D": {"id": 84, "login": "offline-publisher[bot]", "type": "Bot"},
+            "/app/installations/200/access_tokens": {"token": "ghs_100_" + "a" * 600 + ".offline-signature",
+                "expires_at": expires, "permissions": {"pull_requests": "write"}},
+            "/installation/repositories?per_page=100&page=1": {"total_count": 1,
+                "repositories": [{"id": issuer.ROOT_ID, "full_name": issuer.ROOT, "private": False}]},
+            f"/repos/{issuer.ROOT}/pulls/964/reviews": {"id": 123}}
+        def connect(*args, **kwargs):
+            connection = Mock()
+            def read_response():
+                method, path = connection.request.call_args.args
+                self.calls.append("http:" + method + ":" + path)
+                if generation_after_mint and path.startswith("/installation/repositories"):
+                    self.run_lists = 0
+                    self.new_generation_on_final_list = True
+                return Mock(status=201 if method == "POST" else 200,
+                            read=Mock(return_value=json_bytes(responses[path])))
+            connection.getresponse.side_effect = read_response
+            return connection
+        auth = self.service.issue()
+        key = self.key.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8,
+                                     serialization.NoEncryption())
+        with tempfile.TemporaryDirectory() as directory, patch.object(https.http.client, "HTTPSConnection", side_effect=connect):
+            ledger = publisher.PrivateLedger(directory)
+            preparer = app_credential.AppTokenPreparer(app_credential.AppIdentity(100, 200, 84), lambda: key,
+                self.service.attest, ledger, clock=lambda: self.now)
+            prepared = preparer.prepare(auth)
+            service = publisher.Publisher(admitted_bindings={(42, 84): self.source}, attest=self.service.attest,
+                ledger=ledger, serialize=ledger.serialize,
+                transport=publisher.BoundedTransport(https.HTTPSOnceSender(prepared.credential), publisher_actor_id=84),
+                clock=lambda: datetime.fromtimestamp(self.now, timezone.utc))
+            return service.publish(auth, self.wire, self.inventory, self.policy)
+
+    def test_oidc_native_issuer_narrow_token_and_final_https_publication_are_one_real_chain(self):
+        self.assertEqual("response-observed", self.credential_chain()["disposition"])
+        self.assertEqual("http:POST:/repos/ltn-it/.github/pulls/964/reviews", self.calls[-1])
+        self.assertEqual(f"repos/{issuer.ROOT}/actions/runs?head_sha={self.head}", self.calls[-2])
+        self.assertEqual(1, self.calls.count("http:POST:/app/installations/200/access_tokens"))
+
+    def test_native_generation_after_token_preparation_still_blocks_publication(self):
+        with self.assertRaises(AdmissionError):
+            self.credential_chain(generation_after_mint=True)
+        self.assertEqual(1, self.calls.count("http:POST:/app/installations/200/access_tokens"))
+        self.assertNotIn("http:POST:/repos/ltn-it/.github/pulls/964/reviews", self.calls)
 
 
 if __name__ == "__main__":

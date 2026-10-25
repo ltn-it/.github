@@ -138,6 +138,11 @@ an unknown result. No raw exception, token or response body is returned. The
 credential callback is private trusted broker code; it is never sent to the
 validator or selected by a producer. No environment token lookup, proxy,
 caller-selected CA or alternate URL is supported.
+The header-safe bounded token syntax supports both legacy and stateless
+installation tokens, including JWT dots and base64url characters; it does not
+assume a 40-character or underscore-only token. GitHub documents the 2026
+stateless-token rollout in its
+[App token endpoint reference](https://docs.github.com/en/rest/apps/apps#create-an-installation-access-token-for-an-app).
 
 This adapter is not a running credential boundary. Its offline tests replace
 the connection at the socket boundary and exercise the actual sender through

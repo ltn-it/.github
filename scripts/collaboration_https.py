@@ -62,7 +62,7 @@ class HTTPSOnceSender:
         connection = None
         try:
             token = self._credential()
-            require(type(token) is str and re.fullmatch(r"[A-Za-z0-9_]{20,512}", token),
+            require(type(token) is str and re.fullmatch(r"[A-Za-z0-9_.-]{20,8192}", token),
                     "publisher-credential")
             connection = http.client.HTTPSConnection(HOST, timeout=TIMEOUT,
                                                     context=ssl.create_default_context())
