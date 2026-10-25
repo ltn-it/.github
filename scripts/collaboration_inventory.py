@@ -101,6 +101,7 @@ def observe_open_issues(api, inventory, policy, repositories):
     require(type(repositories) is list and repositories and len(set(repositories)) == len(repositories), "scope-shape")
     for repository in repositories:
         require(repository in known and known[repository]["visibility"] == "public", "scope-public-repository")
+        validate({"kind": "comment", "repository": repository, "title": "", "body": ""}, inventory, policy)
         live = api.get(f"repos/{repository}")
         require(type(live) is dict and all(live.get(key) == known[repository][key]
                                          for key in ("id", "full_name", "visibility", "archived")), "scope-visibility-drift")
@@ -112,7 +113,8 @@ def observe_open_issues(api, inventory, policy, repositories):
             number = issue["number"]
             current = api.get(f"repos/{repository}/issues/{number}")
             require(type(current) is dict and current.get("id") == issue["id"]
-                    and current.get("number") == number and "pull_request" not in current,
+                    and current.get("number") == number and current.get("state") == "open"
+                    and "pull_request" not in current,
                     "issue-binding")
             comments = pages(api, f"repos/{repository}/issues/{number}/comments")
             require(type(current.get("comments")) is int and len(comments) == current["comments"], "comment-count")
@@ -132,10 +134,17 @@ def observe_open_issues(api, inventory, policy, repositories):
                                 "content_sha256": result["content_sha256"], "categories": result["categories"]})
             final = api.get(f"repos/{repository}/issues/{number}")
             require(type(final) is dict and final.get("id") == current["id"]
-                    and all(final.get(field) == current.get(field) for field in ("title", "body", "comments", "updated_at")),
+                    and all(final.get(field) == current.get(field) for field in ("state", "title", "body", "comments", "updated_at")),
                     "issue-observation-drift")
+            repeated = pages(api, f"repos/{repository}/issues/{number}/comments")
+            require(snapshot(comments, ("body", "updated_at")) == snapshot(repeated, ("body", "updated_at")),
+                    "comment-observation-drift")
         latest = pages(api, f"repos/{repository}/issues?state=open&sort=created&direction=asc")
         require([row["id"] for row in latest] == [row["id"] for row in issues], "scope-observation-drift")
+        final_live = api.get(f"repos/{repository}")
+        require(type(final_live) is dict and all(final_live.get(key) == known[repository][key]
+                                                for key in ("id", "full_name", "visibility", "archived")),
+                "scope-visibility-drift")
     excluded = ["closed-issues", "pull-requests", "reviews", "inline-comments", "edit-history",
                 "attachments", "timeline", "releases", "wiki", "caches", "repository-files", "other-repositories"]
     return {"version": 1, "scope": "open-issue-titles-bodies-current-comments", "owner": policy["owner"],
@@ -143,6 +152,88 @@ def observe_open_issues(api, inventory, policy, repositories):
             "repository_ids": [known[name]["id"] for name in repositories], "counts": counts,
             "clean": all(not row["categories"] for row in results), "objects": results, "excluded": excluded,
             "inventory_sha256": sha256(json.dumps(inventory, sort_keys=True, separators=(",", ":")))}
+
+
+def snapshot(rows, fields):
+    """An in-memory comparison only; source values never enter a receipt."""
+    return [(row["id"], *(row.get(field) for field in fields)) for row in rows]
+
+
+def observe_open_collaboration(api, inventory, policy, repositories):
+    """Explicitly extend the bounded open-issue scope with open PR content.
+
+    Submitted reviews (including dismissed reviews), PR conversation comments
+    and inline review comments are included. Pending review drafts and their
+    comments are excluded. Re-enumeration detects observed drift; edits after
+    the final read and cross-object races remain outside an atomic guarantee.
+    """
+    report = observe_open_issues(api, inventory, policy, repositories)
+    report["scope"] = "open-issues-and-pulls-current-comments-submitted-reviews-inline-comments"
+    report["counts"].update({"pull_requests": 0, "pull_comments": 0, "reviews": 0, "inline_comments": 0})
+    report["excluded"] = [item for item in report["excluded"]
+                          if item not in ("pull-requests", "reviews", "inline-comments")]
+    report["excluded"].extend(["closed-pull-requests", "pending-review-drafts"])
+    report["pending_review_drafts_excluded"] = 0
+    known = {row["full_name"]: row for row in inventory["repositories"]}
+    for repository in repositories:
+        path = f"repos/{repository}"
+        enumeration = f"{path}/pulls?state=open&sort=created&direction=asc"
+        pulls = pages(api, enumeration)
+        for listed in pulls:
+            number = listed.get("number")
+            require(type(number) is int and number > 0, "pull-number")
+            target = f"{path}/pulls/{number}"
+            current = api.get(target)
+            require(type(current) is dict and current.get("id") == listed["id"]
+                    and current.get("number") == number and current.get("state") == "open", "pull-binding")
+            comments_path = f"{path}/issues/{number}/comments"
+            comments = pages(api, comments_path)
+            reviews = pages(api, f"{target}/reviews")
+            inline = pages(api, f"{target}/comments")
+            require(type(current.get("comments")) is int and current["comments"] == len(comments)
+                    and type(current.get("review_comments")) is int
+                    and current["review_comments"] == len(inline), "pull-comment-count")
+            require(all(row.get("state") in ("APPROVED", "CHANGES_REQUESTED", "COMMENTED", "DISMISSED", "PENDING")
+                        for row in reviews), "review-state")
+            review_ids = {row["id"] for row in reviews}
+            pending = {row["id"] for row in reviews if row["state"] == "PENDING"}
+            require(all(type(row.get("pull_request_review_id")) is int
+                        and row["pull_request_review_id"] in review_ids for row in inline), "inline-review-binding")
+            report["pending_review_drafts_excluded"] += len(pending)
+            objects = [("pull_request", "pull_requests", current)]
+            objects += [("comment", "pull_comments", row) for row in comments]
+            objects += [("review", "reviews", row) for row in reviews if row["id"] not in pending]
+            objects += [("review_comment", "inline_comments", row) for row in inline
+                        if row["pull_request_review_id"] not in pending]
+            for kind, counter, obj in objects:
+                require(type(obj.get("body")) is str or obj.get("body") is None, "body-type")
+                result = validate({"kind": kind, "repository": repository,
+                                   "title": obj.get("title", "") if kind == "pull_request" else "",
+                                   "body": obj.get("body") or ""}, inventory, policy)
+                report["counts"][counter] += 1
+                report["objects"].append({"repository_id": known[repository]["id"], "kind": kind, "id": obj["id"],
+                                          "observed_at": utc_now(), "source_updated_at": obj.get("updated_at"),
+                                          "disposition": "admitted-current-content" if result["admitted"] else "owner-remediation-required",
+                                          "content_sha256": result["content_sha256"], "categories": result["categories"]})
+            final = api.get(target)
+            require(type(final) is dict and final.get("id") == current["id"]
+                    and all(final.get(field) == current.get(field) for field in
+                            ("number", "state", "title", "body", "comments", "review_comments", "updated_at", "head", "base")),
+                    "pull-observation-drift")
+            for suffix, initial, fields in (
+                (comments_path, comments, ("body", "updated_at")),
+                (f"{target}/reviews", reviews, ("body", "state", "submitted_at", "commit_id")),
+                (f"{target}/comments", inline, ("body", "updated_at", "pull_request_review_id")),
+            ):
+                require(snapshot(initial, fields) == snapshot(pages(api, suffix), fields), "pull-content-drift")
+        require([row["id"] for row in pages(api, enumeration)] == [row["id"] for row in pulls], "pull-scope-drift")
+        final_live = api.get(path)
+        require(type(final_live) is dict and all(final_live.get(key) == known[repository][key]
+                                                for key in ("id", "full_name", "visibility", "archived")),
+                "scope-visibility-drift")
+    report["clean"] = all(not row["categories"] for row in report["objects"])
+    report["finished_at"] = utc_now()
+    return report
 
 
 def private_write(path, value):
@@ -162,12 +253,15 @@ def main():
     parser.add_argument("--policy", type=Path, required=True)
     parser.add_argument("--report", type=Path, required=True)
     parser.add_argument("--repository", action="append", required=True)
+    parser.add_argument("--include-open-pulls", action="store_true",
+                        help="Include open PRs, submitted reviews and current conversation/inline comments.")
     args = parser.parse_args()
     try:
         api = GitHubReadOnly()
         policy = policy_from(args.policy)
         inventory = organization_inventory(api)
-        report = observe_open_issues(api, inventory, policy, args.repository)
+        observe = observe_open_collaboration if args.include_open_pulls else observe_open_issues
+        report = observe(api, inventory, policy, args.repository)
         private_write(args.report, {"inventory": inventory, "observation": report})
         print(json.dumps({"complete": True, "clean": report["clean"], "counts": report["counts"]}))
         return 0 if report["clean"] else 1

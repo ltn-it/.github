@@ -83,11 +83,14 @@ comments. Keep inventory and content reads separate from that notification
 effect. Failure to read a page, classify visibility, reach the sink or notify the
 owner is a recorded failed control, never a clean result.
 
-The initial local observer currently covers only explicitly selected open issue
-titles/bodies and current issue comments. Expand or separately implement PRs,
-reviews, inline comments and supported edit events before claiming their
-monitoring coverage. Declare closed content, histories, attachments and caches
-individually. History metadata observation never authorizes revision deletion.
+The initial live receipt covered only explicitly selected open issue
+titles/bodies and current issue comments. The local optional broader path also
+reads open PRs, conversation comments, submitted/dismissed reviews and inline
+comments with repeated snapshot checks. Its presence does not establish actual
+monitoring deployment, timely edit-event detection or owner notification.
+Qualify each of those controls separately. Declare closed content, pending
+review drafts, histories, attachments and caches individually. History metadata
+observation never authorizes revision deletion.
 
 ## Delivery order and proof
 

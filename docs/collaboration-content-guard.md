@@ -86,9 +86,13 @@ count drift and expired inventories fail closed. A partial list is never clean.
 The current adapter is an operator inspection tool; it does not prove that a
 least-privilege production monitoring identity has been provisioned.
 
-The observer reads explicitly selected public repositories' open issue titles,
-bodies and current issue comments. It rechecks issue metadata and open-item
-enumeration for drift. Source text remains in memory. Private receipts contain
+By default the observer reads explicitly selected public repositories' open
+issue titles, bodies and current issue comments. The explicit
+`--include-open-pulls` option also reads open PR titles/bodies, current PR
+conversation comments, submitted reviews (including dismissed reviews) and
+inline review comments. Pending review drafts and their comments are excluded.
+It rechecks parent metadata, comment/review snapshots, open-item enumeration
+and repository visibility for observed drift. Source text remains in memory. Private receipts contain
 only the inventory, native object locators, safe categories, counts, hashes,
 timestamps and deterministic dispositions. They never contain source bodies or
 matched values. Receipts require a private output directory, mode 0600 and
@@ -100,12 +104,14 @@ an independently provisioned read-only identity, named owner `litroc`, a private
 remediation sink, an agreed maximum detection interval and actual notification
 delivery. None of those deployments is implied by a local observation receipt.
 
-The declared initial content scope excludes closed issues, pull requests,
-reviews, inline comments, edit histories, attachments, timeline events,
-releases, repository files, wikis, external caches and unselected repositories.
-An observation is a bounded time window, not an atomic organization snapshot.
-Comment edits after their individual read can race the observer. No statement
-that the entire organization is clean follows from an open-issue observation.
+The initial live receipt covered open issues only; the optional broader path
+requires its own actual readback and runtime acceptance. Both scopes exclude
+closed issues/PRs, edit histories, attachments, timeline events, releases,
+repository files, wikis, external caches and unselected repositories. The broader
+scope also explicitly excludes pending review drafts. An observation is a
+bounded time window, not an atomic organization snapshot. Edits after each
+final individual read can still race the observer. A clean selected-scope
+observation never establishes that the entire organization is clean.
 
 ## Separate history procedure
 

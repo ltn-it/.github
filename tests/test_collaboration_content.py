@@ -254,7 +254,7 @@ class ObservationTests(unittest.TestCase):
     def setUp(self):
         self.policy = content.policy_from(ROOT / ".lit/collaboration-content-policy.json")
         self.inventory = inventory()
-        self.item = {"id": 10, "number": 556, "title": "Safe", "body": "Safe", "comments": 1, "updated_at": "2026-10-24T19:59:00Z"}
+        self.item = {"id": 10, "number": 556, "state": "open", "title": "Safe", "body": "Safe", "comments": 1, "updated_at": "2026-10-24T19:59:00Z"}
         self.comment = {"id": 20, "body": "TEST-123", "updated_at": "2026-10-24T19:59:00Z"}
         self.responses = {
             "repos/ltn-it/.github": copy.deepcopy(self.inventory["repositories"][0]),
@@ -307,6 +307,23 @@ class ObservationTests(unittest.TestCase):
         with self.assertRaisesRegex(content.AdmissionError, "issue-observation-drift"):
             self.observe(api)
 
+    def test_comment_edit_without_issue_timestamp_change_is_detected(self):
+        api = FakeAPI(self.responses)
+        original = api.get
+        calls = []
+
+        def get(path):
+            value = original(path)
+            if path.endswith("/comments?per_page=100&page=1"):
+                calls.append(path)
+                if len(calls) > 1:
+                    value[0]["body"] = "Edited without parent timestamp change"
+            return value
+
+        api.get = get
+        with self.assertRaisesRegex(content.AdmissionError, "comment-observation-drift"):
+            self.observe(api)
+
     def test_receipt_is_private_and_no_clobber(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "report.json"
@@ -320,6 +337,109 @@ class ObservationTests(unittest.TestCase):
             Path(directory).chmod(0o755)
             with self.assertRaisesRegex(content.AdmissionError, "private-report-directory"):
                 observation.private_write(Path(directory) / "report.json", {})
+
+
+class PullObservationTests(unittest.TestCase):
+    def setUp(self):
+        self.policy = content.policy_from(ROOT / ".lit/collaboration-content-policy.json")
+        self.inventory = inventory()
+        self.pull = {"id": 30, "number": 3, "state": "open", "title": "Public change", "body": "Safe",
+                     "comments": 1, "review_comments": 1, "updated_at": "2026-10-24T19:59:00Z"}
+        self.comment = {"id": 40, "body": "Safe conversation", "updated_at": "2026-10-24T19:59:00Z"}
+        self.review = {"id": 50, "body": "TEST-123", "state": "DISMISSED", "commit_id": "a" * 40}
+        self.inline = {"id": 60, "body": "Safe inline", "pull_request_review_id": 50,
+                       "updated_at": "2026-10-24T19:59:00Z"}
+        root = "repos/ltn-it/.github"
+        self.responses = {root: copy.deepcopy(self.inventory["repositories"][0]),
+                          f"{root}/pulls/3": self.pull}
+        for path, rows in (
+            (f"{root}/issues?state=open&sort=created&direction=asc", [dict(self.pull, pull_request={})]),
+            (f"{root}/pulls?state=open&sort=created&direction=asc", [self.pull]),
+            (f"{root}/issues/3/comments", [self.comment]),
+            (f"{root}/pulls/3/reviews", [self.review]),
+            (f"{root}/pulls/3/comments", [self.inline]),
+        ):
+            separator = "&" if "?" in path else "?"
+            self.responses[f"{path}{separator}per_page=100&page=1"] = rows
+            self.responses[f"{path}{separator}per_page=100&page=2"] = []
+
+    def observe(self, api=None):
+        with patch.object(content, "datetime") as clock:
+            clock.now.return_value = NOW
+            clock.strptime.side_effect = datetime.strptime
+            return observation.observe_open_collaboration(api or FakeAPI(self.responses), self.inventory,
+                                                          self.policy, ["ltn-it/.github"])
+
+    def test_all_public_pull_surfaces_include_dismissed_reviews_without_raw_values(self):
+        report = self.observe()
+        self.assertFalse(report["clean"])
+        self.assertEqual({"issues": 0, "comments": 0, "pull_requests": 1, "pull_comments": 1,
+                          "reviews": 1, "inline_comments": 1}, report["counts"])
+        self.assertEqual({"pull_request", "comment", "review", "review_comment"},
+                         {row["kind"] for row in report["objects"]})
+        self.assertNotIn("TEST-123", json.dumps(report))
+        self.assertNotIn("reviews", report["excluded"])
+        self.assertIn("closed-pull-requests", report["excluded"])
+
+    def test_pending_review_draft_and_its_inline_comment_are_not_public_content(self):
+        self.review["state"] = "PENDING"
+        self.inline["body"] = "TEST-456"
+        report = self.observe()
+        self.assertTrue(report["clean"])
+        self.assertEqual(1, report["pending_review_drafts_excluded"])
+        self.assertEqual(0, report["counts"]["reviews"])
+        self.assertEqual(0, report["counts"]["inline_comments"])
+
+    def test_review_page_failure_never_returns_partial_clean_result(self):
+        self.responses["repos/ltn-it/.github/pulls/3/reviews?per_page=100&page=2"] = content.AdmissionError("read-unavailable")
+        with self.assertRaisesRegex(content.AdmissionError, "read-unavailable"):
+            self.observe()
+
+    def test_orphan_inline_comment_and_unknown_review_state_fail_closed(self):
+        self.inline["pull_request_review_id"] = 999
+        with self.assertRaisesRegex(content.AdmissionError, "inline-review-binding"):
+            self.observe()
+        self.inline["pull_request_review_id"] = 50
+        self.review["state"] = "UNKNOWN"
+        with self.assertRaisesRegex(content.AdmissionError, "review-state"):
+            self.observe()
+
+    def test_review_edit_during_observation_is_incomplete(self):
+        api = FakeAPI(self.responses)
+        original = api.get
+        reads = []
+
+        def get(path):
+            value = original(path)
+            if path == "repos/ltn-it/.github/pulls/3/reviews?per_page=100&page=1":
+                reads.append(path)
+                if len(reads) > 1:
+                    value[0]["body"] = "Edited review"
+            return value
+
+        api.get = get
+        with self.assertRaisesRegex(content.AdmissionError, "pull-content-drift"):
+            self.observe(api)
+
+    def test_pull_close_and_visibility_change_during_observation_block(self):
+        for target in ("pull", "visibility"):
+            with self.subTest(target=target):
+                api = FakeAPI(self.responses)
+                original = api.get
+                reads = []
+                path = "repos/ltn-it/.github/pulls/3" if target == "pull" else "repos/ltn-it/.github"
+
+                def get(request):
+                    value = original(request)
+                    if request == path:
+                        reads.append(request)
+                        if len(reads) > (1 if target == "pull" else 2):
+                            value["state" if target == "pull" else "visibility"] = "closed" if target == "pull" else "private"
+                    return value
+
+                api.get = get
+                with self.assertRaises(content.AdmissionError):
+                    self.observe(api)
 
 
 if __name__ == "__main__":
