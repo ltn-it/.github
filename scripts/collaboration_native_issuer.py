@@ -63,8 +63,8 @@ def signing_keys():
         connection.close()
 
 
-def authenticate(token, keys, *, audience, registration, now):
-    """Verify the actual RS256 signature before accepting job identity claims."""
+def verified_claims(token, keys, *, audience, subject, now):
+    """Verify signature, exact audience/subject and time; callers bind origin."""
     require(type(token) is str and 0 < len(token) <= MAX_TOKEN and token.count(".") == 2,
             "issuer-token-shape")
     header64, claims64, signature64 = token.split(".")
@@ -85,12 +85,18 @@ def authenticate(token, keys, *, audience, registration, now):
     rsa.RSAPublicNumbers(exponent, modulus).public_key().verify(
         decode64(signature64), (header64 + "." + claims64).encode(), padding.PKCS1v15(), hashes.SHA256())
     require(type(claims) is dict and claims.get("iss") == ISSUER and claims.get("aud") == audience
-            and claims.get("sub") == registration["subject"], "issuer-token-subject")
+            and claims.get("sub") == subject, "issuer-token-subject")
     require(all(type(claims.get(field)) is int for field in ("iat", "nbf", "exp"))
             and claims["iat"] <= claims["nbf"] <= now < claims["exp"]
             and 0 < claims["exp"] - claims["iat"] <= 600, "issuer-token-time")
     require(type(claims.get("jti")) is str and 0 < len(claims["jti"]) <= 256,
             "issuer-token-identity")
+    return claims
+
+
+def authenticate(token, keys, *, audience, registration, now):
+    """Root review issuer retains its exact public origin and native contract."""
+    claims = verified_claims(token, keys, audience=audience, subject=registration["subject"], now=now)
     require(claims.get("repository") == ROOT and numeric(claims.get("repository_id")) == ROOT_ID
             and claims.get("repository_owner") == "ltn-it"
             and numeric(claims.get("repository_owner_id")) == control.ORGANIZATION_ID
