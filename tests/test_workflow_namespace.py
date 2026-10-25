@@ -30,7 +30,7 @@ class NamespaceIdentityTests(unittest.TestCase):
         workflow = yaml.safe_load((root / ".github/workflows/delivery-operations.yml").read_bytes())
         revisions = {workflow["jobs"][job]["steps"][0]["with"]["ref"] for job in ("refresh", "prepare")}
         for revision in revisions:
-            source = "573408625acf084f846a624a3e3f0787ebd46211"
+            source = "ee06f181eb9e6fd527f0098c3b4d17b8f645e425"
             changes = subprocess.check_output(["git", "-c", f"safe.directory={root}", "diff",
                 "--name-only", source, revision], cwd=root, text=True).splitlines()
             self.assertEqual([".lit/promotion-event-targets.json", "scripts/workflow_promotion_event.py"], changes)
