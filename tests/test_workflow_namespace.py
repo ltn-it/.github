@@ -77,3 +77,25 @@ class NamespaceIdentityTests(unittest.TestCase):
         self.assertEqual("lightning-it/shared-assets-lit", control.SOURCE_GENERATED_SUBJECT["repository"])
         self.assertEqual(("lightning-it-release-automation[bot]", 307565056, "Bot"), control.RELEASE)
         self.assertEqual(("lightning-it-shared-assets-sync[bot]", 307342877, "Bot"), control.SYNC)
+
+    def test_old_protected_base_needs_verified_numeric_identity_and_keeps_original_name(self):
+        for name, identifier in control.RENAMED_REPOSITORIES.items():
+            original = {"version": 1, "repository": f"lightning-it/{name}", "mode": "reference",
+                        "quality": [{"workflow": ".github/workflows/quality.yml", "job": "quality"}],
+                        "accepted_sources": []}
+            raw = json.dumps(original).encode()
+            api = Mock(); api.file.return_value = raw; api.call.return_value = self.repository(name)
+            result = control.policy(api, f"ltn-it/{name}", "b" * 40, "a" * 40)
+            self.assertEqual(f"lightning-it/{name}", result["repository"])
+            self.assertEqual(raw, api.file.return_value)
+            api.call.assert_called_once_with(f"repos/ltn-it/{name}")
+            for actual in (None, True, identifier + 1):
+                with self.subTest(name=name, identifier=actual), self.assertRaises(control.ControlError):
+                    control.policy_value(json.loads(raw), f"ltn-it/{name}", "a" * 40,
+                                         renamed_repository_id=actual)
+            # Even a correctly authenticated rename never admits an unknown
+            # source or refunds/changes any historical request record.
+            changed = json.loads(raw) | {"accepted_sources": ["f" * 40]}
+            with self.assertRaisesRegex(control.ControlError, "consumer-cannot-admit-central-source"):
+                control.policy_value(changed, f"ltn-it/{name}", "a" * 40,
+                                     renamed_repository_id=identifier)

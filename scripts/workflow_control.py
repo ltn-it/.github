@@ -236,12 +236,22 @@ def policy(api, repo, base, source_sha, *, pull=None):
     value = first_policy(api, repo, base, source_sha, pull)
     if value is None:
         value = json.loads(api.file(repo, ".lit/workflow-control.json", base))
-    return policy_value(value, repo, source_sha)
+    # A namespace repair must still judge the installed protected base before
+    # a consumer can merge its own metadata update. Authenticate the unchanged
+    # numeric identity; never take an alias/admission flag from consumer JSON.
+    identifier = current_repository(api, repo) if value.get("repository") != repo else None
+    return policy_value(value, repo, source_sha, renamed_repository_id=identifier)
 
 
-def policy_value(value, repo, source_sha):
+def policy_value(value, repo, source_sha, *, renamed_repository_id=None):
     """The same protected lineage validation for installed and typed bootstrap reads."""
-    require(value.get("version") == 1 and value.get("repository") == repo, "protected-policy-shape")
+    name = repo.split("/", 1)[-1]
+    migrated_base = (repo == f"ltn-it/{name}" and name in RENAMED_REPOSITORIES
+                     and type(renamed_repository_id) is int
+                     and renamed_repository_id == RENAMED_REPOSITORIES[name]
+                     and value.get("repository") == f"lightning-it/{name}")
+    require(value.get("version") == 1 and (value.get("repository") == repo or migrated_base),
+            "protected-policy-shape")
     require(value.get("mode") in {"reference", "enforce"}, "scope-not-admitted")
     require(type(value.get("quality")) is list and value["quality"], "quality-policy-missing")
     for item in value["quality"]:
