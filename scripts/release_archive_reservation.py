@@ -31,10 +31,10 @@ def rule_payload():
 class NativeAPI:
     """Preserve HTTP status for atomic creation; never retry or print responses."""
     def request(self, method, path, data=None):
-        require(method in {"GET", "POST", "PATCH", "DELETE"} and path.startswith("repos/lightning-it/")
+        require(method in {"GET", "POST", "PATCH", "DELETE"} and path.startswith("repos/ltn-it/")
                 and not any(c.isspace() for c in path), "archive-native-api-path")
         if method in {"PATCH", "DELETE"}:
-            require(re.fullmatch(r"repos/lightning-it/[A-Za-z0-9_.-]+/git/refs/tags/release-archive/v1/[0-9a-f]{64}/reservation", path),
+            require(re.fullmatch(r"repos/ltn-it/[A-Za-z0-9_.-]+/git/refs/tags/release-archive/v1/[0-9a-f]{64}/reservation", path),
                     "archive-negative-test-scope")
         command = ["gh", "api", "--include", "--method", method, path]
         if data is not None:
@@ -67,7 +67,7 @@ def operation(subject):
 
 class Reservations:
     def __init__(self, api, repository, ruleset_id):
-        require(type(repository) is str and re.fullmatch(r"lightning-it/[A-Za-z0-9_.-]+", repository)
+        require(type(repository) is str and re.fullmatch(r"ltn-it/[A-Za-z0-9_.-]+", repository)
                 and type(ruleset_id) is int and ruleset_id > 0, "archive-reservation-scope")
         self.api, self.repository, self.ruleset_id = api, repository, ruleset_id
         self.base = "repos/" + repository

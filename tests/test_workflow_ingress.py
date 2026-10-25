@@ -9,7 +9,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 import workflow_control as control
 import workflow_ingress as ingress
 
-REPO = 'lightning-it/.github'
+REPO = 'ltn-it/.github'
 HEAD, SOURCE = 'a' * 40, 'b' * 40
 MERGED = '2026-10-15T12:01:00Z'
 

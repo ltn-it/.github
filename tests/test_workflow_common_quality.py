@@ -20,6 +20,9 @@ RAW = b'schema_version: 1\nrepository: .github\nrepository_type: repository_prof
 
 class CommonQualityTests(unittest.TestCase):
     def setUp(self):
+        guard = patch.object(control, "current_repository", return_value=1112629689)
+        guard.start()
+        self.addCleanup(guard.stop)
         # Nested Git fixtures must not inherit the read-only source worktree.
         environment = {key: value for key, value in os.environ.items()
                        if key not in {"GIT_DIR", "GIT_COMMON_DIR", "GIT_WORK_TREE"}}

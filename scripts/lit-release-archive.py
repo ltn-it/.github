@@ -24,7 +24,9 @@ MAX_METADATA_BYTES = 65536
 ENDPOINTS = {"fsn1.your-objectstorage.com", "nbg1.your-objectstorage.com", "hel1.your-objectstorage.com"}
 SHA256 = re.compile(r"[0-9a-f]{64}")
 SHA = re.compile(r"[0-9a-f]{40}")
-REPOSITORY = re.compile(r"lightning-it/(?:\.github|[A-Za-z0-9_-]+)")
+# Keys retain the explicitly recorded namespace. A rename never moves or
+# rewrites an older object; current operations may create their own new key.
+REPOSITORY = re.compile(r"(?:lightning-it|ltn-it)/(?:\.github|[A-Za-z0-9_-]+)")
 
 
 class ArchiveError(ValueError):
