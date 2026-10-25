@@ -4,6 +4,7 @@
     "Public technical issue #556; SHA-256 and UTF-8.",
     "https://github.com/ltn-it/.github/issues/556",
     "https://docs.github.com/en/rest",
+    "https://www.bestpractices.dev/projects/15886",
     "RFC-9110 and CVE-2026-12345"
   ],
   "negative": [
@@ -15,6 +16,8 @@
     "person@example.com",
     "password: synthetic-value",
     "https://github.com/ltn-it/example/issues/1",
-    "https://docs.github.com/en/rest?private=value"
+    "https://docs.github.com/en/rest?private=value",
+    "https://www.bestpractices.dev/projects/15886?private=value",
+    "https://www.bestpractices.dev/projects/15887"
   ]
 }

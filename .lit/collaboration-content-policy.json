@@ -5,7 +5,8 @@
   "owner": "litroc",
   "approved_public_urls": [
     "https://docs.github.com/en/rest",
-    "https://docs.l-it.io/contributing/github-issues/"
+    "https://docs.l-it.io/contributing/github-issues/",
+    "https://www.bestpractices.dev/projects/15886"
   ],
   "approved_public_identifiers": ["SHA-256", "SHA-512", "UTF-8", "ISO-8601"],
   "protected_value_sha256": []

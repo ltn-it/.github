@@ -65,6 +65,12 @@ domain-wide bypass, query-string bypass or runtime skip flag. A false positive
 requires a narrowly reviewed policy revision and regression fixture. Do not
 paste the rejected value into a public review or exception request.
 
+The exact public project URL `https://www.bestpractices.dev/projects/15886`
+was verified through its public project JSON to identify `ltn-it/.github` after
+actual enrollment. That exception admits neither another project nor query
+parameters, and says nothing about whether the project has achieved Passing.
+The initial saved questionnaire was still in progress at 99 percent.
+
 Private exact-value additions use normalized SHA-256 values, not raw protected
 infrastructure. Their provenance and review stay private. Empty supplemental
 data does not establish an inventory of every protected value.
