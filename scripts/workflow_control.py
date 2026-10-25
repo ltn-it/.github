@@ -1133,6 +1133,38 @@ def ingress_candidates(api, repo, pull, sources, runs, bindings, *, read_operati
     return candidates
 
 
+def revalidate_native_generation(api, repo, pull, sources, observed, bindings):
+    """Read-only final generation guard shared by ingress and Main readers.
+
+    Call only after route-specific proof and approval authentication. This
+    selector grants no route, source admission, approval or mutation authority.
+    """
+    require(type(sources) is list and sources, "accepted-source-lineage-missing")
+    for value in sources:
+        sha(value)
+    warm_runs = api.pages(f"repos/{repo}/actions/runs?head_sha={pull['head']['sha']}", "workflow_runs")
+    ingress_candidates(api, repo, pull, sources, warm_runs, bindings)
+    fields = ("id", "run_attempt", "status", "conclusion", "head_sha",
+              "workflow_id", "workflow_url", "path")
+    if pull.get("merged") is True:
+        current_pull = api.call(f"repos/{repo}/pulls/{pull['number']}")
+        require(binding(current_pull) == binding(pull)
+                and all(current_pull.get(key) == pull.get(key)
+                        for key in ("state", "merged", "merged_at", "merge_commit_sha")),
+                "ingress-referenced-pull-changed")
+    current = api.call(f"repos/{repo}/actions/runs/{observed['id']}")
+    require(native_required(current, repo)
+            and all(current.get(key) == observed.get(key) for key in fields),
+            "ingress-current-run-changed")
+    # Final I/O: this snapshot must also contain a generation started during
+    # earlier refreshes. The last selector consumes authenticated memory only.
+    latest_runs = api.pages(f"repos/{repo}/actions/runs?head_sha={pull['head']['sha']}", "workflow_runs")
+    generations = ingress_candidates(api, repo, pull, sources, latest_runs, bindings, read_operations=False)
+    latest = max(generations, key=lambda item: (item["id"], item["run_attempt"])) if generations else None
+    require(latest is not None and all(latest.get(key) == observed.get(key) for key in fields),
+            "ingress-native-generation-changed")
+
+
 def check_native_control(api, repo, pull, config):
     """Authenticate the entire native required run, not a caller-authored name."""
     sources = config.get("accepted_sources", [])
@@ -1161,32 +1193,7 @@ def check_native_control(api, repo, pull, config):
             "head": pull["head"]["sha"], "source_sha": record["source_sha"],
             "route": record.get("route"), "artifact": f"control-proof-{selected['run_attempt']}",
             "proof_sha256": digest(record)}
-    # Every saved object above is a snapshot. Re-read all mutable decision
-    # subjects after the evidence reads, for ordinary and historical passes.
-    # Authenticate newly discovered persisted bindings BEFORE the final native
-    # generation snapshot. Its selector performs no artifact/network reads.
-    warm_runs = api.pages(f"repos/{repo}/actions/runs?head_sha={pull['head']['sha']}", "workflow_runs")
-    ingress_candidates(api, repo, pull, sources, warm_runs, bindings)
-    fields = ("id", "run_attempt", "status", "conclusion", "head_sha",
-              "workflow_id", "workflow_url", "path")
-    if pull.get("merged") is True:
-        current_pull = api.call(f"repos/{repo}/pulls/{pull['number']}")
-        require(binding(current_pull) == binding(pull)
-                and all(current_pull.get(key) == pull.get(key)
-                        for key in ("state", "merged", "merged_at", "merge_commit_sha")),
-                "ingress-referenced-pull-changed")
-    current = api.call(f"repos/{repo}/actions/runs/{observed['id']}")
-    require(native_required(current, repo)
-            and all(current.get(key) == observed.get(key) for key in fields),
-            "ingress-current-run-changed")
-    # This is the final I/O: a run started during either subject refresh above
-    # must also be visible here. Selection below uses authenticated memory only.
-    latest_runs = api.pages(f"repos/{repo}/actions/runs?head_sha={pull['head']['sha']}", "workflow_runs")
-    generations = ingress_candidates(api, repo, pull, sources, latest_runs, bindings, read_operations=False)
-    latest_generation = max(generations, key=lambda item: (item["id"], item["run_attempt"])) if generations else None
-    require(latest_generation is not None
-            and all(latest_generation.get(key) == observed.get(key) for key in fields),
-            "ingress-native-generation-changed")
+    revalidate_native_generation(api, repo, pull, sources, observed, bindings)
     if after_merge:
         result["post_merge_failed_attempts"] = after_merge
     return result
