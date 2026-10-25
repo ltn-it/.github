@@ -15,11 +15,15 @@ import re
 import subprocess
 from urllib.parse import quote
 
-from workflow_control import ControlError, canonical, digest, require, sha
+from workflow_control import (ControlError, ORGANIZATION_ID, RENAMED_REPOSITORIES,
+                              canonical, digest, require, sha)
 
 PREFIX = "release-archive/v1/"
 RULE_NAME = "Release archive immutable references"
 REF_PATTERNS = ["refs/tags/" + PREFIX + "*/" + kind for kind in ("reservation", "receipt")]
+# This retained helper constructed every storage key from the old API name.
+# Its existing claims predate an explicit storage_repository field.
+LEGACY_STORAGE_HELPER = "f263bac1a19c7b7a0f727e744c35360666925820"
 
 
 def rule_payload():
@@ -71,6 +75,26 @@ class Reservations:
                 and type(ruleset_id) is int and ruleset_id > 0, "archive-reservation-scope")
         self.api, self.repository, self.ruleset_id = api, repository, ruleset_id
         self.base = "repos/" + repository
+
+    def storage_repository(self, record):
+        stored = record.get("storage_repository")
+        if stored == self.repository:
+            return stored
+        name = self.repository.split("/", 1)[-1]
+        identifier = RENAMED_REPOSITORIES.get(name)
+        legacy = f"lightning-it/{name}"
+        require(stored is None and identifier is not None
+                and record.get("subject", {}).get("repository_id") == identifier
+                and record.get("authority", {}).get("helper_sha") == LEGACY_STORAGE_HELPER,
+                "archive-storage-namespace-unproven")
+        status, repo = self.api.request("GET", self.base)
+        require(status == 200 and repo.get("full_name") == self.repository
+                and type(repo.get("id")) is int and repo["id"] == identifier
+                and repo.get("owner", {}).get("login") == "ltn-it"
+                and type(repo.get("owner", {}).get("id")) is int
+                and repo["owner"]["id"] == ORGANIZATION_ID,
+                "archive-historical-storage-identity")
+        return legacy
 
     def verify_anchor(self, anchor):
         require(type(anchor) is dict and set(anchor) == {"repository_id", "commit_sha"}
@@ -153,7 +177,8 @@ class Reservations:
         expected = {"version": 1, "kind": "reservation", "operation": key, "subject": subject,
                     "package_sha256": package_sha256, "package_bytes": package_bytes,
                     "reservation": key[:32], "policy_sha256": policy, "anchor": anchor}
-        record = expected | {"authority": authority, "management_sha": authority["management_sha"]}
+        record = expected | {"authority": authority, "management_sha": authority["management_sha"],
+                             "storage_repository": self.repository}
         existing = self.read(key, "reservation")
         if existing is None:
             created = self.create(key, "reservation", record)
@@ -235,7 +260,7 @@ def deliver(reservations, storage, store, subject, authority, build, validate, n
         # Reuse claim validation without rebuilding historical payloads.
         existing, mode = reservations.claim(subject, existing.get("package_sha256"), existing.get("package_bytes"), authority)
     require(existing["policy_sha256"] == policy, "archive-protection-changed")
-    arguments = dict(repository=reservations.repository, promotion=subject["promotion"],
+    arguments = dict(repository=reservations.storage_repository(existing), promotion=subject["promotion"],
                      head=subject["head_sha"], expected_digest=existing["package_sha256"],
                      reservation=existing["reservation"], now=now)
     if mode == "create":

@@ -37,7 +37,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: ltn-it/.github
-          ref: bfb1e53be7ab05102aa3ea53c5ed3c468d1a593b
+          ref: c292909ca4f90b79d2b2fef404f10d42c7184e00
           persist-credentials: false
       - name: Refresh original native job from current state
         env:
@@ -69,7 +69,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: ltn-it/.github
-          ref: 201f55b5369112ac600b5a6b0f967258f145fe72
+          ref: c292909ca4f90b79d2b2fef404f10d42c7184e00
           persist-credentials: false
       - name: Authenticate current profiled producer and independent ingress before credentials
         id: signal

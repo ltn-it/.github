@@ -310,6 +310,35 @@ def same_immutable_tuple(left, right):
     return all(canonical(left.get(key)) == canonical(right.get(key)) for key in keys)
 
 
+def historical_binding_matches(api, repo, pull, recorded, *, immutable=False):
+    """Compare old names only for the same authenticated, merged repository.
+
+    Retained operations/proofs and their digests remain byte-for-byte intact.
+    Open subjects, forks, recreated repositories and every other tuple change
+    retain the ordinary exact comparison.
+    """
+    expected = binding(pull)
+    compare = same_immutable_tuple if immutable else lambda a, b: a == b
+    if compare(recorded, expected):
+        return True
+    name = repo.split("/", 1)[-1]
+    identifier = RENAMED_REPOSITORIES.get(name)
+    if (type(recorded) is not dict or pull.get("merged") is not True
+            or pull.get("state") != "closed" or not pull.get("merge_commit_sha")
+            or repo != f"ltn-it/{name}" or identifier is None
+            or recorded.get("head_repository") != f"lightning-it/{name}"
+            or expected["head_repository"] != repo):
+        return False
+    for side in ("base", "head"):
+        value = pull[side].get("repo") or {}
+        if (value.get("full_name") != repo or type(value.get("id")) is not int
+                or value["id"] != identifier):
+            return False
+    if current_repository(api, repo) != identifier:
+        return False
+    return compare(recorded | {"head_repository": repo}, expected)
+
+
 def normal_environment(api, repo):
     env = api.call(f"repos/{repo}/environments/normal-release-promotion-approval")
     require(env.get("name") == "normal-release-promotion-approval" and env.get("can_admins_bypass") is False,
@@ -1075,7 +1104,7 @@ def ingress_candidates(api, repo, pull, sources, runs, bindings, *, read_operati
                     require(read_operations, "ingress-generation-binding-unavailable")
                     operation = operation_record(api, repo, run)
                     bindings[operation_key] = (operation["source_sha"] in sources
-                                              and same_immutable_tuple(operation["binding"], binding(pull)))
+                                              and historical_binding_matches(api, repo, pull, operation["binding"], immutable=True))
                 if not bindings[operation_key]:
                     bindings[key] = False
                     continue
@@ -1092,7 +1121,7 @@ def ingress_candidates(api, repo, pull, sources, runs, bindings, *, read_operati
                 require(read_operations, "ingress-generation-binding-unavailable")
                 operation = operation_record(api, repo, run)
                 bindings[key] = (operation["source_sha"] in sources
-                                 and same_immutable_tuple(operation["binding"], binding(pull)))
+                                 and historical_binding_matches(api, repo, pull, operation["binding"], immutable=True))
             if not bindings[key]:
                 continue
         else:
@@ -1125,7 +1154,7 @@ def check_native_control(api, repo, pull, config):
     require(len(gate) == 1 and gate[0]["conclusion"] == "success", "ingress-protected-job-missing")
     record = artifact_record(api, repo, selected, f"control-proof-{selected['run_attempt']}", "control-proof.json")
     require(record.get("version") == 1 and record.get("source_sha") in sources
-            and record.get("binding") == binding(pull)
+            and historical_binding_matches(api, repo, pull, record.get("binding"))
             and record.get("route") in {"copilot", "renovate", "ancestry", "distribution", "codex"},
             "ingress-protected-proof-binding")
     result = {"run": selected["id"], "attempt": selected["run_attempt"], "job": gate[0]["id"],

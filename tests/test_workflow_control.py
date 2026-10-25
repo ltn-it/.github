@@ -451,7 +451,7 @@ class ControlTests(unittest.TestCase):
         self.assertEqual("steps.signal.outputs.current == 'true'", app['if'])
         self.assertEqual('github-management-lit', app['with']['repositories'])
         checkout = next(step for step in receiver['jobs']['refresh']['steps'] if 'uses' in step)
-        self.assertEqual('bfb1e53be7ab05102aa3ea53c5ed3c468d1a593b', checkout['with']['ref'])
+        self.assertEqual('c292909ca4f90b79d2b2fef404f10d42c7184e00', checkout['with']['ref'])
         self.assertFalse(checkout['with']['persist-credentials'])
         self.assertNotIn('${{', str(checkout['with']['ref']))
 
