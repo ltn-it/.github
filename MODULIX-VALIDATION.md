@@ -4,11 +4,11 @@ This organization-wide guidance applies to ModuLix source repositories and centr
 validation. It does not change the `.github` repository's own
 `repository_profile` classification, test profiles, or release behavior.
 
-The authoritative decisions are:
-
-- [MLX-10 distributed test ownership](https://lit.atlassian.net/wiki/spaces/LIT/pages/2886566105)
-- [MLX-40 release evidence](https://lit.atlassian.net/wiki/spaces/LIT/pages/2886926524)
-- [MLX-70 asynchronous Heavy execution](https://lit.atlassian.net/wiki/spaces/LIT/pages/2893119515)
+The public [Collection candidate/promotion contract](docs/collection-candidate-promotion.md)
+defines Nexus as the candidate registry and Galaxy as production for every
+current and future Collection. The [observed inventory](docs/collection-promotion-inventory.md)
+separates installed transition paths from the target and records exact sources.
+Internal governance and acceptance records retain their private system boundary.
 
 ## Ownership and triggers
 
@@ -57,14 +57,19 @@ compensating controls, start date, expiry date, and review date. Source-owned
 Heavy schedules or synchronous PR Heavy/Application execution without a current
 exception are not permitted.
 
-## Enforcement
+## Implementation responsibilities
 
-The policy is enforced and regression-tested in the implementation repositories:
+Each implementation layer must provide its own current-revision evidence.
+Documentation does not claim completed cross-repository enforcement:
 
-- [`shared-assets-lit#590`](https://github.com/lightning-it/shared-assets-lit/issues/590): versioned policy schema, renderer, templates, and contract tests.
-- [`modulix-validation#134`](https://github.com/lightning-it/modulix-validation/issues/134): central orchestration, evidence schema, semantic verification, cleanup, and failure-path tests.
-- [`ansible-collection-supplementary#554`](https://github.com/lightning-it/ansible-collection-supplementary/issues/554): pilot Fast Lane, semantic impact selection, and removal of source-owned Heavy scheduling.
-- [`github-management-lit#180`](https://github.com/lightning-it/github-management-lit/issues/180): branch-specific required contexts, invalid-context rejection, and live drift detection.
+- The private canonical distribution source owns versioned policy schemas,
+  renderers, templates and distribution contract tests.
+- [`modulix-validation#134`](https://github.com/ltn-it/modulix-validation/issues/134)
+  tracks central orchestration, evidence verification, cleanup and failure tests.
+- [`ansible-collection-supplementary#554`](https://github.com/ltn-it/ansible-collection-supplementary/issues/554)
+  tracks the pilot Fast Lane, impact selection and scheduling boundaries.
+- Private administration owns branch-specific required contexts, environment
+  admission, scoped App access and live drift detection.
 
-Cross-repository governance and check-name semantics are tracked in
-[LTN-118](https://lit.atlassian.net/browse/LTN-118).
+The repository-local documentation deliverable is tracked in
+[issue #55](https://github.com/ltn-it/.github/issues/55).
