@@ -1,8 +1,13 @@
 """Current GitHub names never substitute for immutable organization/repo IDs."""
 import json
 import importlib.util
+import copy
+import io
 import os
+import subprocess
 import sys
+import tarfile
+import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import Mock, patch
@@ -12,6 +17,84 @@ import workflow_control as control
 
 
 class NamespaceIdentityTests(unittest.TestCase):
+    def test_correction_preserves_the_independently_seeded_judge_in_proof_lineage(self):
+        value = {"version": 1, "repository": "ltn-it/.github", "mode": "reference",
+                 "quality": [{"workflow": ".github/workflows/repository-quality.yml", "job": "quality"}],
+                 "accepted_sources": ["c292909ca4f90b79d2b2fef404f10d42c7184e00"]}
+        result = control.policy_value(value, "ltn-it/.github", "a" * 40)
+        self.assertIn("c292909ca4f90b79d2b2fef404f10d42c7184e00", result["accepted_sources"])
+
+    def test_actual_frozen_delivery_helpers_admit_current_consumers(self):
+        import yaml
+        root = Path(__file__).resolve().parents[1]
+        workflow = yaml.safe_load((root / ".github/workflows/delivery-operations.yml").read_bytes())
+        revisions = {workflow["jobs"][job]["steps"][0]["with"]["ref"] for job in ("refresh", "prepare")}
+        for revision in revisions:
+            source = "ee06f181eb9e6fd527f0098c3b4d17b8f645e425"
+            changes = subprocess.check_output(["git", "-c", f"safe.directory={root}", "diff",
+                "--name-only", source, revision], cwd=root, text=True).splitlines()
+            self.assertEqual([".lit/promotion-event-targets.json", "scripts/workflow_promotion_event.py"], changes)
+            subprocess.run(["git", "-c", f"safe.directory={root}", "merge-base",
+                            "--is-ancestor", source, revision], cwd=root, check=True)
+            payload = subprocess.check_output(["git", "-c", f"safe.directory={root}",
+                "archive", revision, "scripts", ".lit"], cwd=root)
+            with tempfile.TemporaryDirectory() as temp:
+                with tarfile.open(fileobj=io.BytesIO(payload)) as archive:
+                    archive.extractall(temp, filter="data")
+                program = '''
+import json, os, sys
+from pathlib import Path
+from unittest.mock import patch
+sys.path.insert(0, sys.argv[1] + "/scripts")
+import workflow_events as events
+import workflow_promotion_event as promotion
+for repository in ("ltn-it/shared-assets-lit", "ltn-it/ansible-collection-supplementary"):
+    assert promotion.target(repository)["repository"] == repository
+    assert promotion.target(repository)["source_sha"] == sys.argv[3]
+    event = Path(sys.argv[1]) / "event.json"
+    event.write_text("{}")
+    os.environ.update(GITHUB_REPOSITORY=repository, GITHUB_EVENT_NAME="pull_request_target",
+        GITHUB_EVENT_PATH=str(event), NATIVE_JOB=json.dumps({"workflow_repository":"ltn-it/.github",
+        "workflow_file_path":".github/workflows/delivery-operations.yml",
+        "workflow_sha":sys.argv[2], "check_run_id":55}))
+    with patch.object(events, "refresh") as refresh:
+        events.main()
+        assert refresh.call_args.args[1] == repository
+'''
+                subprocess.run([sys.executable, "-IB", "-c", program, temp, revision, source],
+                               check=True, capture_output=True)
+
+    def test_unchanged_historical_native_proof_survives_authenticated_rename(self):
+        from test_workflow_control import pull, run, SOURCE, REPO
+        value = pull(state="closed", merged=True, merge_commit_sha="d" * 40)
+        for side in ("base", "head"):
+            value[side]["repo"]["id"] = control.RENAMED_REPOSITORIES[".github"]
+        record = {"version": 1, "source_sha": SOURCE, "route": "copilot",
+                  "binding": control.binding(value) | {"head_repository": "lightning-it/.github"}}
+        original = control.canonical(record)
+        source_run = run() | {"status": "completed", "conclusion": "success"}
+        api = Mock()
+        api.pages.side_effect = [[source_run], [{"id": 100, "run_id": 10,
+            "name": "Current revision review", "conclusion": "success"}], [source_run], [source_run]]
+        api.call.side_effect = lambda path: (self.repository() if path == "repos/" + REPO else
+            copy.deepcopy(value) if path.endswith("/pulls/3") else source_run)
+        with patch.object(control, "artifact_record", return_value=record):
+            result = control.check_native_control(api, REPO, value, {"accepted_sources": [SOURCE]})
+        self.assertEqual(control.digest(record), result["proof_sha256"])
+        self.assertEqual(original, control.canonical(record))
+        for mutate in (lambda p: p.update(state="open", merged=False),
+                       lambda p: p["head"]["repo"].update(id=1),
+                       lambda p: p["base"]["repo"].update(id=True),
+                       lambda p: p.update(title="changed"),
+                       lambda p: p["head"]["repo"].update(full_name="ltn-it/other")):
+            changed = copy.deepcopy(value)
+            mutate(changed)
+            self.assertFalse(control.historical_binding_matches(api, REPO, changed, record["binding"]))
+        api.call.side_effect = None
+        api.call.return_value = self.repository() | {"id": 1}
+        with self.assertRaises(control.ControlError):
+            control.historical_binding_matches(api, REPO, value, record["binding"])
+
     def test_archive_keys_preserve_old_namespace_and_reject_similar_foreign_names(self):
         spec = importlib.util.spec_from_file_location("namespace_archive", Path(__file__).resolve().parents[1]
                                                      / "scripts/lit-release-archive.py")
