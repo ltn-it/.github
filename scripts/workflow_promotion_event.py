@@ -34,7 +34,7 @@ def target(repository):
                 and entry["repository"] in profiles and entry["repository"] not in entries,
                 "promotion-event-target-identity")
         expected = profiles[entry["repository"]] | {
-            "repository": entry["repository"], "source_sha": "ee06f181eb9e6fd527f0098c3b4d17b8f645e425"}
+            "repository": entry["repository"], "source_sha": "39a5f49b0a21d498c6f4a7a19699ec441e24b1e0"}
         require(entry == expected and type(entry.get("private")) is bool
                 and type(entry.get("repository_id")) is int and type(entry.get("workflow_id")) is int,
                 "promotion-event-target-identity")

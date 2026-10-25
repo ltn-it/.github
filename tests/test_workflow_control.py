@@ -289,6 +289,38 @@ class NativeAPIReadTests(unittest.TestCase):
             command.assert_called_once()
 
 
+class NativeGenerationReaderTests(unittest.TestCase):
+    def test_shared_reader_keeps_final_selector_read_only_and_last(self):
+        value, observed, api, cache = pull(), run() | {'status': 'completed', 'conclusion': 'success'}, Mock(), {}
+        api.call.return_value = observed
+        with patch.object(control, 'ingress_candidates', return_value=[observed]) as select:
+            control.revalidate_native_generation(api, REPO, value, [SOURCE], observed, cache)
+        self.assertEqual(2, select.call_count)
+        self.assertIs(cache, select.call_args.args[5])
+        self.assertFalse(select.call_args.kwargs['read_operations'])
+        self.assertEqual('pages', api.method_calls[-1][0])
+
+    def test_shared_reader_rejects_changed_attempt_generation_and_unknown_final_binding(self):
+        observed = run() | {'status': 'completed', 'conclusion': 'success'}
+        for defect in ('attempt', 'generation', 'unknown-binding'):
+            api = Mock()
+            latest = observed | ({'run_attempt': 2, 'status': 'in_progress', 'conclusion': None}
+                                 if defect == 'attempt' else {'id': 11})
+            api.call.return_value = latest if defect == 'attempt' else observed
+            final = control.ControlError('ingress-final-operation-unbound') if defect == 'unknown-binding' else [latest]
+            with self.subTest(defect=defect), patch.object(control, 'ingress_candidates', side_effect=[[observed], final]), \
+                    self.assertRaises(control.ControlError):
+                control.revalidate_native_generation(api, REPO, pull(), [SOURCE], observed, {})
+
+    def test_shared_reader_retains_merged_pull_lifecycle_refresh(self):
+        value = pull(merged=True, merged_at='original', merge_commit_sha='d' * 40, state='closed')
+        observed, api = run() | {'status': 'completed', 'conclusion': 'failure'}, Mock()
+        api.call.return_value = value | {'merged_at': 'changed'}
+        with patch.object(control, 'ingress_candidates', return_value=[observed]), \
+                self.assertRaisesRegex(control.ControlError, 'ingress-referenced-pull-changed'):
+            control.revalidate_native_generation(api, REPO, value, [SOURCE], observed, {})
+
+
 class ControlTests(unittest.TestCase):
     def setUp(self):
         guard = patch.object(control, "current_repository", return_value=1112629689)
@@ -451,7 +483,7 @@ class ControlTests(unittest.TestCase):
         self.assertEqual("steps.signal.outputs.current == 'true'", app['if'])
         self.assertEqual('github-management-lit', app['with']['repositories'])
         checkout = next(step for step in receiver['jobs']['refresh']['steps'] if 'uses' in step)
-        self.assertEqual('5409fb26ca352e668f9be2194356bdcc384c0543', checkout['with']['ref'])
+        self.assertEqual('c188d38bbc93147741ab82849cbcc2566fab3acb', checkout['with']['ref'])
         self.assertFalse(checkout['with']['persist-credentials'])
         self.assertNotIn('${{', str(checkout['with']['ref']))
 
