@@ -18,7 +18,7 @@ import workflow_security_profile as security
 import workflow_subject as subjects
 import workflow_recovery as recovery
 
-REPO = 'lightning-it/security-fixture'
+REPO = 'ltn-it/security-fixture'
 VERSION, EVIDENCE, DOMAIN = '1.0.1', 'MLX90-FIXTURE-1.0.1', 'fixture/security-v1'
 IDENTITY = dict(zip(('login', 'id', 'type'), core.RELEASE))
 
@@ -41,6 +41,9 @@ def git(root, *args, binary=False):
 
 class SecurityProfileTests(unittest.TestCase):
     def setUp(self):
+        guard = patch.object(core, "current_repository", return_value=123)
+        guard.start()
+        self.addCleanup(guard.stop)
         # The integration gate supplies its own worktree context. Fixtures and
         # the data-only helpers they exercise own independent repositories.
         context = patch.dict(os.environ, git_environment(), clear=True)

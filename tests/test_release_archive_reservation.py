@@ -11,7 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 import release_archive_reservation as reservation
 from workflow_control import ControlError, digest
 
-REPO = "lightning-it/archive-fixture"
+REPO = "ltn-it/archive-fixture"
 SUBJECT = {"version": 1, "repository_id": 21, "promotion": 22, "head_sha": "a" * 40, "target": "main"}
 AUTHORITY = {"run": 23, "attempt": 1, "management_sha": "b" * 40, "workflow_blob": "c" * 40, "helper_sha": "d" * 40}
 
@@ -256,7 +256,7 @@ class ReservationTests(unittest.TestCase):
         record = self.store.read(first["operation"], "reservation")
         extended = first["storage"] | {"retain_until": (cloud.until + timedelta(days=365)).isoformat()}
         for field, value in (("version_id", "replacement"), ("package_sha256", "f" * 64),
-                             ("key", "different-key"), ("repository", "lightning-it/other"),
+                             ("key", "different-key"), ("repository", "ltn-it/other"),
                              ("promotion", 99), ("head_sha", "f" * 40),
                              ("retention_mode", "GOVERNANCE"), ("release_authorized", True)):
             with self.subTest(field=field), self.assertRaises(ControlError):

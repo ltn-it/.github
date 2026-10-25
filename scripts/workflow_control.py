@@ -23,7 +23,16 @@ from urllib.parse import quote
 if __name__ == "__main__":
     sys.modules.setdefault("workflow_control", sys.modules[__name__])
 
-SOURCE = "lightning-it/.github"
+SOURCE = "ltn-it/.github"
+ORGANIZATION_ID = 54334171
+RENAMED_REPOSITORIES = {
+    ".github": 1112629689,
+    "github-management-lit": 1273655215,
+    "shared-assets-lit": 1120841013,
+    "ansible-collection-supplementary": 1103407173,
+    "modulix-validation": 1269461997,
+    "container-ee-wunder-devtools-ubi9": 1110305651,
+}
 WORKFLOW = ".github/workflows/change-control-required.yml"
 RELEASE = ("lightning-it-release-automation[bot]", 307565056, "Bot")
 SYNC = ("lightning-it-shared-assets-sync[bot]", 307342877, "Bot")
@@ -56,6 +65,22 @@ def sha(value):
     return value
 
 
+def current_repository(api, repository):
+    """Bind current names to GitHub identity; never relabel historical proofs."""
+    require(type(repository) is str and re.fullmatch(r"ltn-it/[A-Za-z0-9_.-]+", repository),
+            "consumer-repository")
+    value = api.call(f"repos/{repository}")
+    identifier = value.get("id")
+    owner = value.get("owner") or {}
+    require(type(identifier) is int and identifier > 0 and value.get("full_name") == repository
+            and owner.get("login") == "ltn-it" and type(owner.get("id")) is int
+            and owner["id"] == ORGANIZATION_ID and not value.get("archived")
+            and not value.get("disabled"), "current-repository-identity")
+    expected = RENAMED_REPOSITORIES.get(repository.split("/", 1)[1])
+    require(expected is None or identifier == expected, "renamed-repository-id-drift")
+    return identifier
+
+
 class API:
     """No mutation retry; errors never echo provider bodies or private paths."""
 
@@ -72,7 +97,7 @@ class API:
     def call(self, path, *, method="GET", data=None):
         require(not path.startswith(("/", "http")), "api-path")
         command = ["gh", "api", "--method", method, path]
-        if re.fullmatch(r"repos/lightning-it/[A-Za-z0-9_.-]+/pulls/[1-9][0-9]*/reviews(?:\?.*)?", path):
+        if re.fullmatch(r"repos/ltn-it/[A-Za-z0-9_.-]+/pulls/[1-9][0-9]*/reviews(?:\?.*)?", path):
             command += ["--header", "Accept: application/vnd.github-commitcomment.full+json"]
         if data is not None:
             command += ["--input", "-"]
@@ -134,7 +159,7 @@ class API:
         return data
 
     def native_job_log(self, repo, job):
-        require(re.fullmatch(r"lightning-it/[A-Za-z0-9_.-]+", repo)
+        require(re.fullmatch(r"ltn-it/[A-Za-z0-9_.-]+", repo)
                 and type(job) is int and job > 0, "native-log-locator")
         with tempfile.TemporaryFile() as stream:
             result = subprocess.run(["gh", "api", "--allow-escape-sequences",
@@ -378,7 +403,7 @@ def native_conversation_guard(api, repo, pull):
             "native-extra-human-review-policy")
     guards = [r for r in pulls if r.get("type") == "pull_request"
               and (r.get("ruleset_source_type"), r.get("ruleset_source"))
-                  in {("Organization", "lightning-it"), ("Repository", repo)}
+                  in {("Organization", "ltn-it"), ("Repository", repo)}
               and r.get("parameters", {}).get("required_review_thread_resolution") is True
               and r.get("parameters", {}).get("required_approving_review_count") == 0
               and r.get("parameters", {}).get("require_code_owner_review") is False
@@ -1209,9 +1234,16 @@ def distribution_evidence(api, repo, pull, config):
     receipt = json.loads(encoded)
     require(set(receipt) == {"source", "source_sha", "run", "files"}, "distribution-receipt-shape")
     allowed = config.get("distribution_sources", [])
-    require(receipt["source"] == "lightning-it/shared-assets-lit" and receipt["source_sha"] in allowed, "distribution-source-not-accepted")
+    # A released v1 receipt keeps its original source string and bytes. Both
+    # exact names resolve to the same fixed repository; arbitrary aliases do not.
+    require(receipt["source"] in {"lightning-it/shared-assets-lit", "ltn-it/shared-assets-lit"}
+            and receipt["source_sha"] in allowed, "distribution-source-not-accepted")
     run = api.call(f"repos/{receipt['source']}/actions/runs/{receipt['run']}")
-    require(run["head_sha"] == receipt["source_sha"] and run["head_branch"] == "main"
+    require(type(run.get("repository", {}).get("id")) is int
+            and run["repository"]["id"] == RENAMED_REPOSITORIES["shared-assets-lit"]
+            and type(run.get("head_repository", {}).get("id")) is int
+            and run["head_repository"]["id"] == RENAMED_REPOSITORIES["shared-assets-lit"]
+            and run["head_sha"] == receipt["source_sha"] and run["head_branch"] == "main"
             and run["status"] == "completed" and run["conclusion"] == "success"
             and run["path"] == ".github/workflows/sync-repository-quality-repos.yml", "distribution-native-source")
     files = api.pages(f"repos/{repo}/pulls/{pull['number']}/files")
@@ -1275,8 +1307,9 @@ def main():
     args = parser.parse_args()
     api = API()
     repo = os.environ["GITHUB_REPOSITORY"]
-    require(re.fullmatch(r"lightning-it/[A-Za-z0-9_.-]+", repo), "consumer-repository")
+    require(re.fullmatch(r"ltn-it/[A-Za-z0-9_.-]+", repo), "consumer-repository")
     source_sha = source_identity(json.loads(os.environ["NATIVE_JOB"]))
+    current_repository(api, repo)
     event = json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text())
     native = api.call(f"repos/{repo}/actions/runs/{os.environ['GITHUB_RUN_ID']}")
     require(native_required(native, repo), "only-native-ruleset-workflow-may-authorize")

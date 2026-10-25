@@ -14,11 +14,11 @@ DELIVERY = ".github/workflows/delivery-operations.yml"
 
 def target(repository):
     profiles = {
-        "lightning-it/shared-assets-lit": {
+        "ltn-it/shared-assets-lit": {
             "repository_id": 1120841013, "scope": "shared-assets", "private": True,
             "workflow_id": 307348847, "workflow": ".github/workflows/repository-quality.yml",
             "workflow_name": "Repository policy audit", "job": "Release policy audit artifact"},
-        "lightning-it/ansible-collection-supplementary": {
+        "ltn-it/ansible-collection-supplementary": {
             "repository_id": 1103407173, "scope": "collection-supplementary", "private": False,
             "workflow_id": 214182490, "workflow": ".github/workflows/collection-ci.yml",
             "workflow_name": "Collection CI", "job": "Collection / Fast"},

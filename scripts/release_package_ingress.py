@@ -95,7 +95,7 @@ def assemble(api, repository, promotion, expected_digest, destination: Path, *, 
     failure preserves an existing destination and removes our incomplete file.
     The returned digest covers the exact component bytes, including final LF.
     """
-    require(type(repository) is str and re.fullmatch(r"lightning-it/[A-Za-z0-9_.-]+", repository),
+    require(type(repository) is str and re.fullmatch(r"ltn-it/[A-Za-z0-9_.-]+", repository),
             "package-repository")
     require(type(maximum) is int and 0 < maximum <= MAX_PROOF_BYTES, "package-size-limit")
     require(type(expected_digest) is str and re.fullmatch(r"[0-9a-f]{64}", expected_digest)

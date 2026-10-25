@@ -47,7 +47,7 @@ jobs:
     name: Prepare one promotion after current native quality
     needs: quality
     if: >-
-      github.repository == 'lightning-it/.github' &&
+      github.repository == 'ltn-it/.github' &&
       github.event_name == 'push' &&
       github.ref == 'refs/heads/develop' &&
       github.run_attempt == 1
@@ -62,7 +62,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          current="$(gh api repos/lightning-it/.github/branches/develop --jq 'select(.protected == true) | .commit.sha')"
+          current="$(gh api repos/ltn-it/.github/branches/develop --jq 'select(.protected == true) | .commit.sha')"
           if [ "$current" = "$GITHUB_SHA" ]; then
             printf 'current=true\n' >> "$GITHUB_OUTPUT"
           fi
@@ -73,7 +73,7 @@ jobs:
         with:
           client-id: ${{ vars.RELEASE_AUTOMATION_APP_CLIENT_ID }}
           private-key: ${{ secrets.RELEASE_AUTOMATION_APP_PRIVATE_KEY }}
-          owner: lightning-it
+          owner: ltn-it
           repositories: github-management-lit
           permission-actions: write
       - name: Recheck Develop and dispatch preparation on protected Main
@@ -83,13 +83,13 @@ jobs:
           SOURCE_READ_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          current="$(GH_TOKEN="$SOURCE_READ_TOKEN" gh api repos/lightning-it/.github/branches/develop --jq 'select(.protected == true) | .commit.sha')"
+          current="$(GH_TOKEN="$SOURCE_READ_TOKEN" gh api repos/ltn-it/.github/branches/develop --jq 'select(.protected == true) | .commit.sha')"
           if [ "$current" != "$GITHUB_SHA" ]; then
             printf 'Develop advanced; this event is no longer relevant.\n'
             exit 0
           fi
           gh api --method POST \
-            repos/lightning-it/github-management-lit/actions/workflows/terraform-github-management.yml/dispatches \
+            repos/ltn-it/github-management-lit/actions/workflows/terraform-github-management.yml/dispatches \
             --input - <<'JSON'
           {"ref":"main","inputs":{"operation":"native-promotion-prepare","repository":".github","policy_group":"repository_quality"}}
           JSON

@@ -12,7 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 import release_package_ingress as package
 from workflow_control import ControlError, SOURCE, WORKFLOW, digest
 
-REPO = "lightning-it/.github"
+REPO = "ltn-it/.github"
 HEAD, BASE, MERGE, POLICY = (letter * 40 for letter in "abcd")
 
 

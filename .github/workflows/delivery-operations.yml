@@ -36,7 +36,7 @@ jobs:
       - name: Load immutable reviewed event helper
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          repository: lightning-it/.github
+          repository: ltn-it/.github
           ref: bfb1e53be7ab05102aa3ea53c5ed3c468d1a593b
           persist-credentials: false
       - name: Refresh original native job from current state
@@ -48,11 +48,11 @@ jobs:
   prepare:
     name: Prepare one admitted promotion
     if: >-
-      github.repository != 'lightning-it/.github' &&
+      github.repository != 'ltn-it/.github' &&
       github.event_name == 'workflow_run' &&
-      ((github.repository == 'lightning-it/shared-assets-lit' &&
+      ((github.repository == 'ltn-it/shared-assets-lit' &&
         github.event.workflow_run.name == 'Repository policy audit') ||
-       (github.repository == 'lightning-it/ansible-collection-supplementary' &&
+       (github.repository == 'ltn-it/ansible-collection-supplementary' &&
         github.event.workflow_run.name == 'Collection CI')) &&
       github.event.workflow_run.event == 'push' &&
       github.event.workflow_run.head_branch == 'develop' &&
@@ -68,7 +68,7 @@ jobs:
       - name: Load immutable reviewed event admission helper
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          repository: lightning-it/.github
+          repository: ltn-it/.github
           ref: 201f55b5369112ac600b5a6b0f967258f145fe72
           persist-credentials: false
       - name: Authenticate current profiled producer and independent ingress before credentials
@@ -88,7 +88,7 @@ jobs:
         with:
           client-id: ${{ vars.RELEASE_AUTOMATION_APP_CLIENT_ID }}
           private-key: ${{ secrets.RELEASE_AUTOMATION_APP_PRIVATE_KEY }}
-          owner: lightning-it
+          owner: ltn-it
           repositories: github-management-lit
           permission-actions: write
       - name: Recheck exact profiled event and dispatch the existing protected preparer once
@@ -109,5 +109,5 @@ jobs:
             '{ref:"main",inputs:{operation:"native-promotion-prepare",repository:$repository,policy_group:"repository_quality",runtime_develop_sha:$head}}' \
             > promotion-dispatch.json
           gh api --method POST \
-            repos/lightning-it/github-management-lit/actions/workflows/terraform-github-management.yml/dispatches \
+            repos/ltn-it/github-management-lit/actions/workflows/terraform-github-management.yml/dispatches \
             --input promotion-dispatch.json
