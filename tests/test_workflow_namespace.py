@@ -1,5 +1,6 @@
 """Current GitHub names never substitute for immutable organization/repo IDs."""
 import json
+import importlib.util
 import os
 import sys
 import unittest
@@ -11,6 +12,20 @@ import workflow_control as control
 
 
 class NamespaceIdentityTests(unittest.TestCase):
+    def test_archive_keys_preserve_old_namespace_and_reject_similar_foreign_names(self):
+        spec = importlib.util.spec_from_file_location("namespace_archive", Path(__file__).resolve().parents[1]
+                                                     / "scripts/lit-release-archive.py")
+        archive = importlib.util.module_from_spec(spec)
+        sys.modules[spec.name] = archive
+        spec.loader.exec_module(archive)
+        for repository in ("lightning-it/.github", "ltn-it/.github"):
+            key = archive.object_key(repository, 3, "a" * 40, "b" * 64, "c" * 32)
+            self.assertEqual(f"runs/github-release/v1/{repository}/3/"
+                             + "a" * 40 + "/" + "c" * 32 + "/" + "b" * 64 + ".json", key)
+        for repository in ("evil/ltn-it/.github", "ltn-it-evil/.github", "ltn-it/../.github"):
+            with self.subTest(repository=repository), self.assertRaises(archive.ArchiveError):
+                archive.object_key(repository, 3, "a" * 40, "b" * 64, "c" * 32)
+
     def repository(self, name=".github"):
         return {"id": control.RENAMED_REPOSITORIES[name], "full_name": f"ltn-it/{name}",
                 "owner": {"login": "ltn-it", "id": 54334171},

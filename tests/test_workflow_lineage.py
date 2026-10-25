@@ -27,6 +27,7 @@ MAINC3 = "066b62a2a9e49d3fdba014068266664f930315bd"
 MAIN5B72 = "5b72a68a352bd926620b0487b867f80bba774a2f"
 MAIN564 = "564c50265df607e62dbcd46d06897a166b81d330"
 MAIND820 = "d82074e0e1719490bcd9c75d8a2ffe4b461bf938"
+MAIN99 = "99f29a6dfd76d741dd61c2a1e9dfb7be8fbe7ead"
 # The reader parameter models a future independent native selection. Neither
 # this test nor the lineage file admits this actual, currently unselected commit.
 CANDIDATE = "4dbd1a7d63a3ffae5ada5e6e0127a847585a051d"
@@ -62,7 +63,7 @@ class AdoptedLineageTests(unittest.TestCase):
         value = json.loads((ROOT / ".lit/workflow-source-lineage.json").read_bytes())
         # Exact sequence catches deletion, duplication, replacement, unknown or
         # forward/self additions without adding a production validator/framework.
-        self.assertEqual({"version": 1, "accepted_predecessors": [*PREDECESSORS, BB1, MAIN678, MAIN4F12, MAINB634, MAIN1E48, MAIN652, MAINE12, MAINA092, MAINA513, MAINC3, MAIN5B72, MAIN564, MAIND820]}, value)
+        self.assertEqual({"version": 1, "accepted_predecessors": [*PREDECESSORS, BB1, MAIN678, MAIN4F12, MAINB634, MAIN1E48, MAIN652, MAINE12, MAINA092, MAINA513, MAINC3, MAIN5B72, MAIN564, MAIND820, MAIN99]}, value)
         policy = json.loads((ROOT / ".lit/workflow-control.json").read_bytes())
         self.assertEqual([], policy["accepted_sources"])
         self.assertNotIn(CANDIDATE, value["accepted_predecessors"])
@@ -70,7 +71,7 @@ class AdoptedLineageTests(unittest.TestCase):
     def test_real_policy_retains_bb1_and_old_pins_but_consumer_cannot_admit_unknown(self):
         api = Mock()
         value = self.policy(api)
-        self.assertEqual({CANDIDATE, BB1, MAIN678, MAIN4F12, MAINB634, MAIN1E48, MAIN652, MAINE12, MAINA092, MAINA513, MAINC3, MAIN5B72, MAIN564, MAIND820, *PREDECESSORS}, set(value["accepted_sources"]))
+        self.assertEqual({CANDIDATE, BB1, MAIN678, MAIN4F12, MAINB634, MAIN1E48, MAIN652, MAINE12, MAINA092, MAINA513, MAINC3, MAIN5B72, MAIN564, MAIND820, MAIN99, *PREDECESSORS}, set(value["accepted_sources"]))
         consumer = json.loads((ROOT / ".lit/workflow-control.json").read_bytes())
         api.file.return_value = json.dumps(consumer | {"accepted_sources": ["e" * 40]}).encode()
         with self.assertRaisesRegex(control.ControlError, "consumer-cannot-admit-central-source"):
