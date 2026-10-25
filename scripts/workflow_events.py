@@ -231,7 +231,7 @@ def refresh(api, repo, name, event):
 
 def main():
     repo = os.environ["GITHUB_REPOSITORY"]
-    require(re.fullmatch(r"lightning-it/[A-Za-z0-9_.-]+", repo), "consumer-repository")
+    require(re.fullmatch(r"ltn-it/[A-Za-z0-9_.-]+", repo), "consumer-repository")
     source_identity(json.loads(os.environ["NATIVE_JOB"]), expected_path=".github/workflows/delivery-operations.yml")
     event = json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_bytes())
     refresh(API(), repo, os.environ["GITHUB_EVENT_NAME"], event)

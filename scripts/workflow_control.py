@@ -23,7 +23,16 @@ from urllib.parse import quote
 if __name__ == "__main__":
     sys.modules.setdefault("workflow_control", sys.modules[__name__])
 
-SOURCE = "lightning-it/.github"
+SOURCE = "ltn-it/.github"
+ORGANIZATION_ID = 54334171
+RENAMED_REPOSITORIES = {
+    ".github": 1112629689,
+    "github-management-lit": 1273655215,
+    "shared-assets-lit": 1120841013,
+    "ansible-collection-supplementary": 1103407173,
+    "modulix-validation": 1269461997,
+    "container-ee-wunder-devtools-ubi9": 1110305651,
+}
 WORKFLOW = ".github/workflows/change-control-required.yml"
 RELEASE = ("lightning-it-release-automation[bot]", 307565056, "Bot")
 SYNC = ("lightning-it-shared-assets-sync[bot]", 307342877, "Bot")
@@ -56,6 +65,22 @@ def sha(value):
     return value
 
 
+def current_repository(api, repository):
+    """Bind current names to GitHub identity; never relabel historical proofs."""
+    require(type(repository) is str and re.fullmatch(r"ltn-it/[A-Za-z0-9_.-]+", repository),
+            "consumer-repository")
+    value = api.call(f"repos/{repository}")
+    identifier = value.get("id")
+    owner = value.get("owner") or {}
+    require(type(identifier) is int and identifier > 0 and value.get("full_name") == repository
+            and owner.get("login") == "ltn-it" and type(owner.get("id")) is int
+            and owner["id"] == ORGANIZATION_ID and value.get("archived") is False
+            and value.get("disabled") is False, "current-repository-identity")
+    expected = RENAMED_REPOSITORIES.get(repository.split("/", 1)[1])
+    require(expected is None or identifier == expected, "renamed-repository-id-drift")
+    return identifier
+
+
 class API:
     """No mutation retry; errors never echo provider bodies or private paths."""
 
@@ -72,7 +97,7 @@ class API:
     def call(self, path, *, method="GET", data=None):
         require(not path.startswith(("/", "http")), "api-path")
         command = ["gh", "api", "--method", method, path]
-        if re.fullmatch(r"repos/lightning-it/[A-Za-z0-9_.-]+/pulls/[1-9][0-9]*/reviews(?:\?.*)?", path):
+        if re.fullmatch(r"repos/ltn-it/[A-Za-z0-9_.-]+/pulls/[1-9][0-9]*/reviews(?:\?.*)?", path):
             command += ["--header", "Accept: application/vnd.github-commitcomment.full+json"]
         if data is not None:
             command += ["--input", "-"]
@@ -134,7 +159,7 @@ class API:
         return data
 
     def native_job_log(self, repo, job):
-        require(re.fullmatch(r"lightning-it/[A-Za-z0-9_.-]+", repo)
+        require(re.fullmatch(r"ltn-it/[A-Za-z0-9_.-]+", repo)
                 and type(job) is int and job > 0, "native-log-locator")
         with tempfile.TemporaryFile() as stream:
             result = subprocess.run(["gh", "api", "--allow-escape-sequences",
@@ -211,12 +236,22 @@ def policy(api, repo, base, source_sha, *, pull=None):
     value = first_policy(api, repo, base, source_sha, pull)
     if value is None:
         value = json.loads(api.file(repo, ".lit/workflow-control.json", base))
-    return policy_value(value, repo, source_sha)
+    # A namespace repair must still judge the installed protected base before
+    # a consumer can merge its own metadata update. Authenticate the unchanged
+    # numeric identity; never take an alias/admission flag from consumer JSON.
+    identifier = current_repository(api, repo) if value.get("repository") != repo else None
+    return policy_value(value, repo, source_sha, renamed_repository_id=identifier)
 
 
-def policy_value(value, repo, source_sha):
+def policy_value(value, repo, source_sha, *, renamed_repository_id=None):
     """The same protected lineage validation for installed and typed bootstrap reads."""
-    require(value.get("version") == 1 and value.get("repository") == repo, "protected-policy-shape")
+    name = repo.split("/", 1)[-1]
+    migrated_base = (repo == f"ltn-it/{name}" and name in RENAMED_REPOSITORIES
+                     and type(renamed_repository_id) is int
+                     and renamed_repository_id == RENAMED_REPOSITORIES[name]
+                     and value.get("repository") == f"lightning-it/{name}")
+    require(value.get("version") == 1 and (value.get("repository") == repo or migrated_base),
+            "protected-policy-shape")
     require(value.get("mode") in {"reference", "enforce"}, "scope-not-admitted")
     require(type(value.get("quality")) is list and value["quality"], "quality-policy-missing")
     for item in value["quality"]:
@@ -240,7 +275,8 @@ def native_required(run, repo):
     workflow = run.get("workflow_id")
     return (type(workflow) is int and workflow > 0
             and run.get("workflow_url") == f"https://api.github.com/repos/{repo}/actions/required_workflows/{workflow}"
-            and run.get("path", "").split("@", 1)[0] in {WORKFLOW, f"{SOURCE}/{WORKFLOW}"})
+            and run.get("path", "").split("@", 1)[0] in {
+                WORKFLOW, f"{SOURCE}/{WORKFLOW}", f"lightning-it/.github/{WORKFLOW}"})
 
 
 def artifact_record(api, repo, run, name, filename):
@@ -273,6 +309,35 @@ def artifact_record(api, repo, run, name, filename):
 def same_immutable_tuple(left, right):
     keys = {"number", "base", "head", "base_ref", "head_ref", "head_repository", "author"}
     return all(canonical(left.get(key)) == canonical(right.get(key)) for key in keys)
+
+
+def historical_binding_matches(api, repo, pull, recorded, *, immutable=False):
+    """Compare old names only for the same authenticated, merged repository.
+
+    Retained operations/proofs and their digests remain byte-for-byte intact.
+    Open subjects, forks, recreated repositories and every other tuple change
+    retain the ordinary exact comparison.
+    """
+    expected = binding(pull)
+    compare = same_immutable_tuple if immutable else lambda a, b: a == b
+    if compare(recorded, expected):
+        return True
+    name = repo.split("/", 1)[-1]
+    identifier = RENAMED_REPOSITORIES.get(name)
+    if (type(recorded) is not dict or pull.get("merged") is not True
+            or pull.get("state") != "closed" or not pull.get("merge_commit_sha")
+            or repo != f"ltn-it/{name}" or identifier is None
+            or recorded.get("head_repository") != f"lightning-it/{name}"
+            or expected["head_repository"] != repo):
+        return False
+    for side in ("base", "head"):
+        value = pull[side].get("repo") or {}
+        if (value.get("full_name") != repo or type(value.get("id")) is not int
+                or value["id"] != identifier):
+            return False
+    if current_repository(api, repo) != identifier:
+        return False
+    return compare(recorded | {"head_repository": repo}, expected)
 
 
 def normal_environment(api, repo):
@@ -378,7 +443,7 @@ def native_conversation_guard(api, repo, pull):
             "native-extra-human-review-policy")
     guards = [r for r in pulls if r.get("type") == "pull_request"
               and (r.get("ruleset_source_type"), r.get("ruleset_source"))
-                  in {("Organization", "lightning-it"), ("Repository", repo)}
+                  in {("Organization", "ltn-it"), ("Repository", repo)}
               and r.get("parameters", {}).get("required_review_thread_resolution") is True
               and r.get("parameters", {}).get("required_approving_review_count") == 0
               and r.get("parameters", {}).get("require_code_owner_review") is False
@@ -1040,7 +1105,7 @@ def ingress_candidates(api, repo, pull, sources, runs, bindings, *, read_operati
                     require(read_operations, "ingress-generation-binding-unavailable")
                     operation = operation_record(api, repo, run)
                     bindings[operation_key] = (operation["source_sha"] in sources
-                                              and same_immutable_tuple(operation["binding"], binding(pull)))
+                                              and historical_binding_matches(api, repo, pull, operation["binding"], immutable=True))
                 if not bindings[operation_key]:
                     bindings[key] = False
                     continue
@@ -1057,7 +1122,7 @@ def ingress_candidates(api, repo, pull, sources, runs, bindings, *, read_operati
                 require(read_operations, "ingress-generation-binding-unavailable")
                 operation = operation_record(api, repo, run)
                 bindings[key] = (operation["source_sha"] in sources
-                                 and same_immutable_tuple(operation["binding"], binding(pull)))
+                                 and historical_binding_matches(api, repo, pull, operation["binding"], immutable=True))
             if not bindings[key]:
                 continue
         else:
@@ -1067,6 +1132,38 @@ def ingress_candidates(api, repo, pull, sources, runs, bindings, *, read_operati
         # Its status/proof and every newer unknown generation remain mandatory.
         break
     return candidates
+
+
+def revalidate_native_generation(api, repo, pull, sources, observed, bindings):
+    """Read-only final generation guard shared by ingress and Main readers.
+
+    Call only after route-specific proof and approval authentication. This
+    selector grants no route, source admission, approval or mutation authority.
+    """
+    require(type(sources) is list and sources, "accepted-source-lineage-missing")
+    for value in sources:
+        sha(value)
+    warm_runs = api.pages(f"repos/{repo}/actions/runs?head_sha={pull['head']['sha']}", "workflow_runs")
+    ingress_candidates(api, repo, pull, sources, warm_runs, bindings)
+    fields = ("id", "run_attempt", "status", "conclusion", "head_sha",
+              "workflow_id", "workflow_url", "path")
+    if pull.get("merged") is True:
+        current_pull = api.call(f"repos/{repo}/pulls/{pull['number']}")
+        require(binding(current_pull) == binding(pull)
+                and all(current_pull.get(key) == pull.get(key)
+                        for key in ("state", "merged", "merged_at", "merge_commit_sha")),
+                "ingress-referenced-pull-changed")
+    current = api.call(f"repos/{repo}/actions/runs/{observed['id']}")
+    require(native_required(current, repo)
+            and all(current.get(key) == observed.get(key) for key in fields),
+            "ingress-current-run-changed")
+    # Final I/O: this snapshot must also contain a generation started during
+    # earlier refreshes. The last selector consumes authenticated memory only.
+    latest_runs = api.pages(f"repos/{repo}/actions/runs?head_sha={pull['head']['sha']}", "workflow_runs")
+    generations = ingress_candidates(api, repo, pull, sources, latest_runs, bindings, read_operations=False)
+    latest = max(generations, key=lambda item: (item["id"], item["run_attempt"])) if generations else None
+    require(latest is not None and all(latest.get(key) == observed.get(key) for key in fields),
+            "ingress-native-generation-changed")
 
 
 def check_native_control(api, repo, pull, config):
@@ -1090,39 +1187,14 @@ def check_native_control(api, repo, pull, config):
     require(len(gate) == 1 and gate[0]["conclusion"] == "success", "ingress-protected-job-missing")
     record = artifact_record(api, repo, selected, f"control-proof-{selected['run_attempt']}", "control-proof.json")
     require(record.get("version") == 1 and record.get("source_sha") in sources
-            and record.get("binding") == binding(pull)
+            and historical_binding_matches(api, repo, pull, record.get("binding"))
             and record.get("route") in {"copilot", "renovate", "ancestry", "distribution", "codex"},
             "ingress-protected-proof-binding")
     result = {"run": selected["id"], "attempt": selected["run_attempt"], "job": gate[0]["id"],
             "head": pull["head"]["sha"], "source_sha": record["source_sha"],
             "route": record.get("route"), "artifact": f"control-proof-{selected['run_attempt']}",
             "proof_sha256": digest(record)}
-    # Every saved object above is a snapshot. Re-read all mutable decision
-    # subjects after the evidence reads, for ordinary and historical passes.
-    # Authenticate newly discovered persisted bindings BEFORE the final native
-    # generation snapshot. Its selector performs no artifact/network reads.
-    warm_runs = api.pages(f"repos/{repo}/actions/runs?head_sha={pull['head']['sha']}", "workflow_runs")
-    ingress_candidates(api, repo, pull, sources, warm_runs, bindings)
-    fields = ("id", "run_attempt", "status", "conclusion", "head_sha",
-              "workflow_id", "workflow_url", "path")
-    if pull.get("merged") is True:
-        current_pull = api.call(f"repos/{repo}/pulls/{pull['number']}")
-        require(binding(current_pull) == binding(pull)
-                and all(current_pull.get(key) == pull.get(key)
-                        for key in ("state", "merged", "merged_at", "merge_commit_sha")),
-                "ingress-referenced-pull-changed")
-    current = api.call(f"repos/{repo}/actions/runs/{observed['id']}")
-    require(native_required(current, repo)
-            and all(current.get(key) == observed.get(key) for key in fields),
-            "ingress-current-run-changed")
-    # This is the final I/O: a run started during either subject refresh above
-    # must also be visible here. Selection below uses authenticated memory only.
-    latest_runs = api.pages(f"repos/{repo}/actions/runs?head_sha={pull['head']['sha']}", "workflow_runs")
-    generations = ingress_candidates(api, repo, pull, sources, latest_runs, bindings, read_operations=False)
-    latest_generation = max(generations, key=lambda item: (item["id"], item["run_attempt"])) if generations else None
-    require(latest_generation is not None
-            and all(latest_generation.get(key) == observed.get(key) for key in fields),
-            "ingress-native-generation-changed")
+    revalidate_native_generation(api, repo, pull, sources, observed, bindings)
     if after_merge:
         result["post_merge_failed_attempts"] = after_merge
     return result
@@ -1209,9 +1281,16 @@ def distribution_evidence(api, repo, pull, config):
     receipt = json.loads(encoded)
     require(set(receipt) == {"source", "source_sha", "run", "files"}, "distribution-receipt-shape")
     allowed = config.get("distribution_sources", [])
-    require(receipt["source"] == "lightning-it/shared-assets-lit" and receipt["source_sha"] in allowed, "distribution-source-not-accepted")
+    # A released v1 receipt keeps its original source string and bytes. Both
+    # exact names resolve to the same fixed repository; arbitrary aliases do not.
+    require(receipt["source"] in {"lightning-it/shared-assets-lit", "ltn-it/shared-assets-lit"}
+            and receipt["source_sha"] in allowed, "distribution-source-not-accepted")
     run = api.call(f"repos/{receipt['source']}/actions/runs/{receipt['run']}")
-    require(run["head_sha"] == receipt["source_sha"] and run["head_branch"] == "main"
+    require(type(run.get("repository", {}).get("id")) is int
+            and run["repository"]["id"] == RENAMED_REPOSITORIES["shared-assets-lit"]
+            and type(run.get("head_repository", {}).get("id")) is int
+            and run["head_repository"]["id"] == RENAMED_REPOSITORIES["shared-assets-lit"]
+            and run["head_sha"] == receipt["source_sha"] and run["head_branch"] == "main"
             and run["status"] == "completed" and run["conclusion"] == "success"
             and run["path"] == ".github/workflows/sync-repository-quality-repos.yml", "distribution-native-source")
     files = api.pages(f"repos/{repo}/pulls/{pull['number']}/files")
@@ -1275,8 +1354,9 @@ def main():
     args = parser.parse_args()
     api = API()
     repo = os.environ["GITHUB_REPOSITORY"]
-    require(re.fullmatch(r"lightning-it/[A-Za-z0-9_.-]+", repo), "consumer-repository")
+    require(re.fullmatch(r"ltn-it/[A-Za-z0-9_.-]+", repo), "consumer-repository")
     source_sha = source_identity(json.loads(os.environ["NATIVE_JOB"]))
+    current_repository(api, repo)
     event = json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text())
     native = api.call(f"repos/{repo}/actions/runs/{os.environ['GITHUB_RUN_ID']}")
     require(native_required(native, repo), "only-native-ruleset-workflow-may-authorize")

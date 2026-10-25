@@ -12,7 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 import workflow_control as control
 import workflow_events as events
 
-REPO = 'lightning-it/.github'
+REPO = 'ltn-it/.github'
 BASE, HEAD, SOURCE = 'a' * 40, 'b' * 40, 'c' * 40
 
 
@@ -117,7 +117,7 @@ def delivery(**changes):
 
 
 class NativeAPIReadTests(unittest.TestCase):
-    PATH = 'repos/lightning-it/private-example/pulls/791?private=value'
+    PATH = 'repos/ltn-it/private-example/pulls/791?private=value'
 
     @staticmethod
     def response(status=0, stdout=b'{}', stderr=b''):
@@ -289,7 +289,57 @@ class NativeAPIReadTests(unittest.TestCase):
             command.assert_called_once()
 
 
+class NativeGenerationReaderTests(unittest.TestCase):
+    def test_historical_qualified_path_keeps_native_required_url_and_strict_live_source_identity(self):
+        historical = run() | {'path': 'lightning-it/.github/' + control.WORKFLOW + '@' + SOURCE,
+            'repository': {'id': 1112629689, 'full_name': REPO, 'owner': {'id': 54334171}}}
+        self.assertTrue(control.native_required(historical, REPO))
+        for change in ({'workflow_id': True}, {'workflow_url': 'https://api.github.com/repos/foreign/.github/actions/required_workflows/77'},
+                       {'workflow_url': f'https://api.github.com/repos/{REPO}/actions/workflows/77'},
+                       {'path': 'foreign/.github/' + control.WORKFLOW + '@' + SOURCE}):
+            with self.subTest(change=change):
+                self.assertFalse(control.native_required(historical | change, REPO))
+        with self.assertRaisesRegex(control.ControlError, 'untrusted-source-repository'):
+            control.source_identity({'workflow_repository': 'lightning-it/.github',
+                'workflow_file_path': control.WORKFLOW, 'workflow_sha': SOURCE, 'check_run_id': 5})
+
+    def test_shared_reader_keeps_final_selector_read_only_and_last(self):
+        value, observed, api, cache = pull(), run() | {'status': 'completed', 'conclusion': 'success'}, Mock(), {}
+        api.call.return_value = observed
+        with patch.object(control, 'ingress_candidates', return_value=[observed]) as select:
+            control.revalidate_native_generation(api, REPO, value, [SOURCE], observed, cache)
+        self.assertEqual(2, select.call_count)
+        self.assertIs(cache, select.call_args.args[5])
+        self.assertFalse(select.call_args.kwargs['read_operations'])
+        self.assertEqual('pages', api.method_calls[-1][0])
+
+    def test_shared_reader_rejects_changed_attempt_generation_and_unknown_final_binding(self):
+        observed = run() | {'status': 'completed', 'conclusion': 'success'}
+        for defect in ('attempt', 'generation', 'unknown-binding'):
+            api = Mock()
+            latest = observed | ({'run_attempt': 2, 'status': 'in_progress', 'conclusion': None}
+                                 if defect == 'attempt' else {'id': 11})
+            api.call.return_value = latest if defect == 'attempt' else observed
+            final = control.ControlError('ingress-final-operation-unbound') if defect == 'unknown-binding' else [latest]
+            with self.subTest(defect=defect), patch.object(control, 'ingress_candidates', side_effect=[[observed], final]), \
+                    self.assertRaises(control.ControlError):
+                control.revalidate_native_generation(api, REPO, pull(), [SOURCE], observed, {})
+
+    def test_shared_reader_retains_merged_pull_lifecycle_refresh(self):
+        value = pull(merged=True, merged_at='original', merge_commit_sha='d' * 40, state='closed')
+        observed, api = run() | {'status': 'completed', 'conclusion': 'failure'}, Mock()
+        api.call.return_value = value | {'merged_at': 'changed'}
+        with patch.object(control, 'ingress_candidates', return_value=[observed]), \
+                self.assertRaisesRegex(control.ControlError, 'ingress-referenced-pull-changed'):
+            control.revalidate_native_generation(api, REPO, value, [SOURCE], observed, {})
+
+
 class ControlTests(unittest.TestCase):
+    def setUp(self):
+        guard = patch.object(control, "current_repository", return_value=1112629689)
+        guard.start()
+        self.addCleanup(guard.stop)
+
     def test_new_source_retains_current_native_ingress_without_consumer_self_admission(self):
         current = '5b72a68a352bd926620b0487b867f80bba774a2f'
         value = {'version': 1, 'repository': REPO, 'mode': 'reference',
@@ -433,7 +483,7 @@ class ControlTests(unittest.TestCase):
         self.assertNotIn('pull_request_review_comment', triggers)
         self.assertNotIn('issue_comment', triggers)
         self.assertEqual(['Repository review events'], triggers['workflow_run']['workflows'])
-        self.assertIn("github.repository != 'lightning-it/.github'", receiver['jobs']['prepare']['if'])
+        self.assertIn("github.repository != 'ltn-it/.github'", receiver['jobs']['prepare']['if'])
         self.assertIn("Repository policy audit", receiver['jobs']['prepare']['if'])
         quality = yaml.safe_load((root / '.github/workflows/repository-quality.yml').read_text())
         prepare = quality['jobs']['prepare']
@@ -446,7 +496,7 @@ class ControlTests(unittest.TestCase):
         self.assertEqual("steps.signal.outputs.current == 'true'", app['if'])
         self.assertEqual('github-management-lit', app['with']['repositories'])
         checkout = next(step for step in receiver['jobs']['refresh']['steps'] if 'uses' in step)
-        self.assertEqual('bfb1e53be7ab05102aa3ea53c5ed3c468d1a593b', checkout['with']['ref'])
+        self.assertEqual('34d4923dce25d60151738d2b7848ca72fe268a7f', checkout['with']['ref'])
         self.assertFalse(checkout['with']['persist-credentials'])
         self.assertNotIn('${{', str(checkout['with']['ref']))
 
@@ -518,7 +568,9 @@ class ControlTests(unittest.TestCase):
 
     def test_observed_cloud_context_exists_but_does_not_authorize_a_candidate(self):
         fixture = json.loads((Path(__file__).parent / 'fixtures/native-job-pr871.json').read_bytes())
-        self.assertEqual('6532da1b9eadc0ccd56af2fd2646c6138d8d5c1f', control.source_identity(fixture))
+        self.assertEqual('lightning-it/.github', fixture['workflow_repository'])
+        with self.assertRaisesRegex(control.ControlError, 'untrusted-source-repository'):
+            control.source_identity(fixture)
         candidate = run() | {'workflow_url': f'https://api.github.com/repos/{REPO}/actions/workflows/77'}
         self.assertFalse(control.native_required(candidate, REPO))
 
@@ -1120,11 +1172,12 @@ class ControlTests(unittest.TestCase):
 
     def test_distribution_requires_full_native_changed_file_count(self):
         value = pull(control.SYNC)
-        value['body'] = '<!-- lit-distribution/v1 ' + json.dumps({'source': 'lightning-it/shared-assets-lit',
+        value['body'] = '<!-- lit-distribution/v1 ' + json.dumps({'source': 'ltn-it/shared-assets-lit',
                       'source_sha': SOURCE, 'run': 20, 'files': []}) + ' -->'
         value['changed_files'] = 3001
         api = Mock(); api.call.return_value = {'id': 20, 'head_sha': SOURCE, 'head_branch': 'main',
-                    'status': 'completed', 'conclusion': 'success', 'path': '.github/workflows/sync-repository-quality-repos.yml'}
+                    'status': 'completed', 'conclusion': 'success', 'path': '.github/workflows/sync-repository-quality-repos.yml',
+                    'repository': {'id': 1120841013}, 'head_repository': {'id': 1120841013}}
         api.pages.return_value = [{'filename': f'file-{i}', 'status': 'modified'} for i in range(3000)]
         with self.assertRaisesRegex(control.ControlError, 'distribution-native-file-list-incomplete'):
             control.distribution_evidence(api, REPO, value, {'distribution_sources': [SOURCE]})
@@ -1232,7 +1285,7 @@ class ControlTests(unittest.TestCase):
 
     def test_native_nonzero_findings_keep_prose_coverage_separate_from_container(self):
         findings = ('<details open>\n<summary><strong>1 open finding</strong></summary>\n\n'
-                    '- [Correct the parser](https://github.com/lightning-it/.github/pull/3#discussion_r123) · New\n'
+                    '- [Correct the parser](https://github.com/ltn-it/.github/pull/3#discussion_r123) · New\n'
                     '</details>')
         comment = {'id': 123, 'pull_request_review_id': 9, 'original_commit_id': HEAD,
                    'user': native_review()['user'], 'body': 'Correct the parser.'}
@@ -1252,7 +1305,7 @@ class ControlTests(unittest.TestCase):
 
     def test_native_issue_findings_bind_actual_threads_and_full_file_coverage(self):
         findings = ('<details open>\n<summary><strong>1 open issue</strong></summary>\n\n'
-                    '- [Correct the parser](https://github.com/lightning-it/.github/pull/3#discussion_r123) · New\n'
+                    '- [Correct the parser](https://github.com/ltn-it/.github/pull/3#discussion_r123) · New\n'
                     '</details>')
         comment = {'id': 123, 'pull_request_review_id': 9, 'original_commit_id': HEAD,
                    'user': native_review()['user'], 'body': 'Correct the parser.'}

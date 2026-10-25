@@ -1,5 +1,6 @@
 """Permanent CAS survives run/artifact expiry and ambiguous responses."""
 import copy
+import hashlib
 from datetime import timedelta
 from pathlib import Path
 import sys
@@ -11,7 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 import release_archive_reservation as reservation
 from workflow_control import ControlError, digest
 
-REPO = "lightning-it/archive-fixture"
+REPO = "ltn-it/archive-fixture"
 SUBJECT = {"version": 1, "repository_id": 21, "promotion": 22, "head_sha": "a" * 40, "target": "main"}
 AUTHORITY = {"run": 23, "attempt": 1, "management_sha": "b" * 40, "workflow_blob": "c" * 40, "helper_sha": "d" * 40}
 
@@ -59,6 +60,54 @@ class FakeGit:
 
 
 class ReservationTests(unittest.TestCase):
+    def test_cross_rename_restore_uses_old_key_with_and_without_receipt(self):
+        repository = "ltn-it/github-management-lit"
+        subject = SUBJECT | {"repository_id": 1273655215}
+        authority = AUTHORITY | {"helper_sha": reservation.LEGACY_STORAGE_HELPER}
+        for with_receipt in (False, True):
+            api, cloud = FakeGit(), FakeStore()
+            api.repository_id = subject["repository_id"]
+            original_request = api.request
+            def request(method, path, data=None):
+                status, result = original_request(method, path.replace(repository, REPO), data)
+                result = copy.deepcopy(result)
+                if path == "repos/" + repository:
+                    result.update(full_name=repository, owner={"id": 54334171, "login": "ltn-it"})
+                if path.endswith("/rulesets/25"):
+                    result["source"] = repository
+                return status, result
+            api.request = request
+            claims = reservation.Reservations(api, repository, 25)
+            record, _ = claims.claim(subject, hashlib.sha256(PACKAGE).hexdigest(),
+                                     len(PACKAGE), authority)
+            # Build an unchanged pre-migration claim, with no namespace field.
+            del record["storage_repository"]
+            api.refs.clear()
+            claims.create(record["operation"], "reservation", record)
+            storage_receipt = STORAGE.archive(cloud, PACKAGE, repository="lightning-it/github-management-lit",
+                promotion=subject["promotion"], head=subject["head_sha"],
+                expected_digest=record["package_sha256"], reservation=record["reservation"],
+                operation="create", now=NOW)
+            if with_receipt:
+                claims.finish(record, storage_receipt)
+            old_claim = copy.deepcopy(claims.read(record["operation"], "reservation"))
+            cloud.calls.clear()
+            build = Mock(side_effect=AssertionError("historical producer must not be rebuilt"))
+            package, receipt, mode = reservation.deliver(claims, STORAGE, cloud, subject,
+                                                        AUTHORITY, build, Mock(), NOW)
+            self.assertEqual((PACKAGE, "verify-existing"), (package, mode))
+            self.assertEqual(old_claim, claims.read(record["operation"], "reservation"))
+            self.assertEqual("lightning-it/github-management-lit", receipt["storage"]["repository"])
+            self.assertTrue(all("/lightning-it/github-management-lit/" in c[2] for c in cloud.calls))
+            self.assertTrue(all(c[1] in {"GET", "HEAD"} for c in cloud.calls))
+            self.assertEqual(with_receipt, all(c[3]["query"] and c[3]["query"].get("versionId")
+                                             for c in cloud.calls))
+            for change in ({"authority": authority | {"helper_sha": "f" * 40}},
+                           {"subject": subject | {"repository_id": 1}},
+                           {"storage_repository": "lightning-it/other"}):
+                with self.subTest(change=change), self.assertRaises(ControlError):
+                    claims.storage_repository(record | change)
+
     def setUp(self):
         self.api = FakeGit()
         self.store = reservation.Reservations(self.api, REPO, 25)
@@ -256,7 +305,7 @@ class ReservationTests(unittest.TestCase):
         record = self.store.read(first["operation"], "reservation")
         extended = first["storage"] | {"retain_until": (cloud.until + timedelta(days=365)).isoformat()}
         for field, value in (("version_id", "replacement"), ("package_sha256", "f" * 64),
-                             ("key", "different-key"), ("repository", "lightning-it/other"),
+                             ("key", "different-key"), ("repository", "ltn-it/other"),
                              ("promotion", 99), ("head_sha", "f" * 40),
                              ("retention_mode", "GOVERNANCE"), ("release_authorized", True)):
             with self.subTest(field=field), self.assertRaises(ControlError):

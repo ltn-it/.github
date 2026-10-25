@@ -311,6 +311,12 @@ class DevtoolsBootstrapTests(unittest.TestCase):
                         "NATIVE_BASE": self.base, "NATIVE_JOB": json.dumps({"workflow_repository": control.SOURCE,
                             "workflow_file_path": control.WORKFLOW, "workflow_sha": SOURCE, "check_run_id": 1})})
                 return self.policy()
+            if route == "quality":
+                # The initial descriptor remains a historical old-namespace
+                # contract; it cannot admit a renamed current consumer.
+                with self.assertRaisesRegex(control.ControlError, "common-quality-consumer"):
+                    validate()
+                continue
             validate()
             for defect, path, replacement in (
                     ("old-eighteen", "README.md", ("100644", record["before"]["blob"])),
@@ -328,16 +334,16 @@ class DevtoolsBootstrapTests(unittest.TestCase):
                     validate()
         self.pull, self.head_tree = original_pull, original_tree
 
-    def test_real_common_quality_prepare_validates_delta_before_base_metadata(self):
+    def test_historical_bootstrap_cannot_admit_current_common_quality(self):
         self.api.file.side_effect = None
         self.api.file.return_value = b"schema_version: 1\nrepository: container-ee-wunder-devtools-ubi9\nrepository_type: container_image\n"
         env = {"GITHUB_REPOSITORY": self.repository, "GITHUB_RUN_ID": "10", "NATIVE_PULL_NUMBER": "3",
                "NATIVE_HEAD": HEAD, "NATIVE_BASE": self.base,
                "NATIVE_JOB": json.dumps({"workflow_repository": control.SOURCE,
                     "workflow_file_path": control.WORKFLOW, "workflow_sha": SOURCE, "check_run_id": 1})}
-        result = quality.prepare(self.api, env)
-        self.assertEqual("container_image", result["repository_type"])
-        self.api.file.assert_called_once_with(self.repository, ".lit/repository.yml", self.base)
+        with self.assertRaisesRegex(control.ControlError, "common-quality-consumer"):
+            quality.prepare(self.api, env)
+        self.api.file.assert_not_called()
 
     def test_extra_missing_foreign_policy_mode_and_inventory_all_fail_before_effects(self):
         original = copy.deepcopy(self.head_tree)

@@ -95,7 +95,7 @@ def registry():
         require(type(entry["id"]) is str and re.fullmatch(r"[a-z0-9][a-z0-9-]{2,95}", entry["id"])
                 and entry["id"] not in identifiers, "security-producer-binding-duplicate")
         identifiers.add(entry["id"])
-        require(re.fullmatch(r"lightning-it/[A-Za-z0-9_.-]+", entry["repository"])
+        require(re.fullmatch(r"ltn-it/[A-Za-z0-9_.-]+", entry["repository"])
                 and integer(entry["repository_id"]) and entry["kind"] in {"intake", "preparation"},
                 "security-producer-target")
         sha(entry["source_sha"]); sha(entry["workflow_blob"])

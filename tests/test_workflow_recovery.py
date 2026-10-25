@@ -12,7 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 import workflow_control as control
 import workflow_recovery as recovery
 
-REPO = 'lightning-it/private-example'
+REPO = 'ltn-it/private-example'
 SOURCE = 'a' * 40
 PRIOR = 'b815cefb4a5f18cd97b3947c789b6db59fedf991'
 

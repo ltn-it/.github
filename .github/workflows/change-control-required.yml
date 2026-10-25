@@ -36,7 +36,7 @@ jobs:
           python3 - <<'PY'
           import json, os, re
           job = json.loads(os.environ['NATIVE_JOB'])
-          assert job['workflow_repository'] == 'lightning-it/.github'
+          assert job['workflow_repository'] == 'ltn-it/.github'
           assert job['workflow_file_path'] == '.github/workflows/change-control-required.yml'
           assert re.fullmatch('[0-9a-f]{40}', job['workflow_sha'])
           with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
@@ -45,7 +45,7 @@ jobs:
       - name: Load immutable common source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          repository: lightning-it/.github
+          repository: ltn-it/.github
           ref: ${{ steps.source.outputs.sha }}
           path: common-source
           persist-credentials: false
@@ -101,7 +101,7 @@ jobs:
           python3 - <<'PY'
           import json, os, re
           job = json.loads(os.environ['NATIVE_JOB'])
-          assert job['workflow_repository'] == 'lightning-it/.github'
+          assert job['workflow_repository'] == 'ltn-it/.github'
           assert job['workflow_file_path'] == '.github/workflows/change-control-required.yml'
           assert re.fullmatch('[0-9a-f]{40}', job['workflow_sha'])
           with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
@@ -110,7 +110,7 @@ jobs:
       - name: Load immutable common source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          repository: lightning-it/.github
+          repository: ltn-it/.github
           ref: ${{ steps.source.outputs.sha }}
           persist-credentials: false
       - name: Classify protected current revision
@@ -264,7 +264,7 @@ jobs:
           python3 - <<'PY'
           import json, os, re
           job = json.loads(os.environ['NATIVE_JOB'])
-          assert job['workflow_repository'] == 'lightning-it/.github'
+          assert job['workflow_repository'] == 'ltn-it/.github'
           assert job['workflow_file_path'] == '.github/workflows/change-control-required.yml'
           assert re.fullmatch('[0-9a-f]{40}', job['workflow_sha'])
           with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
@@ -273,7 +273,7 @@ jobs:
       - name: Load immutable common source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          repository: lightning-it/.github
+          repository: ltn-it/.github
           ref: ${{ steps.source.outputs.sha }}
           persist-credentials: false
       - name: Enforce native review and quality on the still-current tuple

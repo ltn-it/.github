@@ -11,7 +11,7 @@ from unittest.mock import Mock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 import workflow_archive as archive
-from workflow_control import ControlError, digest
+from workflow_control import ControlError, binding, canonical, digest
 from test_release_package_ingress import fixtures, REPO, HEAD, POLICY
 
 
@@ -115,6 +115,51 @@ class ArchiveReviewTests(unittest.TestCase):
             with self.assertRaisesRegex(ControlError, "package-native-attempt"):
                 self.assemble_verifier_rerun(destination)
             self.assertEqual([], list(Path(directory).iterdir()))
+
+        self.download.assert_not_called()
+
+    def historical_assembly(self, destination, *, defect=None):
+        promotion, _, _, control_job, pull = fixtures()
+        identity = {"full_name": REPO, "id": 1112629689,
+                    "owner": {"id": 54334171, "login": "ltn-it"},
+                    "archived": False, "disabled": False}
+        pull.update(state="closed", draft=False, title="original", body="original", labels=[],
+                    user={"login": "litroc", "id": 76040632, "type": "User"})
+        pull["base"].update(sha="b" * 40, repo=copy.deepcopy(identity))
+        pull["head"].update(ref="original-feature", repo=copy.deepcopy(identity))
+        self.proof["binding"] = binding(pull) | {"head_repository": "lightning-it/.github"}
+        self.proof["evidence"]["producer"]["repository"] = "lightning-it/.github"
+        if defect == "producer": self.proof["evidence"]["producer"]["repository"] = "foreign/.github"
+        elif defect == "fork": pull["head"]["repo"]["id"] = 1
+        elif defect == "open": pull.update(state="open", merged=False)
+        elif defect == "owner": identity["owner"]["id"] = 1
+        elif defect == "binding": self.proof["binding"]["base"] = "f" * 40
+        promotion["evidence"]["ingress"][0]["control"]["proof_sha256"] = digest(self.proof)
+        original = canonical(self.proof)
+        self.api.call.side_effect = lambda path: (
+            self.run if "/attempts/" in path else identity if path == "repos/" + REPO else pull)
+        self.api.pages.side_effect = lambda path, *args: (
+            [control_job, self.job] if "/attempts/2/jobs" in path else [self.job] if "/jobs" in path else [])
+        with patch.object(archive.ingress, "artifact_record", return_value=self.proof):
+            result = archive.assemble(self.api, REPO, promotion, digest(promotion), destination)
+        self.assertEqual(original, canonical(self.proof))
+        return result
+
+    def test_assembly_preserves_historical_codex_producer_and_proof_bytes_after_authenticated_rename(self):
+        with tempfile.TemporaryDirectory() as directory:
+            destination = Path(directory) / "ingress.json"
+            self.historical_assembly(destination)
+            record = json.loads(destination.read_bytes())["ingress"][0]
+        self.assertEqual("lightning-it/.github", record["review"]["producer"]["repository"])
+        self.assertEqual("lightning-it/.github", record["proof"]["binding"]["head_repository"])
+        self.assertEqual(digest(record["proof"]), record["reference"]["control"]["proof_sha256"])
+
+    def test_historical_codex_archive_rejects_foreign_fork_open_owner_and_binding_drift(self):
+        for defect in ("producer", "fork", "open", "owner", "binding"):
+            with self.subTest(defect=defect), tempfile.TemporaryDirectory() as directory:
+                with self.assertRaises(ControlError):
+                    self.historical_assembly(Path(directory) / "ingress.json", defect=defect)
+                self.assertEqual([], list(Path(directory).iterdir()))
         self.download.assert_not_called()
 
     def test_expired_receipt_never_becomes_new_provider_or_storage_write(self):

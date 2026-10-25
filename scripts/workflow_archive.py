@@ -9,7 +9,7 @@ import base64
 import hashlib
 
 import release_package_ingress as ingress
-from workflow_control import digest, native_jobs, native_required, require
+from workflow_control import digest, historical_binding_matches, native_jobs, native_required, require
 import workflow_codex
 
 
@@ -17,7 +17,13 @@ def codex_review(api, repository, reference, proof):
     evidence = proof["evidence"]
     producer = evidence.get("producer", {})
     control = reference["control"]
-    require(producer.get("repository") == repository and producer.get("pull_request") == reference["pull"]
+    producer_repository = producer.get("repository")
+    if producer_repository != repository:
+        pull = api.call(f"repos/{repository}/pulls/{reference['pull']}")
+        require(producer_repository == proof.get("binding", {}).get("head_repository")
+                and historical_binding_matches(api, repository, pull, proof.get("binding")),
+                "archive-codex-producer-binding")
+    require(producer.get("pull_request") == reference["pull"]
             and producer.get("run") == control["run"] and ingress.positive(producer.get("attempt"))
             and producer["attempt"] <= control["attempt"]
             and ingress.positive(producer.get("job")), "archive-codex-producer-binding")
