@@ -11,6 +11,7 @@ import re
 import ssl
 import time
 from datetime import datetime, timezone
+from dataclasses import asdict
 
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
@@ -155,6 +156,14 @@ class NativeReviewIssuer:
         self.clock, self.keys = clock, keys
 
     def issue(self):
+        return self._authenticated()[0]
+
+    def evidence(self, authorization):
+        observed, evidence = self._authenticated()
+        require(type(authorization) is Authorization and observed == authorization, "issuer-evidence-drift")
+        return evidence
+
+    def _authenticated(self):
         try:
             return self._issue()
         except Exception:
@@ -245,8 +254,14 @@ class NativeReviewIssuer:
         # or asking GitHub for another token cannot allocate another write slot.
         operation_id = digest(json_bytes({"protocol": "native-review-publisher/v1", "repository": ROOT_ID,
             "run": run_id, "attempt": attempt, "job": job_id, "pull": self.number, "operation": "review.create"}))
-        return Authorization(operation_id, "review.create", self.number, None, "pull", self.payload_hash,
+        auth = Authorization(operation_id, "review.create", self.number, None, "pull", self.payload_hash,
                              self.policy_hash, self.inventory_hash, facts)
+        evidence = {"repository_id": ROOT_ID, "origin_producer_id": facts.origin_producer_id,
+                    "publisher_actor_id": facts.publisher_actor_id, "origin_source": facts.origin_source,
+                    "head_sha": facts.head_sha, "generation": generation, "run_id": run_id,
+                    "run_attempt": attempt, "job_id": job_id, "authorization_sha256": digest(json_bytes(asdict(auth))),
+                    "native_evidence_sha256": generation, "before_fields": {}, "provider_response_sha256": None}
+        return auth, evidence
 
     def attest(self, authorization):
         require(type(authorization) is Authorization and self.issue() == authorization, "issuer-authorization-drift")

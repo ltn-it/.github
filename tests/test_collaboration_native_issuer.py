@@ -168,6 +168,18 @@ class NativeIssuerTests(unittest.TestCase):
         self.assertEqual(f"repos/{issuer.ROOT}/actions/runs?head_sha={self.head}", self.calls[-1])
         self.assertEqual(auth.facts, self.service.attest(auth))
 
+    def test_private_evidence_descriptor_is_rederived_from_actual_native_reads(self):
+        auth = self.service.issue()
+        proof = self.service.evidence(auth)
+        self.assertEqual((200, 1, 300), (proof["run_id"], proof["run_attempt"], proof["job_id"]))
+        self.assertEqual(auth.facts.generation, proof["native_evidence_sha256"])
+        self.assertEqual({}, proof["before_fields"])
+        self.assertIsNone(proof["provider_response_sha256"])
+        self.assertNotIn(self.service.token, str(proof))
+        self.new_generation_on_final_list = True
+        with self.assertRaises(AdmissionError):
+            self.service.evidence(auth)
+
     def test_real_signature_is_required_not_merely_decoded_claims(self):
         for header in ({"alg": "none", "typ": "JWT", "kid": "offline-key"},
                        {"alg": "RS256", "typ": "JWT", "kid": "offline-key", "jku": "https://other.example"},
