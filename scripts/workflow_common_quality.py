@@ -31,7 +31,7 @@ def metadata(raw, repository):
 
 def prepare(api, env):
     repository = env["GITHUB_REPOSITORY"]
-    require(re.fullmatch(r"lightning-it/[A-Za-z0-9_.-]+", repository), "common-quality-consumer")
+    require(re.fullmatch(r"ltn-it/[A-Za-z0-9_.-]+", repository), "common-quality-consumer")
     source = source_identity(json.loads(env["NATIVE_JOB"]))
     run = api.call(f"repos/{repository}/actions/runs/{env['GITHUB_RUN_ID']}")
     require(native_required(run, repository), "common-quality-native-required-origin")

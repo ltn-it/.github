@@ -12,9 +12,9 @@ from unittest.mock import Mock, patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 import workflow_promotion_event as event
 
-REPO = "lightning-it/shared-assets-lit"
+REPO = "ltn-it/shared-assets-lit"
 IDENTIFIER = 1120841013
-SUPPLEMENTARY = "lightning-it/ansible-collection-supplementary"
+SUPPLEMENTARY = "ltn-it/ansible-collection-supplementary"
 HEAD, BASE, ADAPTER = "a" * 40, "b" * 40, "c" * 40
 
 # Anonymized historical API form only; no future D1 or native acceptance.
@@ -25,7 +25,7 @@ SUPPLEMENTARY_SHAPE = {'description': 'Anonymized API shape from public Collecti
          'workflow_id': 214182490,
          'name': 'Collection CI',
          'path': '.github/workflows/collection-ci.yml',
-         'workflow_url': 'https://api.github.com/repos/lightning-it/ansible-collection-supplementary/actions/workflows/214182490',
+         'workflow_url': 'https://api.github.com/repos/ltn-it/ansible-collection-supplementary/actions/workflows/214182490',
          'event': 'push',
          'head_branch': 'develop',
          'run_attempt': 1,
@@ -197,7 +197,7 @@ class PromotionEventTests(unittest.TestCase):
         registry = json.loads((Path(__file__).resolve().parents[1] / ".lit/promotion-event-targets.json").read_bytes())
         malformed = [registry | {"version": True}, registry | {"targets": registry["targets"][:1]},
                      registry | {"targets": [registry["targets"][0]] * 2}]
-        for change in ({"repository": "lightning-it/ansible-collection-ubuntu"}, {"repository_id": 42},
+        for change in ({"repository": "ltn-it/ansible-collection-ubuntu"}, {"repository_id": 42},
                        {"private": True}, {"private": 0}, {"workflow_id": 214182490.0}, {"workflow_id": 7}, {"scope": "fleet"},
                        {"source_sha": HEAD}, {"workflow": ".github/workflows/release-prepare.yml"},
                        {"job": "Collection / Build and Install"}, {"extra": "authority"}):
@@ -300,7 +300,7 @@ class PromotionEventTests(unittest.TestCase):
                 self.assertEqual(0 if outcome in {"stale", "proof-failed"} else 1, len(calls), result.stderr)
                 self.assertEqual(outcome in {"current", "stale"}, result.returncode == 0, result.stderr)
                 if calls:
-                    self.assertEqual("api --method POST repos/lightning-it/github-management-lit/actions/workflows/terraform-github-management.yml/dispatches --input promotion-dispatch.json", calls[0])
+                    self.assertEqual("api --method POST repos/ltn-it/github-management-lit/actions/workflows/terraform-github-management.yml/dispatches --input promotion-dispatch.json", calls[0])
                     self.assertEqual({"ref": "main", "inputs": {"operation": "native-promotion-prepare",
                         "repository": "ansible-collection-supplementary", "policy_group": "repository_quality",
                         "runtime_develop_sha": HEAD}}, json.loads((root / "promotion-dispatch.json").read_bytes()))

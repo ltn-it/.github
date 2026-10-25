@@ -14,11 +14,11 @@ DELIVERY = ".github/workflows/delivery-operations.yml"
 
 def target(repository):
     profiles = {
-        "lightning-it/shared-assets-lit": {
+        "ltn-it/shared-assets-lit": {
             "repository_id": 1120841013, "scope": "shared-assets", "private": True,
             "workflow_id": 307348847, "workflow": ".github/workflows/repository-quality.yml",
             "workflow_name": "Repository policy audit", "job": "Release policy audit artifact"},
-        "lightning-it/ansible-collection-supplementary": {
+        "ltn-it/ansible-collection-supplementary": {
             "repository_id": 1103407173, "scope": "collection-supplementary", "private": False,
             "workflow_id": 214182490, "workflow": ".github/workflows/collection-ci.yml",
             "workflow_name": "Collection CI", "job": "Collection / Fast"},
@@ -34,7 +34,7 @@ def target(repository):
                 and entry["repository"] in profiles and entry["repository"] not in entries,
                 "promotion-event-target-identity")
         expected = profiles[entry["repository"]] | {
-            "repository": entry["repository"], "source_sha": "bb1a5df9f54c5f98547048297e7e367cc382543e"}
+            "repository": entry["repository"], "source_sha": "530b8fb175b7fccf238b03aab652bd5ee2ad2a41"}
         require(entry == expected and type(entry.get("private")) is bool
                 and type(entry.get("repository_id")) is int and type(entry.get("workflow_id")) is int,
                 "promotion-event-target-identity")

@@ -14,7 +14,7 @@ class FundingTests(unittest.TestCase):
         run = {'created_at': '2026-10-15T08:00:01Z'}
         event = {'action': 'opened', 'pull_request': {'head': pull['head']}}
         api = Mock()
-        self.assertTrue(funding.finalized(api, 'lightning-it/.github', pull, run, event))
+        self.assertTrue(funding.finalized(api, 'ltn-it/.github', pull, run, event))
         api.pages.assert_not_called()
         event['action'] = 'synchronize'
         ready = {'event': 'ready_for_review', 'actor': {'type': 'User'}}
@@ -22,7 +22,7 @@ class FundingTests(unittest.TestCase):
                                     ('2026-10-15T08:00:02Z', True)):
             api.pages.return_value = [ready | {'created_at': timestamp}]
             with self.subTest(timestamp=timestamp):
-                self.assertEqual(expected, funding.finalized(api, 'lightning-it/.github', pull, run, event))
+                self.assertEqual(expected, funding.finalized(api, 'ltn-it/.github', pull, run, event))
 
 
 if __name__ == '__main__':

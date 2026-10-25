@@ -5,9 +5,9 @@ import re
 from datetime import datetime, timedelta
 
 from workflow_control import (
-    binding,
     digest,
     identity,
+    historical_binding_matches,
     native_jobs,
     native_required,
     operation_record,
@@ -134,7 +134,8 @@ def merged_attempt(api, repo, pull, latest):
             require(instant(attempt.get("updated_at")) < merged and ignored,
                     "ingress-success-not-before-merge")
             operation = operation_record(api, repo, attempt)
-            require(operation.get("binding") == binding(pull), "ingress-current-metadata-drift")
+            require(historical_binding_matches(api, repo, pull, operation.get("binding")),
+                    "ingress-current-metadata-drift")
             accepted = digest(operation)
             require(all(item == accepted for item in operations),
                     "ingress-metadata-changed-before-merge")
