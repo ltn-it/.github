@@ -6,10 +6,12 @@ import unittest
 from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
+from unittest.mock import Mock, patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 import collaboration_content as content
+import collaboration_https as https
 import collaboration_publisher as publisher
 import collaboration_review_result as adapter
 import exact_revision_gateway as gateway
@@ -58,12 +60,29 @@ class ReviewPipelineTests(unittest.TestCase):
         self.calls.append((method, url, wire))
         return publisher.TransportResult(201, 123)
 
-    def service(self, attest=None):
+    def service(self, attest=None, sender=None):
         return publisher.Publisher(admitted_bindings={(42, 84): "a" * 40},
                                    attest=attest or self.attest, ledger=self.ledger,
                                    serialize=self.ledger.serialize,
-                                   transport=publisher.BoundedTransport(self.sender, publisher_actor_id=84),
+                                   transport=publisher.BoundedTransport(sender or self.sender,
+                                                                        publisher_actor_id=84),
                                    clock=lambda: self.now)
+
+    def test_actual_https_unknown_outcome_consumes_private_ledger_without_second_request(self):
+        wire = self.prepare()
+        auth = self.authorization(wire)
+        connection = Mock()
+        connection.getresponse.side_effect = TimeoutError("untrusted private diagnostic")
+        sender = https.HTTPSOnceSender(lambda: "github_test_credential_for_offline_use_only")
+        with patch.object(https.http.client, "HTTPSConnection", return_value=connection):
+            service = self.service(sender=sender)
+            receipt = service.publish(auth, wire, self.inventory, self.policy)
+            self.assertEqual("unknown-readback-required", receipt["disposition"])
+            self.assertNotIn("private diagnostic", str(receipt))
+            self.assertIs(wire, connection.request.call_args.kwargs["body"])
+            with self.assertRaises(content.AdmissionError):
+                service.publish(auth, wire, self.inventory, self.policy)
+            connection.request.assert_called_once()
 
     def test_final_model_finding_bytes_reach_only_fixed_review_endpoint_once(self):
         wire = self.prepare()

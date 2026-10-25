@@ -128,6 +128,24 @@ ambiguous result stays unknown. Reconstruction never invokes the sender and
 never frees a reservation. Normal confirmed writes also require authoritative
 readback during real integration.
 
+`collaboration_https.HTTPSOnceSender` implements the concrete HTTPS part behind
+`BoundedTransport`. It opens one standard verified TLS connection to the fixed
+GitHub host, preserves the supplied request bytes, admits only the declared
+Root method/path pairs, and follows neither redirects nor HTTP retries.
+Requests are bounded at 256 KiB; responses at 1 MiB. Non-success, malformed or
+duplicate response fields, invalid IDs and connection/read failures yield only
+an unknown result. No raw exception, token or response body is returned. The
+credential callback is private trusted broker code; it is never sent to the
+validator or selected by a producer. No environment token lookup, proxy,
+caller-selected CA or alternate URL is supported.
+
+This adapter is not a running credential boundary. Its offline tests replace
+the connection at the socket boundary and exercise the actual sender through
+`BoundedTransport`; they do not contact GitHub or prove installation identity,
+permissions, broker process separation, network confinement or a live effect.
+Deployment must still bind the real credential to the independently admitted
+publisher actor and deny alternate credential access and outbound writes.
+
 ## Required boundaries outside this component
 
 - Independently admitted issuer, signed/otherwise authenticated authorization,
