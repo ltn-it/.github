@@ -11,6 +11,31 @@ consumers. Entries describe behavior, compatibility and upgrade implications;
 the raw commit log is not a substitute. Documentation candidates and unmerged
 branches are not released source revisions.
 
+## 25 October 2026 — organization identity and native evidence compatibility
+
+Protected Main revision:
+[`e4df45c87b6ea2d32124d13dc1cc9863f317dca5`](https://github.com/ltn-it/.github/commit/e4df45c87b6ea2d32124d13dc1cc9863f317dca5)
+
+Immutable control runtime:
+[`530b8fb175b7fccf238b03aab652bd5ee2ad2a41`](https://github.com/ltn-it/.github/commit/530b8fb175b7fccf238b03aab652bd5ee2ad2a41)
+
+- Adopt the current organization identity in the common delivery source while
+  retaining authenticated historical ingress and archive provenance. Historical
+  compatibility does not authorize an arbitrary repository alias or rewrite an
+  original proof.
+- Share the final native workflow-generation revalidation through one reader.
+  A consumer must still authenticate its own operation, approvals and applicable
+  native evidence; a prior successful generation is not current acceptance.
+- Preserve known historical qualified workflow paths without relaxing live
+  source identity. Repository state must be explicitly known rather than
+  inferred from absent, null or incorrectly typed fields.
+
+Upgrade impact: delivery helpers must retain their exact immutable runtime
+bindings. This Main publication does not itself migrate another repository's
+selected verifier, deploy a publisher guard, establish OpenSSF Passing, or
+accept a Collection candidate or production release. Existing review budgets,
+quality gates, source admission and normal approvals remain applicable.
+
 ## 24 October 2026 — historical ingress after branch reuse
 
 Source revision:
