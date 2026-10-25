@@ -56,12 +56,16 @@ class Facts:
     repository: str
     repository_id: int
     visibility: str
-    producer_id: int
-    producer_source: str
+    origin_producer_id: int
+    origin_source: str
+    publisher_actor_id: int
     head_sha: str
     generation: str
     owner_id: int | None = None
     object_revision: str | None = None
+    object_origin_producer_id: int | None = None
+    object_origin_source: str | None = None
+    object_origin_receipt: str | None = None
 
 
 @dataclass(frozen=True)
@@ -174,11 +178,15 @@ class BoundedTransport:
     sender must disable HTTP retries/redirects and never expose provider bodies.
     This endpoint restriction is not a GitHub permission-bucket guarantee.
     """
-    def __init__(self, sender):
+    def __init__(self, sender, *, publisher_actor_id):
+        require(positive(publisher_actor_id), "publisher-actor")
         self._sender = sender
+        self.publisher_actor_id = publisher_actor_id
 
     def send_once(self, auth, wire):
         method, url, _, _ = route(auth)
+        require(type(auth.facts) is Facts and auth.facts.publisher_actor_id == self.publisher_actor_id,
+                "publisher-actor")
         require(type(wire) is bytes and digest(wire) == auth.payload_sha256, "publisher-final-byte-drift")
         return self._sender(method, url, wire)
 
@@ -240,8 +248,8 @@ class Publisher:
     may be supplied by a contributor. Facts must bind the full operation incl.
     parent/object locators, and attest must recheck the producer's native source.
     """
-    def __init__(self, *, admitted_producers, attest, ledger, serialize, transport, clock=None):
-        self.producers = dict(admitted_producers)
+    def __init__(self, *, admitted_bindings, attest, ledger, serialize, transport, clock=None):
+        self.bindings = dict(admitted_bindings)
         self.attest, self.ledger, self.serialize, self.transport = attest, ledger, serialize, transport
         self.clock = clock or (lambda: datetime.now(timezone.utc))
 
@@ -258,16 +266,24 @@ class Publisher:
         method, url, kind, edit = route(auth)
         facts = auth.facts
         require(type(facts) is Facts and facts.repository == ROOT and facts.repository_id == ROOT_ID
-                and facts.visibility == "public" and positive(facts.producer_id)
-                and fixed_hash(facts.producer_source, 40) and fixed_hash(facts.head_sha, 40)
+                and facts.visibility == "public" and positive(facts.origin_producer_id) and positive(facts.publisher_actor_id)
+                and fixed_hash(facts.origin_source, 40) and fixed_hash(facts.head_sha, 40)
                 and fixed_hash(facts.generation)
-                and self.producers.get(facts.producer_id) == facts.producer_source, "publisher-authority")
+                and self.bindings.get((facts.origin_producer_id, facts.publisher_actor_id)) == facts.origin_source
+                and type(self.transport) is BoundedTransport
+                and self.transport.publisher_actor_id == facts.publisher_actor_id, "publisher-authority")
         require(fixed_hash(auth.operation_id) and fixed_hash(auth.payload_sha256)
                 and auth.policy_sha256 == digest(json_bytes(policy))
                 and auth.inventory_sha256 == digest(json_bytes(inventory)), "publisher-binding")
-        require((positive(facts.owner_id) and facts.owner_id == facts.producer_id
-                 and fixed_hash(facts.object_revision)) if edit
-                else facts.owner_id is None and facts.object_revision is None, "publisher-ownership")
+        require((positive(facts.owner_id) and facts.owner_id == facts.publisher_actor_id
+                 and fixed_hash(facts.object_revision)
+                 and positive(facts.object_origin_producer_id)
+                 and facts.object_origin_producer_id == facts.origin_producer_id
+                 and facts.object_origin_source == facts.origin_source
+                 and fixed_hash(facts.object_origin_receipt)) if edit
+                else all(value is None for value in (facts.owner_id, facts.object_revision,
+                    facts.object_origin_producer_id, facts.object_origin_source, facts.object_origin_receipt)),
+                "publisher-ownership")
         require(type(wire) is bytes and len(wire) <= policy["max_text_bytes"]
                 and digest(wire) == auth.payload_sha256, "publisher-final-byte-drift")
         try:
@@ -290,7 +306,10 @@ class Publisher:
                                             "payload": auth.payload_sha256,
                                             "policy": auth.policy_sha256,
                                             "inventory": auth.inventory_sha256,
-                                            "generation": facts.generation}))
+                                            "generation": facts.generation,
+                                            "origin": facts.origin_producer_id,
+                                            "origin_source": facts.origin_source,
+                                            "publisher": facts.publisher_actor_id}))
             require(self.ledger.claim(auth.operation_id, fingerprint) is True, "publisher-consumed")
             # Recheck after the durable reservation, immediately before the one
             # effect. A failed recheck burns the reservation; never reset it.

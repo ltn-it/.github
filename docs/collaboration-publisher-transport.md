@@ -43,30 +43,47 @@ and [conversation comments](https://docs.github.com/en/rest/issues/comments).
 `Authorization` fixes the operation ID, operation, parent kind, number/object
 locator, canonical final payload hash, policy hash and complete inventory hash.
 Its immutable `Facts` fixes repository name/ID/visibility, independently admitted
-producer numeric ID and source commit, exact head, native generation digest,
-and (for edits) existing object owner and revision digest. The independent
+origin producer numeric ID/source commit, separate actual publisher actor ID,
+exact head, native generation digest,
+and (for edits) existing object owner, revision digest, original origin ID/source
+and authenticated origin/object assignment receipt hash. The independent
 issuer must bind **all** these values to the actual authorized operation and
 budget. These dataclasses are not signed admission or an authentication protocol.
 A producer must never issue its own authorization or facts.
 
 The trusted attestor accepts only that operation descriptor, not content or a
 publishing credential. It must authenticate the current repository, producer,
-source, actual parent and child associations, edit ownership/revision, head and
+source, actual publisher actor, parent and child associations, edit ownership/revision,
+original origin/object assignment evidence, head and
 native generation. It must obtain complete visibility through the authoritative
 inventory adapter; a partial selected installation is insufficient. It must
 check branch resolution for PR creation and actual native run/attempt/job
 bindings rather than trust a contributor's generation string.
+
+Origin producers do not receive GitHub write credentials. The independent
+admission map has `(origin_producer_id, publisher_actor_id)` keys and immutable
+origin source values; a single broker actor can publish for several separately
+admitted origins. The sender is independently fixed to its actual authenticated
+GitHub actor, and a mismatched actor fails before reservation or transport.
+For edits, `owner_id` must equal that publisher actor, while the independently
+retrieved original origin ID/source must match the current origin and a real
+private assignment-receipt hash is mandatory. Broker ownership alone never
+permits one origin to edit another origin's content. Missing assignments and
+origin/source migrations require separate authenticated admission; they are not
+inferred from user text, the broker's object owner, or matching content. The
+attestor must verify the receipt, not merely trust a supplied hash string.
 
 The interface to integrate is:
 
 ```python
 ledger = PrivateLedger(private_owned_directory)
 publisher = Publisher(
-    admitted_producers=independently_accepted_producer_source_map,
+    admitted_bindings=independently_accepted_origin_publisher_source_map,
     attest=authenticated_operation_reader,
     ledger=ledger,
     serialize=ledger.serialize,
-    transport=BoundedTransport(credential_isolated_once_sender),
+    transport=BoundedTransport(credential_isolated_once_sender,
+                               publisher_actor_id=authenticated_github_actor_id),
 )
 receipt = publisher.publish(authorization, canonical_final_utf8_bytes,
                             authoritative_inventory, accepted_policy)

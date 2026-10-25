@@ -36,13 +36,13 @@ class PublisherTests(unittest.TestCase):
                           "started_at": "2026-10-25T11:59:59Z", "finished_at": "2026-10-25T12:00:00Z",
                           "repositories": [{"id": pub.ROOT_ID, "full_name": pub.ROOT,
                                             "visibility": "public", "archived": False}]}
-        self.facts = pub.Facts(pub.ROOT, pub.ROOT_ID, "public", 42, "a" * 40, "b" * 40, "c" * 64)
+        self.facts = pub.Facts(pub.ROOT, pub.ROOT_ID, "public", 42, "a" * 40, 84, "b" * 40, "c" * 64)
         self.calls, self.attestations = [], []
         self.ledger = Ledger()
         self.lock = threading.Lock()
-        self.publisher = pub.Publisher(admitted_producers={42: "a" * 40}, attest=self.attest,
+        self.publisher = pub.Publisher(admitted_bindings={(42, 84): "a" * 40, (43, 84): "f" * 40}, attest=self.attest,
                                        ledger=self.ledger, serialize=lambda: self.lock,
-                                       transport=pub.BoundedTransport(self.send), clock=lambda: self.now)
+                                       transport=pub.BoundedTransport(self.send, publisher_actor_id=84), clock=lambda: self.now)
 
     def attest(self, auth):
         self.attestations.append(auth)
@@ -73,7 +73,8 @@ class PublisherTests(unittest.TestCase):
             "review.edit": {"body": "Edited review"},
         }
         method, suffix, _, edit, needs_object = pub.ROUTES[op]
-        facts = replace(self.facts, owner_id=42, object_revision="d" * 64) if edit else self.facts
+        facts = replace(self.facts, owner_id=84, object_revision="d" * 64,
+                        object_origin_producer_id=42, object_origin_source="a" * 40, object_origin_receipt="e" * 64) if edit else self.facts
         payload = payloads[op]
         wire = pub.json_bytes(payload)
         auth = pub.Authorization(pub.digest(op.encode()), op,
@@ -189,12 +190,48 @@ class PublisherTests(unittest.TestCase):
 
     def test_foreign_repository_id_visibility_or_producer_and_source_are_denied(self):
         for field, value in [("repository", "ltn-it/other"), ("repository_id", pub.ROOT_ID + 1),
-                             ("repository_id", True), ("visibility", "private"), ("producer_id", 43),
-                             ("producer_source", "f" * 40), ("head_sha", "no-head"),
-                             ("generation", None)]:
+                             ("repository_id", True), ("visibility", "private"), ("origin_producer_id", 44),
+                             ("origin_source", "f" * 40), ("head_sha", "no-head"),
+                             ("generation", None), ("publisher_actor_id", 42)]:
             self.setUp()
             auth, wire = self.subject("issue.create")
             self.assert_blocked(replace(auth, facts=replace(auth.facts, **{field: value})), wire)
+
+    def test_one_broker_can_publish_for_two_independently_admitted_origins(self):
+        for origin, source in [(42, "a" * 40), (43, "f" * 40)]:
+            self.setUp()
+            auth, wire = self.subject("issue.create")
+            auth = replace(auth, facts=replace(auth.facts, origin_producer_id=origin, origin_source=source))
+            self.assertEqual("response-observed", self.publish(auth, wire)["disposition"])
+            self.assertEqual(84, auth.facts.publisher_actor_id)
+
+    def test_broker_edit_requires_original_origin_provenance_not_just_broker_owner(self):
+        for op in ("issue.edit", "pull.edit", "comment.edit", "inline.edit", "review.edit"):
+            for changes in ({"object_origin_producer_id": 43}, {"object_origin_source": "f" * 40},
+                            {"object_origin_receipt": None}, {"object_origin_producer_id": None},
+                            {"owner_id": 42}):
+                self.setUp()
+                auth, wire = self.subject(op)
+                self.assert_blocked(replace(auth, facts=replace(auth.facts, **changes)), wire)
+            self.setUp()
+            auth, wire = self.subject(op)
+            # Same admitted broker, different independently admitted origin: the
+            # unchanged object's real provenance must still stop this edit.
+            auth = replace(auth, facts=replace(auth.facts, origin_producer_id=43, origin_source="f" * 40))
+            self.assert_blocked(auth, wire)
+
+    def test_second_origin_can_edit_its_own_broker_published_object(self):
+        auth, wire = self.subject("review.edit")
+        auth = replace(auth, facts=replace(auth.facts, origin_producer_id=43, origin_source="f" * 40,
+                       object_origin_producer_id=43, object_origin_source="f" * 40))
+        self.assertEqual("response-observed", self.publish(auth, wire)["disposition"])
+
+    def test_transport_rejects_actor_confusion_even_for_another_admitted_pair(self):
+        self.publisher.bindings[(42, 85)] = "a" * 40
+        auth, wire = self.subject("issue.create")
+        auth = replace(auth, facts=replace(auth.facts, publisher_actor_id=85))
+        self.assert_blocked(auth, wire)
+        self.assertEqual({}, self.ledger.claimed)
 
     def test_wrong_edit_owner_or_missing_existing_object_revision_is_rejected(self):
         for op in ("issue.edit", "pull.edit", "comment.edit", "inline.edit", "review.edit"):
@@ -278,7 +315,7 @@ class PublisherTests(unittest.TestCase):
                 if isinstance(result, Exception):
                     raise result
                 return result
-            self.publisher.transport = pub.BoundedTransport(send)
+            self.publisher.transport = pub.BoundedTransport(send, publisher_actor_id=84)
             receipt = self.publish(auth, wire)
             self.assertEqual("unknown-readback-required", receipt["disposition"])
             self.assertNotIn("PRIVATE", str(receipt))
@@ -291,7 +328,7 @@ class PublisherTests(unittest.TestCase):
 
     def test_unknown_result_only_reconstructs_by_reads_without_another_send(self):
         auth, wire = self.subject("issue.create")
-        self.publisher.transport = pub.BoundedTransport(lambda *args: None)
+        self.publisher.transport = pub.BoundedTransport(lambda *args: None, publisher_actor_id=84)
         self.publish(auth, wire)
         seen = []
         def observe(value):
@@ -340,7 +377,7 @@ class PublisherTests(unittest.TestCase):
             first = pub.PrivateLedger(directory)
             auth, wire = self.subject("issue.create")
             self.publisher.ledger, self.publisher.serialize = first, first.serialize
-            self.publisher.transport = pub.BoundedTransport(lambda *args: None)
+            self.publisher.transport = pub.BoundedTransport(lambda *args: None, publisher_actor_id=84)
             self.assertEqual("unknown-readback-required", self.publish(auth, wire)["disposition"])
             second = pub.PrivateLedger(directory)
             self.publisher.ledger, self.publisher.serialize = second, second.serialize
@@ -355,9 +392,9 @@ class PublisherTests(unittest.TestCase):
             barrier = threading.Barrier(2)
             def attempt(_):
                 ledger = pub.PrivateLedger(directory)
-                publisher = pub.Publisher(admitted_producers={42: "a" * 40}, attest=lambda a: a.facts,
+                publisher = pub.Publisher(admitted_bindings={(42, 84): "a" * 40, (43, 84): "f" * 40}, attest=lambda a: a.facts,
                     ledger=ledger, serialize=ledger.serialize, clock=lambda: self.now,
-                    transport=pub.BoundedTransport(lambda *args: calls.append(args) or pub.TransportResult(201, 123)))
+                    transport=pub.BoundedTransport(lambda *args: calls.append(args) or pub.TransportResult(201, 123), publisher_actor_id=84))
                 barrier.wait(timeout=10)
                 try:
                     return publisher.publish(auth, wire, self.inventory, self.policy)["disposition"]
