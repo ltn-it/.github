@@ -121,7 +121,8 @@ class ArchiveReviewTests(unittest.TestCase):
     def historical_assembly(self, destination, *, defect=None):
         promotion, _, _, control_job, pull = fixtures()
         identity = {"full_name": REPO, "id": 1112629689,
-                    "owner": {"id": 54334171, "login": "ltn-it"}}
+                    "owner": {"id": 54334171, "login": "ltn-it"},
+                    "archived": False, "disabled": False}
         pull.update(state="closed", draft=False, title="original", body="original", labels=[],
                     user={"login": "litroc", "id": 76040632, "type": "User"})
         pull["base"].update(sha="b" * 40, repo=copy.deepcopy(identity))
