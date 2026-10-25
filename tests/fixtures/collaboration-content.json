@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "positive": [
+    "Public technical issue #556; SHA-256 and UTF-8.",
+    "https://github.com/ltn-it/.github/issues/556",
+    "https://docs.github.com/en/rest",
+    "RFC-9110 and CVE-2026-12345"
+  ],
+  "negative": [
+    "TEST-123",
+    "test%2D123",
+    "example.atlassian.net",
+    "10.1.2.3",
+    "host.internal",
+    "person@example.com",
+    "password: synthetic-value",
+    "https://github.com/ltn-it/example/issues/1",
+    "https://docs.github.com/en/rest?private=value"
+  ]
+}

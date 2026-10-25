@@ -1,0 +1,181 @@
+"""Read-only complete inventory and bounded current-content observation.
+
+Only GH GET requests are implemented. Raw source text is held in memory and
+never written to diagnostics or reports. Reports contain categories and hashes.
+Run in a private context; an inventory includes private repository identities.
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import re
+import subprocess
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+from urllib.parse import urlencode
+
+from collaboration_content import AdmissionError, policy_from, require, sha256, validate
+
+
+def utc_now():
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+class GitHubReadOnly:
+    def get(self, path):
+        require(type(path) is str and re.match(r"^(?:orgs/ltn-it(?:[/?]|$)|repos/ltn-it/)", path)
+                and ".." not in path and "\n" not in path, "read-path")
+        try:
+            result = subprocess.run(["gh", "api", "--hostname", "github.com", "--method", "GET", path],
+                                    capture_output=True, timeout=60, check=False)
+            require(result.returncode == 0, "read-unavailable")
+            require(0 < len(result.stdout) <= 16 * 1024 * 1024, "read-size")
+            return json.loads(result.stdout)
+        except (OSError, subprocess.TimeoutExpired, UnicodeError, ValueError):
+            raise AdmissionError("read-unavailable") from None
+
+
+def pages(api, path, *, maximum=1000):
+    """Require a terminal empty page, unique IDs and fully shaped list pages.
+
+    A partial inventory is never returned on transport, shape or bound failure.
+    A short page is not the terminator: the next page is still requested.
+    """
+    result, ids = [], set()
+    separator = "&" if "?" in path else "?"
+    for page in range(1, maximum + 1):
+        block = api.get(f"{path}{separator}{urlencode({'per_page': 100, 'page': page})}")
+        require(type(block) is list and len(block) <= 100, "pagination-shape")
+        if not block:
+            return result
+        for row in block:
+            require(type(row) is dict and type(row.get("id")) is int
+                    and row["id"] > 0 and row["id"] not in ids, "pagination-identity")
+            ids.add(row["id"])
+            result.append(row)
+    raise AdmissionError("pagination-bound")
+
+
+def organization_inventory(api):
+    started = utc_now()
+    before = api.get("orgs/ltn-it")
+    # Full organization visibility is required; a selected-installation token
+    # or ordinary member's partial view cannot claim complete enumeration.
+    membership = api.get("orgs/ltn-it/memberships/litroc")
+    require(type(membership) is dict and membership.get("state") == "active"
+            and membership.get("role") == "admin"
+            and membership.get("organization", {}).get("login") == "ltn-it", "inventory-authority")
+    rows = pages(api, "orgs/ltn-it/repos?type=all")
+    after = api.get("orgs/ltn-it")
+    for field in ("id", "login", "public_repos", "owned_private_repos"):
+        require(type(before) is dict and type(after) is dict and field in before
+                and before[field] == after.get(field), "inventory-generation")
+    require(before["login"] == "ltn-it" and type(before["public_repos"]) is int
+            and type(before["owned_private_repos"]) is int, "inventory-count")
+    require(len(rows) == before["public_repos"] + before["owned_private_repos"]
+            and sum(row.get("visibility") == "public" for row in rows) == before["public_repos"],
+            "inventory-count")
+    output = []
+    for row in rows:
+        require(type(row.get("owner")) is dict and row["owner"].get("login") == "ltn-it"
+                and row.get("visibility") in ("public", "private", "internal")
+                and type(row.get("private")) is bool
+                and row["private"] is (row["visibility"] != "public")
+                and type(row.get("archived")) is bool
+                and type(row.get("full_name")) is str, "inventory-visibility")
+        output.append({key: row[key] for key in ("id", "full_name", "visibility", "archived")})
+    return {"version": 1, "organization": "ltn-it", "started_at": started, "finished_at": utc_now(),
+            "complete": True, "repositories": sorted(output, key=lambda row: row["id"])}
+
+
+def observe_open_issues(api, inventory, policy, repositories):
+    """Observe open issues and their current comments; explicitly exclude PRs.
+
+    Preserve per-object read times. This is a bounded observation window, not
+    an atomic organization snapshot or a promise about edits made afterward.
+    """
+    results, counts = [], {"issues": 0, "comments": 0}
+    known = {row["full_name"]: row for row in inventory["repositories"]}
+    require(type(repositories) is list and repositories and len(set(repositories)) == len(repositories), "scope-shape")
+    for repository in repositories:
+        require(repository in known and known[repository]["visibility"] == "public", "scope-public-repository")
+        live = api.get(f"repos/{repository}")
+        require(type(live) is dict and all(live.get(key) == known[repository][key]
+                                         for key in ("id", "full_name", "visibility", "archived")), "scope-visibility-drift")
+        issues = pages(api, f"repos/{repository}/issues?state=open&sort=created&direction=asc")
+        for issue in issues:
+            if "pull_request" in issue:
+                continue
+            require(type(issue.get("number")) is int and issue["number"] > 0, "issue-number")
+            number = issue["number"]
+            current = api.get(f"repos/{repository}/issues/{number}")
+            require(type(current) is dict and current.get("id") == issue["id"]
+                    and current.get("number") == number and "pull_request" not in current,
+                    "issue-binding")
+            comments = pages(api, f"repos/{repository}/issues/{number}/comments")
+            require(type(current.get("comments")) is int and len(comments) == current["comments"], "comment-count")
+            objects = [("issue", current)] + [("comment", comment) for comment in comments]
+            for kind, obj in objects:
+                require(type(obj.get("body")) is str or obj.get("body") is None, "body-type")
+                result = validate({"kind": kind, "repository": repository,
+                                   "title": obj.get("title", "") if kind == "issue" else "",
+                                   "body": obj.get("body") or ""}, inventory, policy)
+                counts["issues" if kind == "issue" else "comments"] += 1
+                # URLs, titles, author names, bodies, diffs and private values
+                # do not cross this output boundary. The native opaque ID is
+                # sufficient to resolve a target in the private remediation UI.
+                results.append({"repository_id": known[repository]["id"], "kind": kind, "id": obj["id"],
+                                "observed_at": utc_now(), "source_updated_at": obj.get("updated_at"),
+                                "disposition": "admitted-current-content" if result["admitted"] else "owner-remediation-required",
+                                "content_sha256": result["content_sha256"], "categories": result["categories"]})
+            final = api.get(f"repos/{repository}/issues/{number}")
+            require(type(final) is dict and final.get("id") == current["id"]
+                    and all(final.get(field) == current.get(field) for field in ("title", "body", "comments", "updated_at")),
+                    "issue-observation-drift")
+        latest = pages(api, f"repos/{repository}/issues?state=open&sort=created&direction=asc")
+        require([row["id"] for row in latest] == [row["id"] for row in issues], "scope-observation-drift")
+    excluded = ["closed-issues", "pull-requests", "reviews", "inline-comments", "edit-history",
+                "attachments", "timeline", "releases", "wiki", "caches", "repository-files", "other-repositories"]
+    return {"version": 1, "scope": "open-issue-titles-bodies-current-comments", "owner": policy["owner"],
+            "started_at": inventory["started_at"], "finished_at": utc_now(),
+            "repository_ids": [known[name]["id"] for name in repositories], "counts": counts,
+            "clean": all(not row["categories"] for row in results), "objects": results, "excluded": excluded,
+            "inventory_sha256": sha256(json.dumps(inventory, sort_keys=True, separators=(",", ":")))}
+
+
+def private_write(path, value):
+    # Never overwrite a receipt or follow a symlink. Caller selects a private
+    # directory; a public Actions artifact is not a private remediation sink.
+    parent = path.parent
+    require(parent.is_dir() and not parent.is_symlink() and parent.stat().st_mode & 0o077 == 0,
+            "private-report-directory")
+    descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+        json.dump(value, stream, sort_keys=True, indent=2)
+        stream.write("\n")
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--policy", type=Path, required=True)
+    parser.add_argument("--report", type=Path, required=True)
+    parser.add_argument("--repository", action="append", required=True)
+    args = parser.parse_args()
+    try:
+        api = GitHubReadOnly()
+        policy = policy_from(args.policy)
+        inventory = organization_inventory(api)
+        report = observe_open_issues(api, inventory, policy, args.repository)
+        private_write(args.report, {"inventory": inventory, "observation": report})
+        print(json.dumps({"complete": True, "clean": report["clean"], "counts": report["counts"]}))
+        return 0 if report["clean"] else 1
+    except (AdmissionError, OSError) as error:
+        category = str(error) if isinstance(error, AdmissionError) else "report-unavailable"
+        print(json.dumps({"complete": False, "category": category}))
+        return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main())
