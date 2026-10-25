@@ -30,6 +30,12 @@ class NamespaceIdentityTests(unittest.TestCase):
         workflow = yaml.safe_load((root / ".github/workflows/delivery-operations.yml").read_bytes())
         revisions = {workflow["jobs"][job]["steps"][0]["with"]["ref"] for job in ("refresh", "prepare")}
         for revision in revisions:
+            source = "573408625acf084f846a624a3e3f0787ebd46211"
+            changes = subprocess.check_output(["git", "-c", f"safe.directory={root}", "diff",
+                "--name-only", source, revision], cwd=root, text=True).splitlines()
+            self.assertEqual([".lit/promotion-event-targets.json", "scripts/workflow_promotion_event.py"], changes)
+            subprocess.run(["git", "-c", f"safe.directory={root}", "merge-base",
+                            "--is-ancestor", source, revision], cwd=root, check=True)
             payload = subprocess.check_output(["git", "-c", f"safe.directory={root}",
                 "archive", revision, "scripts", ".lit"], cwd=root)
             with tempfile.TemporaryDirectory() as temp:
@@ -44,6 +50,7 @@ import workflow_events as events
 import workflow_promotion_event as promotion
 for repository in ("ltn-it/shared-assets-lit", "ltn-it/ansible-collection-supplementary"):
     assert promotion.target(repository)["repository"] == repository
+    assert promotion.target(repository)["source_sha"] == sys.argv[3]
     event = Path(sys.argv[1]) / "event.json"
     event.write_text("{}")
     os.environ.update(GITHUB_REPOSITORY=repository, GITHUB_EVENT_NAME="pull_request_target",
@@ -54,7 +61,7 @@ for repository in ("ltn-it/shared-assets-lit", "ltn-it/ansible-collection-supple
         events.main()
         assert refresh.call_args.args[1] == repository
 '''
-                subprocess.run([sys.executable, "-IB", "-c", program, temp, revision],
+                subprocess.run([sys.executable, "-IB", "-c", program, temp, revision, source],
                                check=True, capture_output=True)
 
     def test_unchanged_historical_native_proof_survives_authenticated_rename(self):
