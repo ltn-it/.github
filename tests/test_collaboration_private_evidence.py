@@ -354,6 +354,33 @@ class EvidenceTests(unittest.TestCase):
         reader.values[key] = changed
         self.assertEqual({'disposition': 'unknown-readback-required'}, self.readback(auth, response, reader))
 
+    def test_equal_inline_text_with_changed_object_ids_is_not_stable_readback(self):
+        auth, wire, proof, response, reader = self.fixture()
+        self.evidence.write_once(auth, wire, proof)
+        key = 'repos/' + ROOT + '/pulls/7/reviews/123/comments?per_page=100&page=1'
+        original = copy.deepcopy(reader.values[key])
+        calls = []
+        def replacements():
+            calls.append(True)
+            return original if len(calls) == 1 else [dict(original[0], id=789)]
+        reader.values[key] = replacements
+        self.assertEqual({'disposition': 'unknown-readback-required'}, self.readback(auth, response, reader))
+
+    def test_nested_native_proof_mutation_during_gets_cannot_change_custody_binding(self):
+        auth, wire, proof, response, reader = self.fixture()
+        self.evidence.write_once(auth, wire, proof)
+        held = []
+        def native(a, p):
+            held.append(p)
+            return True
+        self.evidence.verify_native = native
+        original_get = reader.get
+        def get(path):
+            held[0].before_fields['title'] = 'f' * 64
+            return original_get(path)
+        reader.get = get
+        self.assertEqual({'disposition': 'unknown-readback-required'}, self.readback(auth, response, reader))
+
     def test_corruption_or_authorization_drift_cannot_reconstruct_effect(self):
         auth, wire, proof, response, reader = self.fixture()
         self.evidence.write_once(auth, wire, proof)

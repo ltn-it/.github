@@ -117,7 +117,9 @@ For a genuine known response, readback checks:
 - for edits, original authenticated origin/object custody and all unchanged
   field hashes, not merely the fields requested for replacement.
 
-The object and parent/content are read twice. Drift, missing visibility,
+The object and parent/content are read twice. Review inline object IDs must
+also remain identical; replacing equal text under another ID fails. The frozen
+native descriptor may not change during any callback or read. Drift, missing visibility,
 unavailable API, incomplete pagination or a final failed native authentication
 returns only `unknown-readback-required`. A successful result is
 `exact-known-effect-read-back` with safe hashes and the confirmed object ID.

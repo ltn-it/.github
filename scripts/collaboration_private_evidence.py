@@ -280,6 +280,7 @@ class PrivateEvidence:
         """
         try:
             payload, proof = self._load(auth)
+            proof_bytes = json_bytes(asdict(proof))
             require(type(response) is KnownResponse and response.operation_id == auth.operation_id
                     and response.payload_sha256 == auth.payload_sha256
                     and type(response.repository_id) is int and response.repository_id == ROOT_ID
@@ -295,7 +296,6 @@ class PrivateEvidence:
             reader = reader if reader is not None else GitHubReadOnly()
             first = observation(reader, auth, response, payload, proof)
             second = observation(reader, auth, response, payload, proof)
-            proof_bytes = json_bytes(asdict(proof))
             require(first == second and self.verify_native(auth, proof) is True
                     and json_bytes(asdict(proof)) == proof_bytes, 'custody-readback-drift')
             return {'operation_id': auth.operation_id, 'payload_sha256': auth.payload_sha256,
@@ -329,6 +329,7 @@ def observation(reader, auth, response, payload, proof):
                 and parent.get('base', {}).get('repo', {}).get('id') == ROOT_ID
                 and type(parent.get('base', {}).get('repo', {}).get('id')) is int, 'custody-readback-head')
     op = auth.operation
+    inline_ids = None
     if op.startswith(('issue.', 'pull.')):
         value = parent
         actor(value, auth)
@@ -370,6 +371,7 @@ def observation(reader, auth, response, payload, proof):
         comments = pages(reader, f'{prefix}/pulls/{number}/reviews/{response.object_id}/comments', maximum=3)
         require(len(comments) <= 100, 'custody-readback-comments')
         projected = []
+        inline_ids = sorted(comment['id'] for comment in comments)
         for comment in comments:
             actor(comment, auth)
             require(comment.get('pull_request_review_id') == response.object_id
@@ -393,5 +395,5 @@ def observation(reader, auth, response, payload, proof):
             require(digest(json_bytes(value)) == proof.before_fields[field], 'custody-readback-unchanged')
         else:
             require(field not in {'body', 'title'}, 'custody-readback-content')
-    return {'object_id': response.object_id, 'number': number, 'fields': current,
+    return {'object_id': response.object_id, 'number': number, 'fields': current, 'inline_ids': inline_ids,
             'head': parent.get('head', {}).get('sha') if family == 'pulls' else None}
