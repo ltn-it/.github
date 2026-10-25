@@ -124,6 +124,33 @@ def normalized(value, maximum):
     return value
 
 
+def public_github_route(parts):
+    """Repository visibility alone cannot admit settings or draft resources."""
+    if not parts:
+        return True
+    family = parts[0]
+    if len(parts) == 1:
+        return family in {"issues", "pulls", "discussions", "releases", "tags", "wiki"}
+    if family in {"issues", "pull", "discussions"}:
+        numbered = bool(re.fullmatch(r"[1-9][0-9]*", parts[1]))
+        return numbered and (len(parts) == 2 or
+                             (family == "pull" and len(parts) == 3
+                              and parts[2] in {"files", "commits", "checks"}))
+    if family == "commit":
+        return len(parts) == 2 and bool(re.fullmatch(r"[0-9a-fA-F]{40}", parts[1]))
+    if family in {"blob", "tree"}:
+        return len(parts) >= 3
+    if family in {"wiki", "compare"}:
+        return True
+    if parts == ["security", "policy"]:
+        return True
+    if parts[:2] == ["actions", "runs"]:
+        return (len(parts) in (3, 5) and bool(re.fullmatch(r"[1-9][0-9]*", parts[2]))
+                and (len(parts) == 3 or (parts[3] in {"job", "attempts"}
+                                         and bool(re.fullmatch(r"[1-9][0-9]*", parts[4])))))
+    return False
+
+
 def scan_text(value, policy, repositories):
     value = normalized(value, policy["max_text_bytes"])
     categories = set()
@@ -167,9 +194,9 @@ def scan_text(value, policy, repositories):
             if url.hostname.casefold() == "github.com":
                 parts = url.path.strip("/").split("/")
                 name = "/".join(parts[:2]).casefold()
-                if (len(parts) < 2 or any(part in (".", "..") for part in parts)
+                if (len(parts) < 2 or any(part in ("", ".", "..") for part in parts)
                         or name not in repositories or repositories[name]["visibility"] != "public"
-                        or url.query or url.fragment):
+                        or not public_github_route(parts[2:]) or url.query or url.fragment):
                     categories.add("unverified-public-source")
             elif target not in policy["approved_public_urls"]:
                 categories.add("unapproved-url")

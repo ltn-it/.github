@@ -59,6 +59,16 @@ inventory. Unknown owners, unknown repositories and private/internal targets
 are rejected. Historical organization aliases are not inferred from a redirect.
 The inventory producer must authenticate any supported migration separately.
 
+Repository visibility is necessary but does not prove that an administration or
+draft resource is public. The offline guard admits only the repository home,
+public issue/PR/discussion routes, full commit IDs, blob/tree/compare/wiki paths,
+security-policy page and public Actions run/job/attempt routes. Listing pages
+for releases and tags are supported; individual release/tag links are not yet
+admitted because an authenticated maintainer can also see drafts. Settings,
+advisories and unknown routes fail closed. This check does not assert that an
+individual referenced resource exists; extending support needs public-resource
+evidence and regression fixtures, not a broad path bypass.
+
 External public-source exceptions are exact HTTPS URLs in the versioned policy,
 with a documented public-source verification in the reviewing PR. There is no
 domain-wide bypass, query-string bypass or runtime skip flag. A false positive
