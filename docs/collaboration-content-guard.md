@@ -54,6 +54,13 @@ email addresses. Unicode compatibility normalization, HTML entities and bounded
 percent decoding occur before inspection. Hidden formatting characters and
 malformed or excessive input fail closed. Code fences are inspected too.
 
+The same sensitive-value rules also inspect bounded text from the qualified
+CommonMark parse. Escaped punctuation and text split by inline formatting cannot
+hide identifiers, credentials or protected values. Paragraph and line boundaries
+remain separators. Source text and exact destinations retain their checks;
+parser or work-bound failures never produce a partial clean result. Parsed text
+is inspected in memory and is not added to receipts or diagnostics.
+
 GitHub source links must resolve to a public repository in the complete trusted
 inventory. Unknown owners, unknown repositories and private/internal targets
 are rejected. Historical organization aliases are not inferred from a redirect.

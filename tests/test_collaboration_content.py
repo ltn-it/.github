@@ -25,6 +25,22 @@ def inventory():
                              {"id": 2, "full_name": "ltn-it/example", "visibility": "private", "archived": False}]}
 
 
+def parsed_sensitive_cases():
+    # Generated token-shaped values are synthetic; diagnostics use case hashes.
+    return ((r"TEST\-123", "private-identifier"),
+            (r"ghp\_" + "A" * 22, "credential"),
+            (r"github\_pat\_" + "A" * 22, "credential"),
+            (r"password\: fixture", "secret-like"),
+            (r"person\@example.com", "personal-data"),
+            (r"node\.internal", "private-system"),
+            (r"10\.1\.2\.3", "protected-infrastructure"),
+            (r"fixture\_resource", "protected-value"),
+            ("TE**ST**-123", "private-identifier"),
+            (r"**ghp**\_" + "A" * 22, "credential"),
+            (r"**fixture**\_resource", "protected-value"),
+            (r"https\://github.com/ltn-it/example/issues/1", "unverified-public-source"))
+
+
 class ContentTests(unittest.TestCase):
     def setUp(self):
         self.policy = content.policy_from(ROOT / ".lit/collaboration-content-policy.json")
@@ -41,6 +57,32 @@ class ContentTests(unittest.TestCase):
             content.guarded_payload("comment", "ltn-it/.github", {"body": body},
                 self.inventory, self.policy, sends.append, now=NOW)
         self.assertEqual([], sends)
+
+    def test_parsed_sensitive_text_blocks_publication_before_send(self):
+        self.policy["protected_value_sha256"].append(content.sha256("fixture_resource"))
+        for body, category in parsed_sensitive_cases():
+            with self.subTest(case=content.sha256(body), category=category):
+                result = self.validate(body=body)
+                self.assertFalse(result["admitted"])
+                self.assertIn(category, result["categories"])
+                self.assertNotIn(body, json.dumps(result))
+                self.assert_destination_blocked_before_send(body)
+
+    def test_parsed_text_preserves_public_exceptions_and_block_boundaries(self):
+        self.policy["approved_public_identifiers"].append("TEST-123")
+        for body in (r"Approved **TEST\-123**", r"**CVE\-2026\-1234**", r"**RFC\-9110**",
+                     r"**https**\://docs.github.com/en/rest",
+                     "TEST\n\n-123", "ghp\n\n_" + "A" * 22):
+            with self.subTest(case=content.sha256(body)):
+                sends = []
+                content.guarded_payload("comment", "ltn-it/.github", {"body": body},
+                    self.inventory, self.policy, sends.append, now=NOW)
+                self.assertEqual(1, len(sends))
+                self.assertEqual(body, json.loads(sends[0])["body"])
+
+    def test_formatted_native_reference_keeps_strict_destination_policy(self):
+        self.assert_destination_blocked_before_send("ltn-it/**example**#1")
+        self.assertTrue(self.validate(body="ltn-it/**.github**#556")["admitted"])
 
     def test_quoted_html_whitespace_cannot_split_exact_url_policy(self):
         for whitespace in ("\n", "\r", "\t", " ", "&#10;", "%09"):
@@ -425,6 +467,22 @@ class ObservationTests(unittest.TestCase):
             clock.now.return_value = NOW
             clock.strptime.side_effect = datetime.strptime
             return observation.observe_open_issues(api or FakeAPI(self.responses), self.inventory, self.policy, ["ltn-it/.github"])
+
+    def test_observer_detects_parsed_sensitive_values_without_echoing_text(self):
+        self.policy["protected_value_sha256"].append(content.sha256("fixture_resource"))
+        for body, category in parsed_sensitive_cases():
+            with self.subTest(case=content.sha256(body), category=category):
+                self.comment["body"] = body
+                report = self.observe()
+                self.assertFalse(report["clean"])
+                self.assertIn(category, report["objects"][1]["categories"])
+                self.assertEqual("owner-remediation-required", report["objects"][1]["disposition"])
+                self.assertNotIn(body, json.dumps(report))
+
+    def test_observer_preserves_formatted_public_identifier_exception(self):
+        self.policy["approved_public_identifiers"].append("TEST-123")
+        self.comment["body"] = r"Approved **TEST\-123** with **RFC\-9110**"
+        self.assertTrue(self.observe()["clean"])
 
     def test_observer_flags_all_three_url_bypasses_without_echoing_destinations(self):
         for body in ('<a href="https://docs.github.com/en/rest\n?extra=value">x</a>',

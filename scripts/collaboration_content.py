@@ -218,8 +218,8 @@ def native_reference_destinations(value):
     return targets
 
 
-def markdown_destinations(value):
-    """Use the qualified CommonMark grammar, including container definitions.
+def _markdown_content(value):
+    """Bound destinations and visible text through the same CommonMark parse.
 
     Parse without URI repair or scheme filtering: admission belongs solely to
     strict_https_destination and destination_categories. Code text is inspected
@@ -233,7 +233,8 @@ def markdown_destinations(value):
         parser.validateLink = lambda target: True
     except Exception:
         raise AdmissionError("content-parser-unavailable") from None
-    targets, pending, remaining = set(), [(value, 0)], max(1, len(value)) * 8
+    targets, rendered = set(), []
+    pending, remaining = [(value, 0)], max(1, len(value)) * 8
     while pending:
         text, depth = pending.pop()
         remaining -= len(text)
@@ -245,12 +246,12 @@ def markdown_destinations(value):
             raise AdmissionError("content-parser-unavailable") from None
         for reference in environment.get("references", {}).values():
             targets.add(reference["href"])
-        stack = list(tokens)
+        parts, stack = [], list(reversed(tokens))
         while stack:
             token = stack.pop()
             # Do not accept a partial parse at the grammar's nesting boundary.
             require(token.level < parser.options["maxNesting"] - 2, "content-markdown-bound")
-            stack.extend(token.children or [])
+            stack.extend(reversed(token.children or []))
             for attribute in ("href", "src"):
                 target = token.attrGet(attribute)
                 if target is not None:
@@ -259,21 +260,40 @@ def markdown_destinations(value):
                 targets.update(native_reference_destinations(token.content))
             elif token.type in {"fence", "code_block", "code_inline"} and token.content:
                 pending.append((token.content, depth + 1))
-    return targets
+            if token.type in {"text", "fence", "code_block", "code_inline"}:
+                parts.append(token.content)
+            if token.type in {"softbreak", "hardbreak"} or token.block:
+                parts.append("\n")
+        # Inline formatting can split a single displayed value across tokens;
+        # block boundaries must not join unrelated paragraphs into a credential.
+        text = "".join(parts)
+        rendered.append(text)
+        targets.update(native_reference_destinations(text))
+    return targets, rendered
 
 
-def link_destinations(value):
+def markdown_destinations(value):
+    return _markdown_content(value)[0]
+
+
+def _link_content(value):
     """All grammar/HTML/native/prose candidates share one destination policy."""
     parser = HTMLDestinations()
     parser.feed(value)
     parser.close()
-    targets = set(parser.destinations) | markdown_destinations(value)
+    targets, rendered = _markdown_content(value)
+    targets.update(parser.destinations)
     targets.update(native_reference_destinations(value))
     # Inspect prose, code and labels as well. Only prose candidates lose terminal
     # punctuation; parsed explicit destinations retain their exact full values.
-    for match in re.finditer(r"(?i)\b(?:[a-z][a-z0-9+.-]*://|www\.)[^\s<>\"'`]+", value):
-        targets.add(match.group().rstrip(".,;:!?)]}"))
-    return targets
+    for text in (value, *rendered):
+        for match in re.finditer(r"(?i)\b(?:[a-z][a-z0-9+.-]*://|www\.)[^\s<>\"'`]+", text):
+            targets.add(match.group().rstrip(".,;:!?)]}"))
+    return targets, rendered
+
+
+def link_destinations(value):
+    return _link_content(value)[0]
 
 
 def destination_categories(target, policy, repositories):
@@ -298,9 +318,8 @@ def destination_categories(target, policy, repositories):
     return []
 
 
-def scan_text(value, policy, repositories):
-    original = value
-    value = normalized(value, policy["max_text_bytes"])
+def _sensitive_value_categories(value, policy):
+    """Apply identical value rules to normalized source and parsed text."""
     categories = set()
     if any(unicodedata.category(c) in ("Cf", "Cs") or (ord(c) < 32 and c not in "\n\r\t") for c in value):
         categories.add("content-control-character")
@@ -329,11 +348,25 @@ def scan_text(value, policy, repositories):
     for token in re.findall(r"[^\s\"'<>`(),;]+", value):
         if sha256(token.casefold()) in policy["protected_value_sha256"]:
             categories.add("protected-value")
+    return categories
+
+
+def scan_text(value, policy, repositories):
+    original = value
+    value = normalized(value, policy["max_text_bytes"])
+    categories = _sensitive_value_categories(value, policy)
+    targets = set()
+    for source in dict.fromkeys((original, value)):
+        destinations, rendered = _link_content(source)
+        targets.update(destinations)
+        for text in rendered:
+            categories.update(_sensitive_value_categories(
+                normalized(text, policy["max_text_bytes"]), policy))
     # Extraction does not decide visibility or repair browser-normalized URLs.
     # All recognized forms pass the exact same strict destination boundary.
     # Retain raw HTML attribute boundaries too: decoding an entity to whitespace
     # before parsing could split a single browser destination into attributes.
-    for target in link_destinations(original) | link_destinations(value):
+    for target in targets:
         target = normalized(target, policy["max_text_bytes"])
         categories.update(destination_categories(target, policy, repositories))
     return sorted(categories)
