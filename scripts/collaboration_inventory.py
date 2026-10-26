@@ -90,12 +90,13 @@ def organization_inventory(api):
             "complete": True, "repositories": sorted(output, key=lambda row: row["id"])}
 
 
-def observe_open_issues(api, inventory, policy, repositories):
+def observe_open_issues(api, inventory, policy, repositories, *, state="open"):
     """Observe open issues and their current comments; explicitly exclude PRs.
 
     Preserve per-object read times. This is a bounded observation window, not
     an atomic organization snapshot or a promise about edits made afterward.
     """
+    require(state in {"open", "all"}, "scope-state")
     results, counts = [], {"issues": 0, "comments": 0}
     known = {row["full_name"]: row for row in inventory["repositories"]}
     require(type(repositories) is list and repositories and len(set(repositories)) == len(repositories), "scope-shape")
@@ -105,7 +106,7 @@ def observe_open_issues(api, inventory, policy, repositories):
         live = api.get(f"repos/{repository}")
         require(type(live) is dict and all(live.get(key) == known[repository][key]
                                          for key in ("id", "full_name", "visibility", "archived")), "scope-visibility-drift")
-        issues = pages(api, f"repos/{repository}/issues?state=open&sort=created&direction=asc")
+        issues = pages(api, f"repos/{repository}/issues?state={state}&sort=created&direction=asc")
         for issue in issues:
             if "pull_request" in issue:
                 continue
@@ -113,7 +114,8 @@ def observe_open_issues(api, inventory, policy, repositories):
             number = issue["number"]
             current = api.get(f"repos/{repository}/issues/{number}")
             require(type(current) is dict and current.get("id") == issue["id"]
-                    and current.get("number") == number and current.get("state") == "open"
+                    and current.get("number") == number
+                    and current.get("state") in ({"open", "closed"} if state == "all" else {"open"})
                     and "pull_request" not in current,
                     "issue-binding")
             comments = pages(api, f"repos/{repository}/issues/{number}/comments")
@@ -139,7 +141,7 @@ def observe_open_issues(api, inventory, policy, repositories):
             repeated = pages(api, f"repos/{repository}/issues/{number}/comments")
             require(snapshot(comments, ("body", "updated_at")) == snapshot(repeated, ("body", "updated_at")),
                     "comment-observation-drift")
-        latest = pages(api, f"repos/{repository}/issues?state=open&sort=created&direction=asc")
+        latest = pages(api, f"repos/{repository}/issues?state={state}&sort=created&direction=asc")
         require([row["id"] for row in latest] == [row["id"] for row in issues], "scope-observation-drift")
         final_live = api.get(f"repos/{repository}")
         require(type(final_live) is dict and all(final_live.get(key) == known[repository][key]
@@ -147,7 +149,9 @@ def observe_open_issues(api, inventory, policy, repositories):
                 "scope-visibility-drift")
     excluded = ["closed-issues", "pull-requests", "reviews", "inline-comments", "edit-history",
                 "attachments", "timeline", "releases", "wiki", "caches", "repository-files", "other-repositories"]
-    return {"version": 1, "scope": "open-issue-titles-bodies-current-comments", "owner": policy["owner"],
+    if state == "all":
+        excluded.remove("closed-issues")
+    return {"version": 1, "scope": state + "-issue-titles-bodies-current-comments", "owner": policy["owner"],
             "started_at": inventory["started_at"], "finished_at": utc_now(),
             "repository_ids": [known[name]["id"] for name in repositories], "counts": counts,
             "clean": all(not row["categories"] for row in results), "objects": results, "excluded": excluded,
@@ -159,7 +163,7 @@ def snapshot(rows, fields):
     return [(row["id"], *(row.get(field) for field in fields)) for row in rows]
 
 
-def observe_open_collaboration(api, inventory, policy, repositories):
+def observe_open_collaboration(api, inventory, policy, repositories, *, state="open"):
     """Explicitly extend the bounded open-issue scope with open PR content.
 
     Submitted reviews (including dismissed reviews), PR conversation comments
@@ -167,17 +171,17 @@ def observe_open_collaboration(api, inventory, policy, repositories):
     comments are excluded. Re-enumeration detects observed drift; edits after
     the final read and cross-object races remain outside an atomic guarantee.
     """
-    report = observe_open_issues(api, inventory, policy, repositories)
-    report["scope"] = "open-issues-and-pulls-current-comments-submitted-reviews-inline-comments"
+    report = observe_open_issues(api, inventory, policy, repositories, state=state)
+    report["scope"] = state + "-issues-and-pulls-current-comments-submitted-reviews-inline-comments"
     report["counts"].update({"pull_requests": 0, "pull_comments": 0, "reviews": 0, "inline_comments": 0})
     report["excluded"] = [item for item in report["excluded"]
                           if item not in ("pull-requests", "reviews", "inline-comments")]
-    report["excluded"].extend(["closed-pull-requests", "pending-review-drafts"])
+    report["excluded"].extend((["closed-pull-requests"] if state == "open" else []) + ["pending-review-drafts"])
     report["pending_review_drafts_excluded"] = 0
     known = {row["full_name"]: row for row in inventory["repositories"]}
     for repository in repositories:
         path = f"repos/{repository}"
-        enumeration = f"{path}/pulls?state=open&sort=created&direction=asc"
+        enumeration = f"{path}/pulls?state={state}&sort=created&direction=asc"
         pulls = pages(api, enumeration)
         for listed in pulls:
             number = listed.get("number")
@@ -185,7 +189,8 @@ def observe_open_collaboration(api, inventory, policy, repositories):
             target = f"{path}/pulls/{number}"
             current = api.get(target)
             require(type(current) is dict and current.get("id") == listed["id"]
-                    and current.get("number") == number and current.get("state") == "open", "pull-binding")
+                    and current.get("number") == number
+                    and current.get("state") in ({"open", "closed"} if state == "all" else {"open"}), "pull-binding")
             comments_path = f"{path}/issues/{number}/comments"
             comments = pages(api, comments_path)
             reviews = pages(api, f"{target}/reviews")
