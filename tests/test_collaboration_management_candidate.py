@@ -344,4 +344,51 @@ class ManagementCandidateTests(unittest.TestCase):
             self.assertEqual({'disposition':'blocked-before-publication'},execute())
         self.key_getter.assert_not_called();self.assertEqual([],self.network);self.assertEqual([],self.writes)
 
+    def readback_fixture(self):
+        auth=self.service.issue()
+        response={'operation_id':auth.operation_id,'payload_sha256':auth.payload_sha256,
+                  'disposition':'response-observed','object_id':1000}
+        obj={'id':1000,'number':15,'state':'open','user':{'id':84,'type':'Bot'},
+             'base':{'repo':{'id':m.ROOT_ID},'ref':'develop'},
+             'head':{'repo':{'id':m.ROOT_ID},'ref':self.payload['head'],'sha':self.head},
+             'title':self.payload['title'],'body':self.payload['body'],'draft':True}
+        reader=SimpleNamespace(call=Mock(side_effect=[self.target,obj]),
+                               pages=Mock(return_value=[{'id':1000,'number':15}]))
+        return auth,response,obj,reader
+
+    def test_readback_resolves_number_from_original_id_not_equal_text(self):
+        auth,response,obj,reader=self.readback_fixture()
+        result=m.readback_owned(reader,auth,self.wire,response)
+        self.assertEqual({'operation_id':auth.operation_id,'payload_sha256':auth.payload_sha256,
+            'disposition':'effect-confirmed','object_id':1000,'number':15},result)
+        self.assertEqual(f'repos/{m.ROOT}/pulls/15',reader.call.call_args.args[0])
+        self.assertNotIn('body',result)
+
+    def test_missing_original_response_never_searches_for_equal_content(self):
+        auth,response,obj,reader=self.readback_fixture();response['disposition']='unknown-readback-required'
+        self.assertEqual({'disposition':'unknown-readback-required'},m.readback_owned(reader,auth,self.wire,response))
+        reader.call.assert_not_called();reader.pages.assert_not_called()
+
+    def test_readback_actor_refs_body_or_draft_drift_stays_unknown(self):
+        for field in ['actor','head','base','body','draft']:
+            with self.subTest(field=field):
+                auth,response,obj,reader=self.readback_fixture()
+                if field=='actor':obj['user']['id']=999
+                if field=='head':obj['head']['sha']='9'*40
+                if field=='base':obj['base']['repo']['id']=999
+                if field=='body':obj['body']='Different response.'
+                if field=='draft':obj['draft']=False
+                self.assertEqual({'disposition':'unknown-readback-required'},m.readback_owned(reader,auth,self.wire,response))
+
+    def test_duplicate_or_different_original_identity_cannot_confirm(self):
+        for rows in [[{'id':999,'number':15}],[{'id':1000,'number':15}]*2]:
+            auth,response,obj,reader=self.readback_fixture();reader.pages.return_value=rows
+            self.assertEqual({'disposition':'unknown-readback-required'},m.readback_owned(reader,auth,self.wire,response))
+            self.assertEqual(1,reader.call.call_count)
+
+    def test_original_response_operation_binding_precedes_all_reads(self):
+        auth,response,obj,reader=self.readback_fixture();response['operation_id']='9'*64
+        self.assertEqual({'disposition':'unknown-readback-required'},m.readback_owned(reader,auth,self.wire,response))
+        reader.call.assert_not_called();reader.pages.assert_not_called()
+
 if __name__=='__main__':unittest.main()

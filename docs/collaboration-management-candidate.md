@@ -64,6 +64,14 @@ does not establish production exclusivity. Unknown journal outcomes stop before
 public publication. After a possible publication, uncertainty or a failed
 response commit returns `unknown-readback-required` and never resends.
 
+`readback_owned` requires the retained original response identity and the exact
+pre-write authorization. GitHub's PR database ID is distinct from its local
+number: the reader resolves the number only from that original ID, then reads
+the exact object and verifies the actual App actor, repository IDs, head SHA,
+refs, title, body and draft flag. Equal text cannot establish provenance. A
+missing original response, duplicate identity or changed object remains unknown;
+this observer grants no retry, new admission or cleanup authority.
+
 ## Concrete adoption package
 
 Use the normal protected development and source-admission path for these

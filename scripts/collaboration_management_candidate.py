@@ -395,3 +395,53 @@ def prepare_and_publish_owned(issuer, journal_api, app_identity, key_source, wir
         return {"disposition": "blocked-before-publication"}
     return publish_owned(issuer, journal_api, transport, wire, inventory, policy,
         clock=lambda: datetime.fromtimestamp(issuer.clock(), timezone.utc), authorization=auth)
+
+
+def readback_owned(api, authorization, wire, original_response):
+    """Observe the original PR identity, never discover success by equal text.
+
+    Inputs belong to the trusted private runtime: the exact pre-write native
+    authorization, frozen payload and original durable response journal. A REST
+    PR database ID is not its repository-local number. Resolve that number only
+    by the recorded original ID, then read the exact object and actor/refs/bytes.
+    This read-only result grants no admission, retry, cleanup or further write.
+    Unknown/lost original responses cannot be reconstructed from matching text.
+    """
+    try:
+        auth, response = authorization, original_response
+        require(type(auth) is Authorization and auth.operation == "pull.create"
+                and auth.facts.repository == ROOT and auth.facts.repository_id == ROOT_ID
+                and type(wire) is bytes and digest(wire) == auth.payload_sha256
+                and type(response) is dict and response.get("disposition") == "response-observed"
+                and response.get("operation_id") == auth.operation_id
+                and response.get("payload_sha256") == auth.payload_sha256
+                and positive(response.get("object_id")), "owned-original-response")
+        payload = document(wire)
+        shape(auth, payload)
+        repository = api.call(f"repos/{ROOT}")
+        require(repository.get("id") == ROOT_ID and repository.get("full_name") == ROOT
+                and repository.get("visibility") == "public" and repository.get("private") is False,
+                "owned-readback-target")
+        listed = api.pages(f"repos/{ROOT}/pulls?state=all&head=ltn-it:{quote(payload['head'], safe='')}"
+                           f"&base={quote(payload['base'], safe='')}&per_page=100")
+        require(type(listed) is list, "owned-readback-inventory")
+        matches = [p for p in listed if type(p) is dict and p.get("id") == response["object_id"]]
+        require(len(matches) == 1 and positive(matches[0].get("number")), "owned-readback-identity")
+        number = matches[0]["number"]
+        observed = api.call(f"repos/{ROOT}/pulls/{number}")
+        require(observed.get("id") == response["object_id"] and observed.get("number") == number
+                and observed.get("state") == "open"
+                and observed.get("user", {}).get("id") == auth.facts.publisher_actor_id
+                and observed.get("user", {}).get("type") == "Bot"
+                and observed.get("base", {}).get("repo", {}).get("id") == ROOT_ID
+                and observed.get("head", {}).get("repo", {}).get("id") == ROOT_ID
+                and observed.get("head", {}).get("sha") == auth.facts.head_sha
+                and observed.get("head", {}).get("ref") == payload["head"]
+                and observed.get("base", {}).get("ref") == payload["base"]
+                and observed.get("title") == payload["title"]
+                and observed.get("body") == payload.get("body")
+                and observed.get("draft") is payload.get("draft", False), "owned-readback-mismatch")
+        return {"operation_id": auth.operation_id, "payload_sha256": auth.payload_sha256,
+                "disposition": "effect-confirmed", "object_id": response["object_id"], "number": number}
+    except Exception:
+        return {"disposition": "unknown-readback-required"}
