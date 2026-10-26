@@ -68,6 +68,17 @@ HTML attribute values and actual link destinations retain their inspection.
 Repeated reference metadata is deduplicated, and HTML parser failures reject
 with a fixed safe category instead of a partial clean result.
 
+The qualified parser enables its existing strikethrough rule and single-tilde
+option for GitHub's matching one- or two-tilde syntax. Its delimiter flanking
+rules, escaped markers and literal runs of three or more tildes are retained;
+see the [GFM strikethrough specification](https://github.github.com/gfm/#strikethrough-extension-).
+Nested inline formatting cannot conceal a sensitive value. Inline HTML uses
+the same bounded HTML projection as the independent HTML surface, so `br` and
+recognized block tags keep their separators in both projections. Existing
+bounded inspection of code text and exact destination checks remain in force.
+An unavailable strikethrough rule or failed parse rejects before publication
+and cannot produce a clean observation.
+
 GitHub source links must resolve to a public repository in the complete trusted
 inventory. Unknown owners, unknown repositories and private/internal targets
 are rejected. Historical organization aliases are not inferred from a redirect.

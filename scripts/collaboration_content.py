@@ -215,6 +215,16 @@ class HTMLDestinations(HTMLParser):
         self.text_parts.append(value)
 
 
+def _html_content(value):
+    parser = HTMLDestinations()
+    try:
+        parser.feed(value)
+        parser.close()
+    except (AssertionError, ValueError):
+        raise AdmissionError("content-parser-unavailable") from None
+    return parser
+
+
 def native_reference_destinations(value):
     """GitHub-qualified issue/commit locators enter the existing URL policy.
 
@@ -243,7 +253,10 @@ def _markdown_content(value):
             and HTML_BLOCK_TAGS is not None,
             "content-parser-unavailable")
     try:
-        parser = MarkdownIt("commonmark", {"maxNesting": 20})
+        parser = MarkdownIt("commonmark", {
+            "maxNesting": 20,
+            "strikethrough_single_tilde": True,
+        }).enable("strikethrough")
         parser.normalizeLink = lambda target: target
         parser.validateLink = lambda target: True
     except Exception:
@@ -285,6 +298,8 @@ def _markdown_content(value):
                 pending.append((token.content, depth + 1))
             if token.type in {"text", "fence", "code_block", "code_inline"}:
                 parts.append(token.content)
+            elif token.type == "html_inline":
+                parts.extend(_html_content(token.content).text_parts)
             if token.type in {"softbreak", "hardbreak"} or token.block:
                 parts.append("\n")
         # Inline formatting can split a single displayed value across tokens;
@@ -302,12 +317,7 @@ def markdown_destinations(value):
 def _link_content(value):
     """All grammar/HTML/native/prose candidates share one destination policy."""
     targets, rendered = _markdown_content(value)
-    parser = HTMLDestinations()
-    try:
-        parser.feed(value)
-        parser.close()
-    except (AssertionError, ValueError):
-        raise AdmissionError("content-parser-unavailable") from None
+    parser = _html_content(value)
     rendered.update(parser.text_values)
     rendered.add("".join(parser.text_parts))
     targets.update(parser.destinations)

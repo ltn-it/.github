@@ -63,6 +63,41 @@ def html_text_cases():
             ("<div>ltn-it/<strong>example</strong>#1</div>", "unverified-public-source"))
 
 
+def strikethrough_cases():
+    return (("TE~~ST~~-123", "private-identifier"),
+            ("~~TEST-123~~", "private-identifier"),
+            ("TE~~S**T**~~-123", "private-identifier"),
+            ("**TE~~ST~~-123**", "private-identifier"),
+            ("TE~ST~-123", "private-identifier"),
+            ("g~~hp~~_" + "A" * 22, "credential"),
+            ("g~hp~_" + "A" * 22, "credential"),
+            ("github_~~pat~~_" + "A" * 22, "credential"),
+            ("pass~~word~~: fixture", "secret-like"),
+            ("per~~son~~@example.com", "personal-data"),
+            ("no~~de~~.internal", "private-system"),
+            ("1~~0.1~~.2.3", "protected-infrastructure"),
+            ("fix~~ture~~_resource", "protected-value"),
+            ("ltn-it/~~example~~#1", "unverified-public-source"),
+            ("`TE~~ST~~-123`", "private-identifier"),
+            ("```text\nTE~~ST~~-123\n```", "private-identifier"))
+
+
+def html_boundary_cases():
+    return ("TEST<br>-123", "TEST<br/>-123", "TEST<br />-123", "TEST<BR>-123",
+            "<span>TEST</span><br><span>-123</span>", "**TEST**<br>**-123**",
+            "~~TEST~~<br>~~-123~~", "ghp<br>_" + "A" * 22,
+            "`ghp`<br>_" + "A" * 22, "TEST<hr>-123", "TEST<div>-123</div>",
+            "<div>TEST<br>-123</div>", "<div>TEST</div><div>-123</div>")
+
+
+def literal_strikethrough_cases():
+    # Delimiter flanking and escaped/long runs retain literal tildes in GFM.
+    return (r"TE\~\~ST\~\~-123", r"TE\~ST\~-123", "TE~~~ST~~~-123",
+            "TE~~**ST**~~-123", "github~~_pat~~_" + "A" * 22,
+            "person~~@~~example.com", "node~~.~~internal", "10~~.~~1.2.3",
+            "fixture~~_~~resource")
+
+
 class ContentTests(unittest.TestCase):
     def setUp(self):
         self.policy = content.policy_from(ROOT / ".lit/collaboration-content-policy.json")
@@ -105,6 +140,41 @@ class ContentTests(unittest.TestCase):
     def test_formatted_native_reference_keeps_strict_destination_policy(self):
         self.assert_destination_blocked_before_send("ltn-it/**example**#1")
         self.assertTrue(self.validate(body="ltn-it/**.github**#556")["admitted"])
+
+    def test_strikethrough_values_cannot_bypass_publication_admission(self):
+        self.policy["protected_value_sha256"].append(content.sha256("fixture_resource"))
+        for body, category in strikethrough_cases():
+            with self.subTest(case=content.sha256(body), category=category):
+                result = self.validate(body=body)
+                self.assertIn(category, result["categories"])
+                self.assertNotIn(body, json.dumps(result))
+                self.assert_destination_blocked_before_send(body)
+
+    def test_inline_and_block_html_boundaries_preserve_safe_publication(self):
+        for body in html_boundary_cases():
+            with self.subTest(case=content.sha256(body)):
+                sends = []
+                content.guarded_payload("comment", "ltn-it/.github", {"body": body},
+                    self.inventory, self.policy, sends.append, now=NOW)
+                self.assertEqual([body], [json.loads(wire)["body"] for wire in sends])
+
+    def test_strikethrough_preserves_literal_markers_and_public_exceptions(self):
+        for body in (*literal_strikethrough_cases(), "~~RFC-9110~~", "~~CVE-2026-1234~~",
+                     "ltn-it/~~.github~~#556"):
+            with self.subTest(case=content.sha256(body)):
+                self.assertTrue(self.validate(body=body)["admitted"])
+        self.policy["approved_public_identifiers"].append("TEST-123")
+        self.assertTrue(self.validate(body="TE~~ST~~-123")["admitted"])
+
+    def test_missing_strikethrough_rule_fails_before_publication(self):
+        sends = []
+        for method in ("enable", "parse"):
+            with (self.subTest(parser_method=method),
+                  patch.object(content.MarkdownIt, method, side_effect=KeyError("private parser details")),
+                  self.assertRaisesRegex(content.AdmissionError, "^content-parser-unavailable$")):
+                content.guarded_payload("comment", "ltn-it/.github", {"body": "Public text"},
+                    self.inventory, self.policy, sends.append, now=NOW)
+            self.assertEqual([], sends)
 
     def test_decoded_titles_and_html_text_block_publication_before_send(self):
         self.policy["protected_value_sha256"].append(content.sha256("fixture_resource"))
@@ -548,6 +618,40 @@ class ObservationTests(unittest.TestCase):
         self.policy["approved_public_identifiers"].append("TEST-123")
         self.comment["body"] = r"Approved **TEST\-123** with **RFC\-9110**"
         self.assertTrue(self.observe()["clean"])
+
+    def test_observer_detects_strikethrough_values_without_raw_text(self):
+        self.policy["protected_value_sha256"].append(content.sha256("fixture_resource"))
+        for body, category in strikethrough_cases():
+            with self.subTest(case=content.sha256(body), category=category):
+                self.comment["body"] = body
+                report = self.observe()
+                self.assertFalse(report["clean"])
+                self.assertIn(category, report["objects"][1]["categories"])
+                self.assertNotIn(body, json.dumps(report))
+
+    def test_observer_preserves_inline_and_block_html_boundaries(self):
+        for body in html_boundary_cases():
+            with self.subTest(case=content.sha256(body)):
+                self.comment["body"] = body
+                self.assertTrue(self.observe()["clean"])
+
+    def test_observer_preserves_literal_markers_and_public_strikethrough(self):
+        for body in (*literal_strikethrough_cases(), "~~RFC-9110~~", "~~CVE-2026-1234~~",
+                     "ltn-it/~~.github~~#556"):
+            with self.subTest(case=content.sha256(body)):
+                self.comment["body"] = body
+                self.assertTrue(self.observe()["clean"])
+        self.policy["approved_public_identifiers"].append("TEST-123")
+        self.comment["body"] = "TE~~ST~~-123"
+        self.assertTrue(self.observe()["clean"])
+
+    def test_observer_cannot_report_clean_when_strikethrough_rule_is_missing(self):
+        self.comment["body"] = "Public text"
+        for method in ("enable", "parse"):
+            with (self.subTest(parser_method=method),
+                  patch.object(content.MarkdownIt, method, side_effect=KeyError("private parser details")),
+                  self.assertRaisesRegex(content.AdmissionError, "^content-parser-unavailable$")):
+                self.observe()
 
     def test_observer_checks_decoded_titles_and_html_text_without_echoing_values(self):
         self.policy["protected_value_sha256"].append(content.sha256("fixture_resource"))
