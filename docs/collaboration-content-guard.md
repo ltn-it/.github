@@ -61,6 +61,13 @@ remain separators. Source text and exact destinations retain their checks;
 parser or work-bound failures never produce a partial clean result. Parsed text
 is inspected in memory and is not added to receipts or diagnostics.
 
+Decoded link, image and reference titles are separate inspected text surfaces;
+they are never joined to unrelated labels or tooltips. Bounded HTML text joins
+inline fragments and keeps the qualified grammar's block and line separators.
+HTML attribute values and actual link destinations retain their inspection.
+Repeated reference metadata is deduplicated, and HTML parser failures reject
+with a fixed safe category instead of a partial clean result.
+
 GitHub source links must resolve to a public repository in the complete trusted
 inventory. Unknown owners, unknown repositories and private/internal targets
 are rejected. Historical organization aliases are not inferred from a redirect.
@@ -135,6 +142,12 @@ scope also explicitly excludes pending review drafts. An observation is a
 bounded time window, not an atomic organization snapshot. Edits after each
 final individual read can still race the observer. A clean selected-scope
 observation never establishes that the entire organization is clean.
+
+Every observed public content object must explicitly contain its nullable body;
+issue and PR titles must be present strings. An explicit null or empty body is
+known empty content. Missing fields are incomplete reads and cannot become empty
+content by default. Rechecks preserve field presence, so a null body disappearing
+later also fails closed. Pending review drafts remain explicitly excluded.
 
 ## Separate history procedure
 

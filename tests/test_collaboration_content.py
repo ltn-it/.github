@@ -41,6 +41,28 @@ def parsed_sensitive_cases():
             (r"https\://github.com/ltn-it/example/issues/1", "unverified-public-source"))
 
 
+def decoded_title_cases():
+    for value, category in ((r"TEST\-123", "private-identifier"),
+                            (r"ghp\_" + "A" * 22, "credential"),
+                            (r"fixture\_resource", "protected-value")):
+        for body in (f'[public](https://docs.github.com/en/rest "{value}")',
+                     f'![public](https://docs.github.com/en/rest "{value}")',
+                     f'[public][ref]\n\n[ref]: https://docs.github.com/en/rest "{value}"'):
+            yield body, category
+
+
+def html_text_cases():
+    return (("<div>TE<strong>ST</strong>-123</div>", "private-identifier"),
+            ("<div>TE<!-- split -->ST<!-- split -->-123</div>", "private-identifier"),
+            ("<div>ghp<span>_</span>" + "A" * 22 + "</div>", "credential"),
+            ("<div>ghp<source>_" + "A" * 22 + "</div>", "credential"),
+            ("<div>person<em>@</em>example.com</div>", "personal-data"),
+            ("<div>node<span>.</span>internal</div>", "private-system"),
+            ("<div>10<span>.</span>1.2.3</div>", "protected-infrastructure"),
+            ("<div>fixture<span>_</span>resource</div>", "protected-value"),
+            ("<div>ltn-it/<strong>example</strong>#1</div>", "unverified-public-source"))
+
+
 class ContentTests(unittest.TestCase):
     def setUp(self):
         self.policy = content.policy_from(ROOT / ".lit/collaboration-content-policy.json")
@@ -83,6 +105,49 @@ class ContentTests(unittest.TestCase):
     def test_formatted_native_reference_keeps_strict_destination_policy(self):
         self.assert_destination_blocked_before_send("ltn-it/**example**#1")
         self.assertTrue(self.validate(body="ltn-it/**.github**#556")["admitted"])
+
+    def test_decoded_titles_and_html_text_block_publication_before_send(self):
+        self.policy["protected_value_sha256"].append(content.sha256("fixture_resource"))
+        for body, category in (*decoded_title_cases(), *html_text_cases()):
+            with self.subTest(case=content.sha256(body), category=category):
+                self.assertIn(category, self.validate(body=body)["categories"])
+                self.assert_destination_blocked_before_send(body)
+
+    def test_titles_html_blocks_and_explicit_public_exceptions_remain_supported(self):
+        self.policy["approved_public_identifiers"].append("TEST-123")
+        bodies = (
+            r'[public](https://docs.github.com/en/rest "TEST\-123")',
+            r'![public](https://docs.github.com/en/rest "RFC\-9110")',
+            '[public][ref]\n\n[ref]: https://docs.github.com/en/rest "CVE\\-2026\\-1234"',
+            '<div><strong>TEST</strong>-123</div>',
+            '<div><strong>CVE</strong>-2026-1234</div>',
+            '<div>TEST</div><div>-123</div>',
+            '<div>ghp</div><div>_' + 'A' * 22 + '</div>',
+            '<div>ghp<br>_' + 'A' * 22 + '</div>',
+            '<a href="https://docs.github.com/en/rest" title="Public">Source</a>',
+        )
+        for body in bodies:
+            with self.subTest(case=content.sha256(body)):
+                self.assertTrue(self.validate(body=body)["admitted"])
+
+    def test_metadata_surfaces_remain_separate_and_reference_titles_can_repeat(self):
+        title = "_" + "A" * 22
+        bodies = (
+            f'[ghp](https://docs.github.com/en/rest "{title}")',
+            f'<span title="ghp">{title}</span>',
+            '[public][ref] ' * 80 + '\n\n[ref]: https://docs.github.com/en/rest "Public context"',
+        )
+        for body in bodies:
+            with self.subTest(case=content.sha256(body)):
+                self.assertTrue(self.validate(body=body)["admitted"])
+
+    def test_html_parser_failure_cannot_send_or_echo_parser_details(self):
+        sends = []
+        with (patch.object(content.HTMLDestinations, "feed", side_effect=AssertionError("private")),
+              self.assertRaisesRegex(content.AdmissionError, "^content-parser-unavailable$")):
+            content.guarded_payload("comment", "ltn-it/.github", {"body": "<div>Public</div>"},
+                self.inventory, self.policy, sends.append, now=NOW)
+        self.assertEqual([], sends)
 
     def test_quoted_html_whitespace_cannot_split_exact_url_policy(self):
         for whitespace in ("\n", "\r", "\t", " ", "&#10;", "%09"):
@@ -484,6 +549,57 @@ class ObservationTests(unittest.TestCase):
         self.comment["body"] = r"Approved **TEST\-123** with **RFC\-9110**"
         self.assertTrue(self.observe()["clean"])
 
+    def test_observer_checks_decoded_titles_and_html_text_without_echoing_values(self):
+        self.policy["protected_value_sha256"].append(content.sha256("fixture_resource"))
+        for body, category in (*decoded_title_cases(), *html_text_cases()):
+            with self.subTest(case=content.sha256(body), category=category):
+                self.comment["body"] = body
+                report = self.observe()
+                self.assertFalse(report["clean"])
+                self.assertIn(category, report["objects"][1]["categories"])
+                self.assertNotIn(body, json.dumps(report))
+
+    def test_observer_requires_present_bodies_and_issue_title(self):
+        for target, field in ((self.item, "body"), (self.comment, "body"), (self.item, "title")):
+            value = target.pop(field)
+            try:
+                with self.subTest(field=field, object_id=target["id"]), self.assertRaises(content.AdmissionError):
+                    self.observe()
+            finally:
+                target[field] = value
+
+    def test_observer_accepts_explicit_null_bodies_and_present_empty_strings(self):
+        self.item["body"], self.comment["body"] = None, None
+        self.assertTrue(self.observe()["clean"])
+        self.item["title"], self.item["body"], self.comment["body"] = "", "", ""
+        self.assertTrue(self.observe()["clean"])
+
+    def test_null_issue_or_comment_body_disappearing_during_recheck_is_unknown(self):
+        self.item["body"], self.comment["body"] = None, None
+        for target in ("issue", "comment"):
+            api = FakeAPI(self.responses)
+            original, reads = api.get, []
+            expected = ("repos/ltn-it/.github/issues/556" if target == "issue" else
+                        "repos/ltn-it/.github/issues/556/comments?per_page=100&page=1")
+
+            def get(path, original=original, reads=reads, expected=expected, target=target):
+                value = original(path)
+                if path == expected:
+                    reads.append(path)
+                    if len(reads) > 1:
+                        (value if target == "issue" else value[0]).pop("body")
+                return value
+
+            api.get = get
+            with self.subTest(target=target), self.assertRaises(content.AdmissionError):
+                self.observe(api)
+
+    def test_html_parser_failure_cannot_report_clean_observation(self):
+        self.comment["body"] = "<div>Public</div>"
+        with (patch.object(content.HTMLDestinations, "feed", side_effect=AssertionError("private")),
+              self.assertRaisesRegex(content.AdmissionError, "^content-parser-unavailable$")):
+            self.observe()
+
     def test_observer_flags_all_three_url_bypasses_without_echoing_destinations(self):
         for body in ('<a href="https://docs.github.com/en/rest\n?extra=value">x</a>',
                      'www.github.com/ltn-it/example/issues/1',
@@ -621,6 +737,56 @@ class PullObservationTests(unittest.TestCase):
         self.assertNotIn("TEST-123", json.dumps(report))
         self.assertNotIn("reviews", report["excluded"])
         self.assertIn("closed-pull-requests", report["excluded"])
+
+    def test_all_observed_pull_surfaces_require_body_and_parent_title(self):
+        self.review["body"] = "Safe review"
+        for target, field in ((self.pull, "body"), (self.comment, "body"), (self.review, "body"),
+                              (self.inline, "body"), (self.pull, "title")):
+            value = target.pop(field)
+            try:
+                with self.subTest(field=field, object_id=target["id"]), self.assertRaises(content.AdmissionError):
+                    self.observe()
+            finally:
+                target[field] = value
+
+    def test_explicit_null_pull_surface_bodies_are_known_empty_content(self):
+        for target in (self.pull, self.comment, self.review, self.inline):
+            target["body"] = None
+        self.assertTrue(self.observe()["clean"])
+
+    def test_missing_body_on_excluded_pending_review_is_not_claimed_observed(self):
+        self.review["state"] = "PENDING"
+        self.review.pop("body")
+        self.inline.pop("body")
+        report = self.observe()
+        self.assertTrue(report["clean"])
+        self.assertEqual(0, report["counts"]["reviews"])
+        self.assertEqual(0, report["counts"]["inline_comments"])
+
+    def test_null_pull_surface_body_disappearance_during_recheck_is_unknown(self):
+        for target in (self.pull, self.comment, self.review, self.inline):
+            target["body"] = None
+        targets = (
+            ("pull", "repos/ltn-it/.github/pulls/3"),
+            ("comment", "repos/ltn-it/.github/issues/3/comments?per_page=100&page=1"),
+            ("review", "repos/ltn-it/.github/pulls/3/reviews?per_page=100&page=1"),
+            ("inline", "repos/ltn-it/.github/pulls/3/comments?per_page=100&page=1"),
+        )
+        for target, expected in targets:
+            api = FakeAPI(self.responses)
+            original, reads = api.get, []
+
+            def get(path, original=original, reads=reads, expected=expected, target=target):
+                value = original(path)
+                if path == expected:
+                    reads.append(path)
+                    if len(reads) > 1:
+                        (value if target == "pull" else value[0]).pop("body")
+                return value
+
+            api.get = get
+            with self.subTest(target=target), self.assertRaises(content.AdmissionError):
+                self.observe(api)
 
     def test_pending_review_draft_and_its_inline_comment_are_not_public_content(self):
         self.review["state"] = "PENDING"

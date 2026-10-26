@@ -90,6 +90,15 @@ def organization_inventory(api):
             "complete": True, "repositories": sorted(output, key=lambda row: row["id"])}
 
 
+def _object_text(obj, *, title_required):
+    """An explicit null body is known empty; an absent field is unreadable."""
+    require(type(obj) is dict and "body" in obj
+            and (type(obj["body"]) is str or obj["body"] is None), "body-type")
+    if title_required:
+        require(type(obj.get("title")) is str, "title-type")
+    return obj["title"] if title_required else "", obj["body"] or ""
+
+
 def observe_open_issues(api, inventory, policy, repositories, *, state="open"):
     """Observe open issues and their current comments; explicitly exclude PRs.
 
@@ -122,10 +131,9 @@ def observe_open_issues(api, inventory, policy, repositories, *, state="open"):
             require(type(current.get("comments")) is int and len(comments) == current["comments"], "comment-count")
             objects = [("issue", current)] + [("comment", comment) for comment in comments]
             for kind, obj in objects:
-                require(type(obj.get("body")) is str or obj.get("body") is None, "body-type")
+                title, body = _object_text(obj, title_required=kind == "issue")
                 result = validate({"kind": kind, "repository": repository,
-                                   "title": obj.get("title", "") if kind == "issue" else "",
-                                   "body": obj.get("body") or ""}, inventory, policy)
+                                   "title": title, "body": body}, inventory, policy)
                 counts["issues" if kind == "issue" else "comments"] += 1
                 # URLs, titles, author names, bodies, diffs and private values
                 # do not cross this output boundary. The native opaque ID is
@@ -138,6 +146,7 @@ def observe_open_issues(api, inventory, policy, repositories, *, state="open"):
             require(type(final) is dict and final.get("id") == current["id"]
                     and all(final.get(field) == current.get(field) for field in ("state", "title", "body", "comments", "updated_at")),
                     "issue-observation-drift")
+            _object_text(final, title_required=True)
             repeated = pages(api, f"repos/{repository}/issues/{number}/comments")
             require(snapshot(comments, ("body", "updated_at")) == snapshot(repeated, ("body", "updated_at")),
                     "comment-observation-drift")
@@ -160,7 +169,7 @@ def observe_open_issues(api, inventory, policy, repositories, *, state="open"):
 
 def snapshot(rows, fields):
     """An in-memory comparison only; source values never enter a receipt."""
-    return [(row["id"], *(row.get(field) for field in fields)) for row in rows]
+    return [(row["id"], *((field in row, row.get(field)) for field in fields)) for row in rows]
 
 
 def observe_open_collaboration(api, inventory, policy, repositories, *, state="open"):
@@ -211,10 +220,9 @@ def observe_open_collaboration(api, inventory, policy, repositories, *, state="o
             objects += [("review_comment", "inline_comments", row) for row in inline
                         if row["pull_request_review_id"] not in pending]
             for kind, counter, obj in objects:
-                require(type(obj.get("body")) is str or obj.get("body") is None, "body-type")
+                title, body = _object_text(obj, title_required=kind == "pull_request")
                 result = validate({"kind": kind, "repository": repository,
-                                   "title": obj.get("title", "") if kind == "pull_request" else "",
-                                   "body": obj.get("body") or ""}, inventory, policy)
+                                   "title": title, "body": body}, inventory, policy)
                 report["counts"][counter] += 1
                 report["objects"].append({"repository_id": known[repository]["id"], "kind": kind, "id": obj["id"],
                                           "observed_at": utc_now(), "source_updated_at": obj.get("updated_at"),
@@ -225,6 +233,7 @@ def observe_open_collaboration(api, inventory, policy, repositories, *, state="o
                     and all(final.get(field) == current.get(field) for field in
                             ("number", "state", "title", "body", "comments", "review_comments", "updated_at", "head", "base")),
                     "pull-observation-drift")
+            _object_text(final, title_required=True)
             for suffix, initial, fields in (
                 (comments_path, comments, ("body", "updated_at")),
                 (f"{target}/reviews", reviews, ("body", "state", "submitted_at", "commit_id")),

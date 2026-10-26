@@ -21,9 +21,11 @@ from urllib.parse import unquote, urlsplit
 
 try:
     from markdown_it import MarkdownIt
+    from markdown_it.common.html_blocks import block_names
     MARKDOWN_VERSION = version("markdown-it-py")
+    HTML_BLOCK_TAGS = frozenset(block_names) | {"br", "pre", "script", "style"}
 except (ImportError, PackageNotFoundError):
-    MarkdownIt, MARKDOWN_VERSION = None, None
+    MarkdownIt, MARKDOWN_VERSION, HTML_BLOCK_TAGS = None, None, None
 
 # The actual Root/Private digest-pinned runtimes contain this qualified parser.
 # An arbitrary host interpreter must not silently fall back to incomplete regex.
@@ -190,15 +192,27 @@ def strict_https_destination(target):
 
 
 class HTMLDestinations(HTMLParser):
-    """Retain entire parsed attribute values, including internal whitespace."""
+    """Keep bounded HTML text, metadata and exact destination boundaries."""
     def __init__(self):
         super().__init__(convert_charrefs=True)
         self.destinations = []
+        self.text_values = set()
+        self.text_parts = []
 
     def handle_starttag(self, tag, attrs):
+        if tag in HTML_BLOCK_TAGS:
+            self.text_parts.append("\n")
         for name, value in attrs:
             if name in {"href", "src"}:
                 self.destinations.append(value or "")
+            self.text_values.add(value or "")
+
+    def handle_endtag(self, tag):
+        if tag in HTML_BLOCK_TAGS:
+            self.text_parts.append("\n")
+
+    def handle_data(self, value):
+        self.text_parts.append(value)
 
 
 def native_reference_destinations(value):
@@ -225,7 +239,8 @@ def _markdown_content(value):
     strict_https_destination and destination_categories. Code text is inspected
     too, under a fixed nesting/work bound; it is not an escape from the guard.
     """
-    require(MarkdownIt is not None and MARKDOWN_VERSION == SUPPORTED_MARKDOWN_VERSION,
+    require(MarkdownIt is not None and MARKDOWN_VERSION == SUPPORTED_MARKDOWN_VERSION
+            and HTML_BLOCK_TAGS is not None,
             "content-parser-unavailable")
     try:
         parser = MarkdownIt("commonmark", {"maxNesting": 20})
@@ -233,7 +248,9 @@ def _markdown_content(value):
         parser.validateLink = lambda target: True
     except Exception:
         raise AdmissionError("content-parser-unavailable") from None
-    targets, rendered = set(), []
+    # Repeated references can reuse one large title. Scan each distinct text
+    # surface once rather than expanding metadata work for every use.
+    targets, rendered = set(), set()
     pending, remaining = [(value, 0)], max(1, len(value)) * 8
     while pending:
         text, depth = pending.pop()
@@ -246,6 +263,8 @@ def _markdown_content(value):
             raise AdmissionError("content-parser-unavailable") from None
         for reference in environment.get("references", {}).values():
             targets.add(reference["href"])
+            if reference.get("title") is not None:
+                rendered.add(reference["title"])
         parts, stack = [], list(reversed(tokens))
         while stack:
             token = stack.pop()
@@ -256,6 +275,10 @@ def _markdown_content(value):
                 target = token.attrGet(attribute)
                 if target is not None:
                     targets.add(target)
+            for attribute in ("title", "alt"):
+                metadata = token.attrGet(attribute)
+                if metadata is not None:
+                    rendered.add(metadata)
             if token.type == "text":
                 targets.update(native_reference_destinations(token.content))
             elif token.type in {"fence", "code_block", "code_inline"} and token.content:
@@ -267,7 +290,7 @@ def _markdown_content(value):
         # Inline formatting can split a single displayed value across tokens;
         # block boundaries must not join unrelated paragraphs into a credential.
         text = "".join(parts)
-        rendered.append(text)
+        rendered.add(text)
         targets.update(native_reference_destinations(text))
     return targets, rendered
 
@@ -278,15 +301,21 @@ def markdown_destinations(value):
 
 def _link_content(value):
     """All grammar/HTML/native/prose candidates share one destination policy."""
-    parser = HTMLDestinations()
-    parser.feed(value)
-    parser.close()
     targets, rendered = _markdown_content(value)
+    parser = HTMLDestinations()
+    try:
+        parser.feed(value)
+        parser.close()
+    except (AssertionError, ValueError):
+        raise AdmissionError("content-parser-unavailable") from None
+    rendered.update(parser.text_values)
+    rendered.add("".join(parser.text_parts))
     targets.update(parser.destinations)
     targets.update(native_reference_destinations(value))
     # Inspect prose, code and labels as well. Only prose candidates lose terminal
     # punctuation; parsed explicit destinations retain their exact full values.
     for text in (value, *rendered):
+        targets.update(native_reference_destinations(text))
         for match in re.finditer(r"(?i)\b(?:[a-z][a-z0-9+.-]*://|www\.)[^\s<>\"'`]+", text):
             targets.add(match.group().rstrip(".,;:!?)]}"))
     return targets, rendered
