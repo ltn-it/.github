@@ -79,6 +79,18 @@ bounded inspection of code text and exact destination checks remain in force.
 An unavailable strikethrough rule or failed parse rejects before publication
 and cannot produce a clean observation.
 
+Hostname, email, prose-link and address inspection first extracts non-overlapping
+lexical candidates. Fixed suffix and boundary checks operate within those runs;
+absent dots, address colons or URL separators do not trigger repeated searches
+of overlapping text tails. IPv4 components retain their fixed-width and word
+boundaries, and existing Unicode boundaries, tracker suffixes, email detection
+and exact destination rules remain covered by compatibility cases.
+Maximum-size regressions bind dot-free text, dotted hostname-like text and
+colon-free hexadecimal text. They also check unchanged final payload bytes,
+read-only observation and candidate search-volume/scaling bounds. A generous
+test-only deadline catches a stalled scanner; it is not a new runtime timeout
+or policy exception. These checks do not replace native or operating acceptance.
+
 GitHub source links must resolve to a public repository in the complete trusted
 inventory. Unknown owners, unknown repositories and private/internal targets
 are rejected. Historical organization aliases are not inferred from a redirect.

@@ -314,6 +314,81 @@ def markdown_destinations(value):
     return _markdown_content(value)[0]
 
 
+def _lexical_runs(pattern, value, flags=0):
+    """Non-overlapping candidates; patterns contain no required long suffix."""
+    return re.finditer(pattern, value, flags)
+
+
+def _word_character(value):
+    return value.isalnum() or value == "_"
+
+
+def _candidate_start(value, start, end, *, letter=False):
+    for index in range(start, end):
+        char = value[index]
+        if (_word_character(char) and (not letter or char.isalpha())
+                and (index == 0 or not _word_character(value[index - 1]))):
+            return index
+    return None
+
+
+def _private_hostname(value):
+    for candidate in _lexical_runs(r"[a-z0-9.-]+", value, re.I):
+        first = _candidate_start(value, candidate.start(), candidate.end())
+        host = candidate.group()
+        for suffix in _lexical_runs(r"atlassian\.net|\.(?:internal|local|corp|lan)", host, re.I):
+            end = candidate.start() + suffix.end()
+            if end < len(value) and _word_character(value[end]):
+                continue
+            if not suffix.group().startswith(".") or (first is not None and first < candidate.start() + suffix.start()):
+                return True
+    return False
+
+
+def _personal_email(value):
+    # Each maximal local/domain run participates in at most two adjacent pairs.
+    left = middle = None
+    for right in _lexical_runs(r"[a-z0-9._%+-]+|@", value, re.I):
+        if (left is not None and middle.group() == "@" and left.group() != "@" and right.group() != "@"
+                and left.end() == middle.start() and middle.end() == right.start()
+                and _candidate_start(value, left.start(), left.end()) is not None):
+            domain = re.match(r"[a-z0-9.-]+", right.group(), re.I)
+            if domain is not None:
+                for suffix in _lexical_runs(r"\.[a-z]{2,}", domain.group(), re.I):
+                    end = right.start() + suffix.end()
+                    if suffix.start() > 0 and (end == len(value) or not _word_character(value[end])):
+                        return True
+        left, middle = middle, right
+    return False
+
+
+def _prose_destinations(value):
+    for candidate in _lexical_runs(r"[^\s<>\"'`]+", value):
+        token = candidate.group()
+        start = None
+        for scheme in _lexical_runs(r"[a-z][a-z0-9+.-]*", token, re.I):
+            if token[scheme.end():scheme.end() + 3] == "://" and scheme.end() + 3 < len(token):
+                position = _candidate_start(token, scheme.start(), scheme.end(), letter=True)
+                if position is not None:
+                    start = position
+                    break
+        www = re.search(r"\bwww\.", token, re.I)
+        if www is not None and www.end() < len(token) and (start is None or www.start() < start):
+            start = www.start()
+        if start is not None:
+            yield token[start:].rstrip(".,;:!?)]}")
+
+
+def _address_candidates(value):
+    # IPv4 has fixed-width components. Maximal IPv6-like runs are consumed even
+    # without a colon, rather than rescanning their overlapping hexadecimal tails.
+    pattern = r"\[?(?<![\w.])(?:\d{1,3}\.){3}\d{1,3}(?![\w.])\]?|\[?[0-9a-fA-F:]+\]?"
+    for candidate in _lexical_runs(pattern, value):
+        address = candidate.group().strip("[]")
+        if ":" in address or "." in address:
+            yield address
+
+
 def _link_content(value):
     """All grammar/HTML/native/prose candidates share one destination policy."""
     targets, rendered = _markdown_content(value)
@@ -326,8 +401,7 @@ def _link_content(value):
     # punctuation; parsed explicit destinations retain their exact full values.
     for text in (value, *rendered):
         targets.update(native_reference_destinations(text))
-        for match in re.finditer(r"(?i)\b(?:[a-z][a-z0-9+.-]*://|www\.)[^\s<>\"'`]+", text):
-            targets.add(match.group().rstrip(".,;:!?)]}"))
+        targets.update(_prose_destinations(text))
     return targets, rendered
 
 
@@ -362,7 +436,7 @@ def _sensitive_value_categories(value, policy):
     categories = set()
     if any(unicodedata.category(c) in ("Cf", "Cs") or (ord(c) < 32 and c not in "\n\r\t") for c in value):
         categories.add("content-control-character")
-    if re.search(r"(?i)(?:[a-z0-9-]+\.)*atlassian\.net\b|\b[a-z0-9.-]+\.(?:internal|local|corp|lan)\b", value):
+    if _private_hostname(value):
         categories.add("private-system")
     for found in re.finditer(r"\b(?:CVE-[0-9]{4}-[0-9]+|[A-Z][A-Z0-9]{1,15}-[1-9][0-9]*)\b", value, re.I):
         token = found.group().upper()
@@ -373,9 +447,9 @@ def _sensitive_value_categories(value, policy):
         categories.add("credential")
     if re.search(r"(?i)\b(?:password|passwd|secret|token|api[_ -]?key|authorization)\s*[:=]\s*[^\s]{4,}", value):
         categories.add("secret-like")
-    if re.search(r"(?i)\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", value):
+    if _personal_email(value):
         categories.add("personal-data")
-    for address in re.findall(r"(?<![\w.])(?:\d{1,3}\.){3}\d{1,3}(?![\w.])|\[?[0-9a-fA-F]*:[0-9a-fA-F:]+\]?", value):
+    for address in _address_candidates(value):
         try:
             if not ipaddress.ip_address(address.strip("[]")).is_global:
                 categories.add("protected-infrastructure")

@@ -1,11 +1,14 @@
 """Exercise the actual offline admission and complete read-only observer."""
 import copy
 import io
+import ipaddress
 import json
+import re
+import signal
 import sys
 import tempfile
 import unittest
-from contextlib import redirect_stdout
+from contextlib import contextmanager, redirect_stdout
 from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import patch
@@ -98,6 +101,29 @@ def literal_strikethrough_cases():
             "fixture~~_~~resource")
 
 
+@contextmanager
+def scanner_deadline():
+    # A generous hang guard, not a timing-based throughput requirement.
+    def expired(signum, frame):
+        raise TimeoutError("bounded-content-scan-exceeded")
+    previous_handler = signal.signal(signal.SIGALRM, expired)
+    previous_timer = signal.setitimer(signal.ITIMER_REAL, 5)
+    try:
+        yield
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, *previous_timer)
+        signal.signal(signal.SIGALRM, previous_handler)
+
+
+def maximum_scanner_cases(limit):
+    for label, unit in (("dot-free", "z"), ("dotted-hostlike", "a."), ("colon-free-hex", "f")):
+        yield label, (unit * (limit // len(unit) + 1))[:limit], None
+    for suffix, category in ((" node.internal", "private-system"),
+                             (" person@example.com", "personal-data"),
+                             (" [fd00::1]", "protected-infrastructure")):
+        yield category, "f" * (limit - len(suffix)) + suffix, category
+
+
 class ContentTests(unittest.TestCase):
     def setUp(self):
         self.policy = content.policy_from(ROOT / ".lit/collaboration-content-policy.json")
@@ -114,6 +140,101 @@ class ContentTests(unittest.TestCase):
             content.guarded_payload("comment", "ltn-it/.github", {"body": body},
                 self.inventory, self.policy, sends.append, now=NOW)
         self.assertEqual([], sends)
+
+    def test_maximum_wire_content_scans_without_stalling_or_changing_final_bytes(self):
+        overhead = len(json.dumps({"body": ""}, separators=(",", ":")).encode())
+        for label, body, category in maximum_scanner_cases(self.policy["max_text_bytes"] - overhead):
+            sends = []
+            with self.subTest(case=label), scanner_deadline():
+                if category is None:
+                    content.guarded_payload("comment", "ltn-it/.github", {"body": body},
+                        self.inventory, self.policy, sends.append, now=NOW)
+                    self.assertEqual(1, len(sends))
+                    self.assertEqual(self.policy["max_text_bytes"], len(sends[0]))
+                    self.assertEqual(content.sha256(body), content.sha256(json.loads(sends[0])["body"]))
+                else:
+                    self.assertIn(category, self.validate(body=body)["categories"])
+                    with self.assertRaises(content.AdmissionError):
+                        content.guarded_payload("comment", "ltn-it/.github", {"body": body},
+                            self.inventory, self.policy, sends.append, now=NOW)
+                    self.assertEqual([], sends)
+
+    def test_raw_scanner_handles_full_size_runs_without_overlapping_suffix_searches(self):
+        for label, body, category in maximum_scanner_cases(self.policy["max_text_bytes"]):
+            with self.subTest(case=label), scanner_deadline():
+                categories = content._sensitive_value_categories(body, self.policy)
+                if category is None:
+                    self.assertEqual(set(), categories)
+                else:
+                    self.assertIn(category, categories)
+
+    def test_candidate_search_work_is_bounded_and_scales_with_input_bytes(self):
+        extractor = getattr(content, "_lexical_runs", None)
+        if extractor is None:
+            self.skipTest("predecessor-has-no-candidate-work-instrumentation")
+        repositories = {row["full_name"]: row for row in self.inventory["repositories"]}
+        for unit in ("z", "a.", "f"):
+            measured = []
+            for size in (4096, 8192, self.policy["max_text_bytes"]):
+                # Explicit paragraph termination keeps the parser's generated
+                # separators within the same existing byte limit.
+                body = (unit * (size // len(unit) + 1))[:size - 8] + "\n" * 8
+                work = {"subjects": 0, "spans": 0}
+                def record(pattern, value, flags=0):
+                    work["subjects"] += len(value)
+                    end = 0
+                    for candidate in extractor(pattern, value, flags):
+                        self.assertGreaterEqual(candidate.start(), end)
+                        work["spans"] += candidate.end() - candidate.start()
+                        end = candidate.end()
+                        yield candidate
+                with self.subTest(unit=unit, size=size), patch.object(content, "_lexical_runs", record), scanner_deadline():
+                    self.assertEqual([], content.scan_text(body, self.policy, repositories))
+                self.assertLessEqual(work["spans"], work["subjects"])
+                self.assertLessEqual(work["subjects"], 32 * size + 1024)
+                measured.append(work["subjects"])
+            self.assertLessEqual(measured[1], 2 * measured[0] + 1024)
+
+    def test_lexical_classification_preserves_existing_boundaries_and_addresses(self):
+        host = r"(?i)(?:[a-z0-9-]+\.)*atlassian\.net\b|\b[a-z0-9.-]+\.(?:internal|local|corp|lan)\b"
+        email = r"(?i)\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b"
+        address = r"(?<![\w.])(?:\d{1,3}\.){3}\d{1,3}(?![\w.])|\[?[0-9a-fA-F]*:[0-9a-fA-F:]+\]?"
+        values = ("team.atlassian.net", "xatlassian.net", "atlassian.net_", "host.local", ".local",
+                  "host.local123", "a-b.corp", "host.İnternal", "example.org", "person@example.com",
+                  "person@.com", "person@..com", "person@example.com_", "a@b.c@d.net",
+                  "10.1.2.3", "[10.1.2.3]", "fd00::1", "[fd00::1]", "::1", ":::1",
+                  "8.8.8.8", "2001:4860:4860::8888", "::ffff:192.0.2.1", "::ffff:8.8.8.8")
+        for value in values:
+            for before in ("", " ", "_", "é", "a.", "a-"):
+                for after in ("", " ", "_", "é", ".", "-x"):
+                    text = before + value + after
+                    expected_address = False
+                    for found in re.findall(address, text):
+                        try:
+                            expected_address |= not ipaddress.ip_address(found.strip("[]")).is_global
+                        except ValueError:
+                            pass
+                    with self.subTest(case=content.sha256(text)):
+                        categories = content._sensitive_value_categories(text, self.policy)
+                        self.assertEqual(bool(re.search(host, text)), "private-system" in categories)
+                        self.assertEqual(bool(re.search(email, text)), "personal-data" in categories)
+                        self.assertEqual(expected_address, "protected-infrastructure" in categories)
+
+    def test_prose_candidate_boundaries_preserve_existing_exact_destinations(self):
+        extractor = getattr(content, "_prose_destinations", None)
+        if extractor is None:
+            self.skipTest("predecessor-has-no-separated-prose-candidates")
+        pattern = r"(?i)\b(?:[a-z][a-z0-9+.-]*://|www\.)[^\s<>\"'`]+"
+        for value in ("www.", "https://", "https://?", "www..", "www.example.com", "WWW.example.com?x=1",
+                      "https://docs.github.com/en/rest", "prefix:https://docs.github.com/en/rest",
+                      "123abc.def://path", "www.example.com/https://second.example",
+                      "https://example.org/next www.example.org", "a.a.a.a", "x" * 128):
+            for before in ("", "_", "é", ".", "(", " "):
+                for after in ("", ".", ")", ">", " "):
+                    text = before + value + after
+                    expected = {m.group().rstrip(".,;:!?)]}") for m in re.finditer(pattern, text)}
+                    with self.subTest(case=content.sha256(text)):
+                        self.assertEqual(expected, set(extractor(text)))
 
     def test_parsed_sensitive_text_blocks_publication_before_send(self):
         self.policy["protected_value_sha256"].append(content.sha256("fixture_resource"))
@@ -602,6 +723,17 @@ class ObservationTests(unittest.TestCase):
             clock.now.return_value = NOW
             clock.strptime.side_effect = datetime.strptime
             return observation.observe_open_issues(api or FakeAPI(self.responses), self.inventory, self.policy, ["ltn-it/.github"])
+
+    def test_maximum_comment_scans_stay_bounded_and_keep_existing_detection(self):
+        for label, body, category in maximum_scanner_cases(self.policy["max_text_bytes"] - 8):
+            self.comment["body"] = body + "\n" * 8
+            with self.subTest(case=label), scanner_deadline():
+                self.assertEqual(self.policy["max_text_bytes"], len(self.comment["body"].encode()))
+                report = self.observe()
+                self.assertEqual(category is None, report["clean"])
+                if category is not None:
+                    self.assertIn(category, report["objects"][1]["categories"])
+                self.assertNotIn(body, json.dumps(report))
 
     def test_observer_detects_parsed_sensitive_values_without_echoing_text(self):
         self.policy["protected_value_sha256"].append(content.sha256("fixture_resource"))
