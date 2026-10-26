@@ -3,6 +3,11 @@ import base64
 import copy
 from datetime import datetime, timezone
 import hashlib
+import json
+import os
+import stat
+import subprocess
+import tempfile
 from pathlib import Path
 import sys
 from types import SimpleNamespace
@@ -17,6 +22,9 @@ import collaboration_management_candidate as m
 from collaboration_content import AdmissionError, policy_from
 from collaboration_publisher import BoundedTransport, TransportResult, digest, json_bytes
 import test_collaboration_native_issuer as fixture
+
+
+REAL_RUN = subprocess.run
 
 
 def encoded(b):return base64.urlsafe_b64encode(b).rstrip(b'=').decode()
@@ -66,7 +74,8 @@ class ManagementCandidateTests(unittest.TestCase):
         self.inventory={'version':1,'organization':'ltn-it','complete':True,'started_at':stamp,'finished_at':stamp,
             'repositories':[{k:self.target[k] for k in ['id','full_name','visibility','archived']}]}
         self.api=SimpleNamespace(call=self.call,file=self.file,pages=self.pages,put_once=self.put_once)
-        self.service=m.OwnedIssuer(self.api,'',self.wire,self.policy,self.inventory,clock=lambda:self.now,keys=lambda:self.keys)
+        self.service=m.OwnedIssuer(self.api,'',self.wire,self.policy,self.inventory,clock=lambda:self.now,keys=lambda:self.keys,
+            artifact_credential="synthetic-private-job-token")
         self.claims={'iss':'https://token.actions.githubusercontent.com','aud':self.service.audience,
             'sub':self.entry['subject'],'iat':self.now-20,'nbf':self.now-20,'exp':self.now+280,'jti':'offline-jti',
             'repository':m.MANAGEMENT,'repository_id':str(m.MANAGEMENT_ID),'repository_owner':'ltn-it',
@@ -121,10 +130,104 @@ class ManagementCandidateTests(unittest.TestCase):
         raise AssertionError('unexpected list')
 
     def download_artifact(self,args,**kwargs):
-        self.assertEqual(args[:-1],['gh','run','download','200','--repo',m.MANAGEMENT,
+        self.assertEqual(args[:-1],['/usr/local/bin/gh','run','download','200','--repo',m.MANAGEMENT,
             '--name','collaboration-owned-operation-1','--dir'])
         (Path(args[-1])/'operation.json').write_bytes(json_bytes(self.manifest))
         return SimpleNamespace(returncode=0)
+
+    def test_explicit_job_credential_and_original_artifact_with_hostile_parent(self):
+        hostile = {"PATH": "/untrusted/bin", "HOME": "/untrusted/home",
+            "GH_TOKEN": "wrong-ambient-token", "GITHUB_TOKEN": "other-token",
+            "APP_PRIVATE_KEY": "synthetic-app-key", "JIRA_NOTIFY_TOKEN": "synthetic-jira-token",
+            "ACTIONS_ID_TOKEN_REQUEST_TOKEN": "synthetic-oidc-token", "GH_DEBUG": "api",
+            "GH_HOST": "untrusted.invalid", "GH_CONFIG_DIR": "/untrusted/config",
+            "GIT_CONFIG_COUNT": "1", "GIT_CONFIG_KEY_0": "core.fsmonitor",
+            "GIT_CONFIG_VALUE_0": "/untrusted/hook", "GIT_CONFIG_GLOBAL": "/untrusted/gitconfig",
+            "HTTPS_PROXY": "http://untrusted.invalid", "SSL_CERT_FILE": "/untrusted/ca"}
+        original_download = self.download_artifact
+        observations = []
+        def download(command, **options):
+            environment = options["env"]
+            self.assertEqual("/usr/local/bin/gh", command[0])
+            self.assertEqual({"PATH", "HOME", "GH_CONFIG_DIR", "XDG_CONFIG_HOME", "GH_HOST",
+                              "GH_PROMPT_DISABLED", "GH_TOKEN"}, set(environment))
+            self.assertEqual("synthetic-private-job-token", environment["GH_TOKEN"])
+            self.assertEqual("github.com", environment["GH_HOST"])
+            self.assertEqual("/usr/local/bin:/usr/bin:/bin", environment["PATH"])
+            self.assertEqual(subprocess.DEVNULL, options["stdin"])
+            self.assertEqual(Path(environment["HOME"]), options["cwd"])
+            for key in ("HOME", "GH_CONFIG_DIR"):
+                self.assertEqual(0o700, stat.S_IMODE(Path(environment[key]).stat().st_mode))
+                self.assertEqual([], list(Path(environment[key]).iterdir()))
+            observations.append(dict(environment))
+            return original_download(command, **options)
+        self.download_mock.side_effect = download
+        with patch.dict(os.environ, hostile, clear=True), patch.object(m.control, "operation_record",
+                side_effect=AssertionError("owned path must not call pilot reader")):
+            self.assertEqual(self.manifest, m.native_manifest(self.api, self.run,
+                artifact_credential="synthetic-private-job-token"))
+        self.assertEqual(1, len(observations))
+        self.assertFalse(Path(observations[0]["HOME"]).exists())
+
+    def test_real_child_receives_only_download_environment_not_parent_credentials(self):
+        # Record the fixed download edge; execute a real offline child using its
+        # exact env/cwd. No GitHub request or actual job credential is used.
+        real_run = REAL_RUN
+        with tempfile.TemporaryDirectory() as temp:
+            marker = Path(temp) / "shim-executed"
+            shim = Path(temp) / "gh"
+            shim.write_text("#!/bin/sh\nprintf invoked > " + str(marker) + "\n")
+            shim.chmod(0o700)
+            seen = []
+            def recorded_edge(command, **options):
+                self.assertEqual("/usr/local/bin/gh", command[0])
+                child = real_run([sys.executable, "-I", "-c",
+                    "import os,json;print(json.dumps(dict(os.environ)))"],
+                    env=options["env"], cwd=options["cwd"], stdin=options["stdin"],
+                    capture_output=True, timeout=10, check=True)
+                observed = json.loads(child.stdout)
+                # Python may supply its own locale coercion value.
+                observed.pop("LC_CTYPE", None)
+                self.assertEqual(options["env"], observed)
+                seen.append(observed)
+                return self.download_artifact(command, **options)
+            self.download_mock.side_effect = recorded_edge
+            with patch.dict(os.environ, {"PATH": temp, "APP_PRIVATE_KEY": "synthetic-app-key",
+                    "JIRA_NOTIFY_TOKEN": "synthetic-notify", "GH_DEBUG": "api",
+                    "ACTIONS_ID_TOKEN_REQUEST_TOKEN": "synthetic-oidc",
+                    "GIT_CONFIG_COUNT": "1", "GIT_CONFIG_KEY_0": "core.fsmonitor",
+                    "GIT_CONFIG_VALUE_0": str(shim)}, clear=True):
+                result = m.native_manifest(self.api, self.run,
+                    artifact_credential="synthetic-private-job-token")
+            self.assertEqual(self.manifest, result)
+            self.assertEqual(1, len(seen))
+            self.assertFalse(marker.exists())
+
+    def test_missing_or_malformed_explicit_job_credential_never_downloads(self):
+        for credential in (None, "", 1, True, "bad\nvalue", "bad\x00value", "bad value", "x" * 16385):
+            with self.subTest(kind=type(credential).__name__), patch.dict(os.environ,
+                    {"GH_TOKEN": "ambient-cannot-authorize"}):
+                with self.assertRaises(AdmissionError):
+                    m.native_manifest(self.api, self.run, artifact_credential=credential)
+        self.download_mock.assert_not_called()
+
+    def test_download_failure_is_unknown_without_environment_or_output_echo(self):
+        for failure in (OSError("synthetic-private-error"), subprocess.TimeoutExpired("private", 60)):
+            self.download_mock.side_effect = failure
+            with self.assertRaisesRegex(AdmissionError, "^owned-private-manifest$"):
+                m.native_manifest(self.api, self.run, artifact_credential="synthetic-private-job-token")
+        self.download_mock.side_effect = lambda *a, **k: SimpleNamespace(returncode=1,
+            stdout=b"synthetic-secret", stderr=b"synthetic-secret")
+        with self.assertRaisesRegex(AdmissionError, "^owned-private-manifest$"):
+            m.native_manifest(self.api, self.run, artifact_credential="synthetic-private-job-token")
+
+    def test_changed_or_extra_artifact_is_not_original_operation(self):
+        def altered(command, **options):
+            result = self.download_artifact(command, **options)
+            (Path(command[-1]) / "unexpected.json").write_text("{}")
+            return result
+        self.download_mock.side_effect = altered
+        self.blocked()
 
     def put_once(self,path,value):
         self.writes.append((path,copy.deepcopy(value)));self.assertEqual(set(value),{'message','content','branch'})

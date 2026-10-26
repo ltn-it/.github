@@ -154,6 +154,13 @@ class NativeIssuerTests(unittest.TestCase):
         (Path(command[-1]) / "control-operation.json").write_bytes(json_bytes(self.operation))
         return SimpleNamespace(returncode=0)
 
+    def test_optional_pilot_still_reaches_original_control_artifact_reader(self):
+        # This records the separate pilot boundary, not a hardened reader claim.
+        with patch.object(control, "operation_record", wraps=control.operation_record) as operation:
+            self.service.issue()
+        self.assertTrue(operation.called)
+        self.assertEqual((self.api, issuer.ROOT, self.run, self.source), operation.call_args.args)
+
     def rejected(self):
         with self.assertRaises(AdmissionError) as caught:
             self.service.issue()

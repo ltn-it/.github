@@ -92,18 +92,35 @@ def private_repository(api):
             "owned-private-repository")
 
 
-def native_manifest(api, run):
+def native_manifest(api, run, *, artifact_credential=None):
+    # Explicit private job credential only: the parent may also hold App, Jira
+    # and OIDC credentials. None of its environment/config reaches gh.
+    require(type(artifact_credential) is str and 0 < len(artifact_credential) <= 16384
+            and all(33 <= ord(c) <= 126 for c in artifact_credential), "owned-artifact-credential")
+    require(type(run) is dict and positive(run.get("id")) and run.get("run_attempt") == 1,
+            "owned-private-manifest")
     name = "collaboration-owned-operation-1"
     records = api.pages(f"repos/{MANAGEMENT}/actions/runs/{run['id']}/artifacts", "artifacts")
     matches = [r for r in records if r.get("name") == name and r.get("expired") is False]
     require(len(matches) == 1 and positive(matches[0].get("size_in_bytes"))
             and matches[0]["size_in_bytes"] <= MAXIMUM, "owned-private-manifest")
     with tempfile.TemporaryDirectory(prefix="owned-publication-") as temporary:
-        completed = subprocess.run(["gh", "run", "download", str(run["id"]), "--repo", MANAGEMENT,
-                                   "--name", name, "--dir", temporary],
-                                  capture_output=True, timeout=60, check=False)
+        root = Path(temporary)
+        home, config, directory = (root / part for part in ("home", "config", "artifact"))
+        for child in (home, config, directory):
+            child.mkdir(mode=0o700)
+        environment = {"PATH": "/usr/local/bin:/usr/bin:/bin", "HOME": str(home),
+                       "GH_CONFIG_DIR": str(config), "XDG_CONFIG_HOME": str(config),
+                       "GH_HOST": "github.com", "GH_PROMPT_DISABLED": "1",
+                       "GH_TOKEN": artifact_credential}
+        try:
+            completed = subprocess.run(["/usr/local/bin/gh", "run", "download", str(run["id"]),
+                                       "--repo", MANAGEMENT, "--name", name, "--dir", str(directory)],
+                                      env=environment, cwd=home, stdin=subprocess.DEVNULL,
+                                      capture_output=True, timeout=60, check=False)
+        except (OSError, subprocess.SubprocessError):
+            raise AdmissionError("owned-private-manifest") from None
         require(completed.returncode == 0, "owned-private-manifest")
-        directory = Path(temporary)
         path = directory / "operation.json"
         require(list(directory.iterdir()) == [path] and path.is_file() and not path.is_symlink()
                 and 0 < path.stat().st_size <= MAXIMUM, "owned-private-manifest")
@@ -119,10 +136,12 @@ class OwnedIssuer:
     This owned deterministic PR path allocates no AI budget and makes no review
     proof. Registration, job and operation artifact are absent in current Main.
     """
-    def __init__(self, api, token, wire, policy, inventory, *, clock=time.time, keys=signing_keys):
+    def __init__(self, api, token, wire, policy, inventory, *, clock=time.time, keys=signing_keys,
+                 artifact_credential=None):
         self.api, self.token, self.wire = api, token, wire
         self.policy, self.inventory = document(json_bytes(policy)), document(json_bytes(inventory))
         self.clock, self.keys = clock, keys
+        self.artifact_credential = artifact_credential
         self.audience = AUDIENCE + digest(wire)
 
     def issue(self):
@@ -169,7 +188,7 @@ class OwnedIssuer:
         prepared = [s for s in selected[0].get("steps", []) if s.get("name") == "Prepare exact owned publication"]
         require(len(prepared) == 1 and prepared[0].get("status") == "completed"
                 and prepared[0].get("conclusion") == "success", "owned-native-preparation")
-        manifest = native_manifest(api, run)
+        manifest = native_manifest(api, run, artifact_credential=self.artifact_credential)
         require(type(manifest) is dict and set(manifest) == {"version", "role", "operation", "repository_id",
                 "run_id", "run_attempt", "job_id", "base_ref", "head_ref", "base_sha", "head_sha", "payload_sha256"}
                 and type(manifest["version"]) is int and manifest["version"] == 1

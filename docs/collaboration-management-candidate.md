@@ -123,3 +123,22 @@ their own proven prepublication path or a legitimate protected replacement.
 The two automatic Security settings remain ON / On PR open. Their documented
 direct-publication gap does not block local owned-adapter development, and a
 successful owned canary would not close issue #556 by itself.
+
+
+The candidate `OwnedIssuer` requires an explicit keyword-only
+`artifact_credential` for the private operation download. The private entry must
+supply its native Management job token, separately from the inventory reader,
+App key, Jira notification credential and OIDC assertion. A missing credential
+blocks before a download; the candidate never falls back to ambient credentials.
+The pinned private Execution Environment supplies `/usr/local/bin/gh`. Each
+operation uses fresh private HOME/config directories, a fixed PATH and only the
+explicit job token in a replacement child environment. Parent debug, proxy, CA
+and Git configuration are excluded. This is a local component contract, not an
+installed token, selected Source admission or operational scope claim.
+
+The separate optional `NativeReviewIssuer` pilot still reaches
+`workflow_control.operation_record` and its existing artifact reader. Its
+original operation and native-generation checks remain unchanged. The owned
+private path does not call that pilot reader. This change does not harden or
+admit the pilot or change shared controllers; any later activation must qualify
+that separate process boundary under its actual selected Source.
