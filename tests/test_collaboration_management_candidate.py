@@ -45,7 +45,7 @@ class ManagementCandidateTests(unittest.TestCase):
                 'ref':'refs/heads/main','sha':self.source}]}}]}
         self.workflow={'concurrency':{'group':m.CONCURRENCY,'cancel-in-progress':False},'jobs':{
             'collaboration-publish':{'name':self.entry['job'],'permissions':{
-                'contents':'read','actions':'read','id-token':'write'}}}}
+                'contents':'write','actions':'read','id-token':'write'}}}}
         self.private={'id':m.MANAGEMENT_ID,'full_name':m.MANAGEMENT,'visibility':'private','private':True,
                       'archived':False,'disabled':False}
         self.target={'id':m.ROOT_ID,'full_name':m.ROOT,'visibility':'public','private':False,
@@ -271,6 +271,16 @@ class ManagementCandidateTests(unittest.TestCase):
                 old=self.journal_rule[field];self.journal_rule[field]=value;self.blocked();self.journal_rule[field]=old
         self.assertEqual([],self.writes)
 
+
+    def test_private_journal_job_requires_exact_permissions(self):
+        permissions = self.workflow['jobs']['collaboration-publish']['permissions']
+        for candidate in [dict(permissions, contents='read'), dict(permissions, issues='write'),
+                          {'contents':'write','actions':'read'}]:
+            with self.subTest(candidate=candidate):
+                self.workflow['jobs']['collaboration-publish']['permissions'] = candidate
+                self.blocked()
+        self.workflow['jobs']['collaboration-publish']['permissions'] = permissions
+        self.assertEqual([], self.writes)
 
     def credential_flow(self, *, extra=False, unknown=False, drift=False):
         from cryptography.hazmat.primitives import serialization

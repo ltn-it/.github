@@ -79,7 +79,7 @@ def selected_registration(api):
             "owned-single-writer-definition")
     job = workflow.get("jobs", {}).get("collaboration-publish", {})
     require(job.get("name") == entry["job"] and job.get("permissions") ==
-            {"contents": "read", "actions": "read", "id-token": "write"},
+            {"contents": "write", "actions": "read", "id-token": "write"},
             "owned-job-definition")
     return entry, source["sha"]
 

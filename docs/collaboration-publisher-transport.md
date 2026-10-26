@@ -179,3 +179,15 @@ positive/negative transport tests, including every declared create/edit route,
 nested findings, malformed fields, private titles/bodies/paths, foreign
 identities, visibility/freshness failures, changed bytes, drift after reservation,
 uncertain outcomes and durable restart behavior.
+
+### Prospective private Actions journal permission
+
+The inactive owned-publication receiver now requires the prospective private
+Management job to declare exactly `contents: write`, `actions: read` and
+`id-token: write`. The private job token supplies create-only journal writes
+on the fixed Management data branch; a separate App installation token supplies
+only public Root pull-request writes. GitHub contents permission is repository
+wide, so the fixed endpoint in this client does not establish infrastructure
+denial of alternate writes. Real credential custody and denial evidence remain
+activation requirements. This change neither grants a permission nor admits a
+new job, source, principal, journal rule or publisher.
