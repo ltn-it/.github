@@ -17,6 +17,12 @@ from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
 
+# Includes stateless installation tokens with numeric IDs and base64url/dot
+# segments, also accepted by the fixed HTTPS transport. Detection is deliberately
+# not a credential-validity check. No match is ever returned in diagnostics.
+GITHUB_TOKEN_PATTERN = r"(?:gh[pousr]_[a-z0-9_.-]{20,}|github_pat_[a-z0-9_]{20,})"
+
+
 class AdmissionError(Exception):
     """Only fixed safe categories may cross the reporting boundary."""
 
@@ -116,11 +122,11 @@ def normalized(value, maximum):
                     for c in value), "content-control-character")
     value = unicodedata.normalize("NFKC", value)
     for _ in range(4):
-        expanded = html.unescape(unquote(value))
+        expanded = unicodedata.normalize("NFKC", html.unescape(unquote(value)))
         if expanded == value:
             return value
         value = expanded
-    require(html.unescape(unquote(value)) == value, "content-encoding-depth")
+    require(unicodedata.normalize("NFKC", html.unescape(unquote(value))) == value, "content-encoding-depth")
     return value
 
 
@@ -162,7 +168,8 @@ def scan_text(value, policy, repositories):
         token = found.group().upper()
         if token not in policy["approved_public_identifiers"] and not re.fullmatch(r"(?:CVE-[0-9]{4}|CWE|RFC)-[0-9]+", token):
             categories.add("private-identifier")
-    if re.search(r"(?i)-----BEGIN (?:[A-Z0-9 ]+ )?PRIVATE KEY-----|\b(?:gh[pousr]_[a-z0-9]{20,}|github_pat_[a-z0-9_]{20,}|AKIA[A-Z0-9]{16}|sk-[a-z0-9_-]{20,})\b", value):
+    if re.search(r"(?i)-----BEGIN (?:[A-Z0-9 ]+ )?PRIVATE KEY-----|\b(?:" + GITHUB_TOKEN_PATTERN
+                 + r"|AKIA[A-Z0-9]{16}|sk-[a-z0-9_-]{20,})\b", value):
         categories.add("credential")
     if re.search(r"(?i)\b(?:password|passwd|secret|token|api[_ -]?key|authorization)\s*[:=]\s*[^\s]{4,}", value):
         categories.add("secret-like")
@@ -180,7 +187,21 @@ def scan_text(value, policy, repositories):
     for token in re.findall(r"[^\s\"'<>`(),;]+", value):
         if sha256(token.casefold()) in policy["protected_value_sha256"]:
             categories.add("protected-value")
-    # Scan all destinations, including code blocks and Markdown link labels.
+    # GitHub renders protocol/root-relative destinations as links too. We have
+    # no trusted renderer/base-ref context for arbitrary relative paths, so
+    # reject them rather than infer visibility. In-page anchors do not cross a
+    # repository boundary; all their text still passes the other checks above.
+    destinations = []
+    for pattern in (r"\]\(\s*(?:<([^>\n]*)>|([^\s)]+))",
+                    r"(?m)^[ \t]{0,3}\[[^\n]+\]:\s*(?:<([^>\n]*)>|([^\s]+))",
+                    r"(?i)\b(?:href|src)\s*=\s*(?:[\"]([^\"]*)[\"]|[']([^']*)[']|([^\s>]+))"):
+        for match in re.finditer(pattern, value):
+            destinations.append(next(group for group in match.groups() if group is not None))
+    for target in destinations:
+        if (not re.match(r"(?i)^https://", target)
+                and not re.fullmatch(r"#[A-Za-z0-9_.:-]+", target)):
+            categories.add("unsupported-link-destination")
+    # Scan all absolute destinations, including code blocks and link labels.
     for match in re.finditer(r"(?i)\b[a-z][a-z0-9+.-]*://[^\s<>\"'`]+", value):
         target = match.group().rstrip(".,;:!?)\]}")
         try:

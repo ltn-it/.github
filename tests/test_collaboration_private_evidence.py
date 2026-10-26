@@ -109,6 +109,28 @@ class EvidenceTests(unittest.TestCase):
     def readback(self, auth, response, reader):
         return self.evidence.exact_readback(auth, response, verify_response=lambda a, r: True, reader=reader)
 
+    def test_stateless_token_rejected_before_any_private_write_including_json_escapes(self):
+        token = "ghs_123456_" + "eyJhbGciOiJSUzI1NiJ9." + "a" * 600 + ".offline-signature_with-dashes"
+        for field in ("body", "model_result"):
+            raw = json_bytes({field: token})
+            for wire in (raw, raw.replace(b"ghs_", b"\\u0067hs_")):
+                with self.subTest(field=field, escaped=wire != raw):
+                    with self.assertRaises(custody.AdmissionError) as caught:
+                        custody.no_auth_material(wire)
+                    self.assertEqual("custody-auth-material", str(caught.exception))
+        for value in ({"model_result": [{"message": token}]}, {token: "text"}):
+            wire = json_bytes(value).replace(b"ghs_", b"\\u0067hs_")
+            with self.assertRaises(custody.AdmissionError):
+                custody.no_auth_material(wire)
+        auth, wire, proof, _, _ = self.fixture()
+        wire = json_bytes(dict(json.loads(wire), body=token))
+        auth = replace(auth, payload_sha256=digest(wire))
+        proof = replace(proof, authorization_sha256=digest(json_bytes(asdict(auth))))
+        with self.assertRaises(custody.AdmissionError):
+            self.evidence.write_once(auth, wire, proof)
+        self.assertEqual([], list(self.directory.iterdir()))
+        self.assertEqual({"body": "Normal public text"}, custody.no_auth_material(json_bytes({"body": "Normal public text"})))
+
     def test_every_supported_operation_persists_and_exactly_reads_back(self):
         operations = ['issue.create', 'issue.edit', 'pull.create', 'pull.edit', 'comment.create', 'comment.edit',
                       'inline.create', 'inline.reply', 'inline.edit', 'review.create', 'review.edit']

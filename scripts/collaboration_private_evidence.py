@@ -14,7 +14,7 @@ import stat
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
-from collaboration_content import AdmissionError, require
+from collaboration_content import AdmissionError, GITHUB_TOKEN_PATTERN, require
 from collaboration_https import unique_object
 from collaboration_inventory import GitHubReadOnly, pages
 from collaboration_publisher import Authorization, Facts, ROOT, ROOT_ID, digest, fixed_hash, json_bytes, positive, route, shape
@@ -64,10 +64,9 @@ def document(raw):
 
 
 def no_auth_material(raw):
-    require(type(raw) is bytes and not re.search(
-        rb'(?i)\b(?:gh[pousr]_[a-z0-9]{20,}|github_pat_[a-z0-9_]{20,}|sk-[a-z0-9_-]{20,})\b'
-        rb'|(?:authorization|proxy-authorization|set-cookie)\s*[:=]|\bBearer\s+[A-Za-z0-9_.-]{8,}', raw),
-        "custody-auth-material")
+    pattern = (r'(?i)\b(?:' + GITHUB_TOKEN_PATTERN + r'|sk-[a-z0-9_-]{20,})\b'
+               r'|(?:authorization|proxy-authorization|set-cookie)\s*[:=]|\bBearer\s+[A-Za-z0-9_.-]{8,}')
+    require(type(raw) is bytes and not re.search(pattern.encode("ascii"), raw), "custody-auth-material")
     value = document(raw)
     def inspect(node):
         if type(node) is dict:
@@ -75,11 +74,16 @@ def no_auth_material(raw):
                 'authorization', 'proxy-authorization', 'headers', 'request-headers', 'cookie', 'set-cookie',
                 'token', 'access-token', 'refresh-token', 'api-key', 'client-secret', 'password', 'secret'}
                 for key in node), "custody-auth-material")
-            for child in node.values():
+            for key, child in node.items():
+                inspect(key)
                 inspect(child)
         elif type(node) is list:
             for child in node:
                 inspect(child)
+        elif type(node) is str:
+            # JSON escape sequences are resolved only by the parser. Inspect
+            # that representation as well as raw wire bytes before any write.
+            require(not re.search(pattern, node), "custody-auth-material")
     inspect(value)
     return value
 

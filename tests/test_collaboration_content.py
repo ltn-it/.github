@@ -34,6 +34,51 @@ class ContentTests(unittest.TestCase):
         return content.validate({"kind": kind, "repository": "ltn-it/.github", "title": title, "body": body},
                                 self.inventory, self.policy, now=NOW)
 
+    def test_decode_then_compatibility_normalization_blocks_sender_and_observer(self):
+        for index, value in enumerate(("TEST&#xFF0D;123", "TEST%EF%BC%8D123", "TEST&amp;#xFF0D;123",
+                                       "&#xFF34;&#xFF25;&#xFF33;&#xFF34;&#xFF0D;123")):
+            with self.subTest(case=index):
+                self.assertIn("private-identifier", self.validate(body=value)["categories"])
+                sends = []
+                with self.assertRaises(content.AdmissionError):
+                    content.guarded_payload("comment", "ltn-it/.github", {"body": value},
+                        self.inventory, self.policy, sends.append, now=NOW)
+                self.assertEqual([], sends)
+
+    def test_stateless_installation_token_is_rejected_on_every_content_surface(self):
+        value = "ghs_123456_" + "eyJhbGciOiJSUzI1NiJ9." + "a" * 600 + ".offline-signature_with-dashes"
+        for kind in ("issue", "pull_request", "comment", "review", "review_comment"):
+            for field in ("title", "body"):
+                with self.subTest(kind=kind, field=field):
+                    result = self.validate(kind=kind, **{field: value})
+                    self.assertIn("credential", result["categories"])
+                    self.assertNotIn(value, json.dumps(result))
+        sends = []
+        with self.assertRaises(content.AdmissionError):
+            content.guarded_payload("review", "ltn-it/.github", {"body": "Public result",
+                "comments": [{"body": value, "path": "src/a.py", "line": 1, "side": "RIGHT"}]},
+                self.inventory, self.policy, sends.append, now=NOW)
+        self.assertEqual([], sends)
+
+    def test_relative_markdown_destinations_cannot_bypass_inventory_visibility(self):
+        for index, value in enumerate(("[source](//github.com/ltn-it/example/issues/1)",
+                "[source](/ltn-it/example/issues/1)", "[outer [inner]](/ltn-it/example/issues/1)",
+                "[source](<//github.com/ltn-it/example/issues/1>)", "![image](/ltn-it/example/blob/main/a.png)",
+                "[source][ref]\n\n[ref]: /ltn-it/example/issues/1", '[source](https://github.com/ltn-it/.github/issues/1) <a href="/ltn-it/example">x</a>',
+                "[source](&#xFF0F;&#xFF0F;github.com/ltn-it/example/issues/1)", "[source](../example)",
+                "[source](javascript:alert(1))")):
+            with self.subTest(case=index):
+                self.assertFalse(self.validate(body=value)["admitted"])
+                sends = []
+                with self.assertRaises(content.AdmissionError):
+                    content.guarded_payload("comment", "ltn-it/.github", {"body": value},
+                        self.inventory, self.policy, sends.append, now=NOW)
+                self.assertEqual([], sends)
+        for value in ("[source](https://github.com/ltn-it/.github/issues/1)",
+                      "[source][ref]\n[ref]: https://docs.github.com/en/rest", "[section](#overview)",
+                      "The relative file path src/a.py is ordinary text."):
+            self.assertTrue(self.validate(body=value)["admitted"])
+
     def test_all_publication_surfaces_reject_the_same_private_body_and_title(self):
         for kind in ("issue", "pull_request", "review", "comment", "review_comment"):
             for field in ("title", "body"):

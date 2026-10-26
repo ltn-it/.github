@@ -154,3 +154,18 @@ attachments and external caches retain their separate acceptance boundaries.
 - Resolve native hosted publisher mediation without weakening required controls.
 - Observe the applicable current-revision checks and protected integration.
 - Close #556 only after every issue acceptance criterion has its actual evidence.
+
+
+Admission applies NFKC again after every bounded HTML/percent decode, including
+its fixed-point check. Known GitHub token prefixes include the underscore, dot
+and base64url segments of stateless installation tokens. The same detector is
+shared with private custody, which inspects both wire bytes and JSON-decoded
+strings/keys before writing. No matching value is included in a rejection.
+
+Markdown inline/image/reference destinations and HTML href/src destinations
+must use a verified absolute HTTPS URL. Relative destinations are rejected
+because this boundary has no trusted rendering/base-ref context to establish
+their destination visibility. Safe in-page anchors remain allowed. Ordinary
+file path text is unchanged; use a verified absolute public URL for a document
+link instead of a relative destination. This change grants no publisher or
+source admission and does not turn local tests into operating coverage.
