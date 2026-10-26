@@ -337,8 +337,9 @@ def observation(reader, auth, response, payload, proof):
     if op.startswith(('issue.', 'pull.')):
         value = parent
         actor(value, auth)
+        require('body' in value and type(value.get('title')) is str
+                and (value['body'] is None or type(value['body']) is str), 'custody-readback-body')
         current = {'title': value.get('title'), 'body': value.get('body')}
-        require(all(type(v) is str for v in current.values()), 'custody-readback-body')
         if op == 'pull.create':
             require(value.get('head', {}).get('ref') == payload['head'] and value.get('base', {}).get('ref') == payload['base']
                     and type(value.get('draft')) is bool and value['draft'] == payload['draft'], 'custody-readback-refs')

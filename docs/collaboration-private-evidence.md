@@ -117,6 +117,11 @@ For a genuine known response, readback checks:
 - for edits, original authenticated origin/object custody and all unchanged
   field hashes, not merely the fields requested for replacement.
 
+Issue and PR bodies must be explicitly present and may contain text or null;
+their titles must be strings. A title-only edit preserves the exact nullable
+body through the authenticated unchanged-field hash, distinguishing null from
+an empty string or a missing field on either read.
+
 The object and parent/content are read twice. Review inline object IDs must
 also remain identical; replacing equal text under another ID fails. The frozen
 native descriptor may not change during any callback or read. Drift, missing visibility,

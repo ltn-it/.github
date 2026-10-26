@@ -41,7 +41,7 @@ class EvidenceTests(unittest.TestCase):
         self.native_calls.append((auth, proof))
         return True
 
-    def fixture(self, operation='review.create'):
+    def fixture(self, operation='review.create', *, payload=None, before_body='Old body'):
         prefix = 'https://api.github.com/repos/' + ROOT
         parent_number, identifier = 7, 123
         head = 'b' * 40
@@ -58,11 +58,11 @@ class EvidenceTests(unittest.TestCase):
             'review.create': {'body': 'Review', 'event': 'COMMENT', 'commit_id': head, 'comments': [inline]},
             'review.edit': {'body': 'Changed review'},
         }
-        payload = payloads[operation]
+        payload = payloads[operation] if payload is None else payload
         parent_kind = 'issue' if operation.startswith(('issue.', 'comment.')) else 'pull'
         parent = {'id': identifier if operation.startswith(('issue.', 'pull.')) else 70,
                   'number': parent_number, 'url': prefix + ('/issues/7' if parent_kind == 'issue' else '/pulls/7'),
-                  'user': user, 'title': 'Old title', 'body': 'Old body', 'draft': True,
+                  'user': user, 'title': 'Old title', 'body': before_body, 'draft': True,
                   'head': {'sha': head, 'ref': 'feature/a', 'repo': {'id': ROOT_ID}}, 'base': {'ref': 'develop', 'repo': {'id': ROOT_ID}}}
         value = {'id': identifier, 'user': user, 'body': 'Old body', 'issue_url': prefix + '/issues/7',
                  'pull_request_url': prefix + '/pulls/7', 'commit_id': head, 'state': 'COMMENTED',
@@ -143,6 +143,78 @@ class EvidenceTests(unittest.TestCase):
                 self.assertTrue(all(path.startswith('repos/ltn-it/.github/') for path in reader.calls))
                 # Reader has no send/mutation method. There is no search path.
                 self.assertFalse(any('/search' in path for path in reader.calls))
+
+    def test_title_only_edits_read_back_explicit_null_body(self):
+        for operation in ('issue.edit', 'pull.edit'):
+            with self.subTest(operation=operation):
+                auth, wire, proof, response, reader = self.fixture(
+                    operation, payload={'title': 'Changed title'}, before_body=None)
+                self.assertEqual(digest(json_bytes(None)), proof.before_fields['body'])
+                self.evidence.write_once(auth, wire, proof)
+                result = self.readback(auth, response, reader)
+                self.assertEqual('exact-known-effect-read-back', result['disposition'])
+                self.assertEqual(response.object_id, result['object_id'])
+                self.assertEqual(2, len(reader.calls))
+
+    def test_title_only_edits_preserve_explicit_empty_body(self):
+        for operation in ('issue.edit', 'pull.edit'):
+            with self.subTest(operation=operation):
+                auth, wire, proof, response, reader = self.fixture(
+                    operation, payload={'title': 'Changed title'}, before_body='')
+                self.evidence.write_once(auth, wire, proof)
+                self.assertEqual('exact-known-effect-read-back', self.readback(auth, response, reader)['disposition'])
+
+    def test_nullable_edit_readback_rejects_missing_invalid_or_changed_fields(self):
+        for operation in ('issue.edit', 'pull.edit'):
+            auth, wire, proof, response, reader = self.fixture(
+                operation, payload={'title': 'Changed title'}, before_body=None)
+            self.evidence.write_once(auth, wire, proof)
+            key = 'repos/' + ROOT + ('/issues/7' if operation == 'issue.edit' else '/pulls/7')
+            original = copy.deepcopy(reader.values[key])
+            variants = [('missing-body', {k: v for k, v in original.items() if k != 'body'}),
+                        ('missing-title', {k: v for k, v in original.items() if k != 'title'})]
+            variants.extend(('body-' + str(index), dict(original, body=body))
+                            for index, body in enumerate((False, 0, [], {}, '', 'Changed body')))
+            variants.extend(('title-' + str(index), dict(original, title=title))
+                            for index, title in enumerate((None, False, 0, [], {})))
+            for name, value in variants:
+                with self.subTest(operation=operation, case=name):
+                    reader.values[key] = value
+                    self.assertEqual({'disposition': 'unknown-readback-required'}, self.readback(auth, response, reader))
+
+    def test_title_only_edits_cannot_replace_unchanged_string_body_with_null(self):
+        for operation in ('issue.edit', 'pull.edit'):
+            with self.subTest(operation=operation):
+                auth, wire, proof, response, reader = self.fixture(operation, payload={'title': 'Changed title'})
+                self.evidence.write_once(auth, wire, proof)
+                key = 'repos/' + ROOT + ('/issues/7' if operation == 'issue.edit' else '/pulls/7')
+                reader.values[key]['body'] = None
+                self.assertEqual({'disposition': 'unknown-readback-required'}, self.readback(auth, response, reader))
+
+    def test_null_body_disappearance_or_change_between_reads_remains_unknown(self):
+        for operation in ('issue.edit', 'pull.edit'):
+            auth, wire, proof, response, reader = self.fixture(
+                operation, payload={'title': 'Changed title'}, before_body=None)
+            self.evidence.write_once(auth, wire, proof)
+            key = 'repos/' + ROOT + ('/issues/7' if operation == 'issue.edit' else '/pulls/7')
+            original = copy.deepcopy(reader.values[key])
+            for drift in ({k: v for k, v in original.items() if k != 'body'}, dict(original, body='')):
+                with self.subTest(operation=operation, missing='body' not in drift):
+                    calls = []
+                    def changed():
+                        calls.append(True)
+                        return original if len(calls) == 1 else drift
+                    reader.values[key] = changed
+                    self.assertEqual({'disposition': 'unknown-readback-required'}, self.readback(auth, response, reader))
+                    self.assertEqual(2, len(calls))
+
+    def test_body_only_edits_can_replace_a_nullable_body_with_exact_text(self):
+        for operation in ('issue.edit', 'pull.edit'):
+            with self.subTest(operation=operation):
+                auth, wire, proof, response, reader = self.fixture(
+                    operation, payload={'body': 'Changed body'}, before_body=None)
+                self.evidence.write_once(auth, wire, proof)
+                self.assertEqual('exact-known-effect-read-back', self.readback(auth, response, reader)['disposition'])
 
     def test_default_client_uses_existing_get_only_reader(self):
         auth, wire, proof, response, reader = self.fixture()
