@@ -169,3 +169,14 @@ their destination visibility. Safe in-page anchors remain allowed. Ordinary
 file path text is unchanged; use a verified absolute public URL for a document
 link instead of a relative destination. This change grants no publisher or
 source admission and does not turn local tests into operating coverage.
+
+
+All recognized HTML href/src, Markdown inline/image/reference and prose autolink
+candidates now share one strict destination validator. HTML attributes retain
+their complete parsed values from both original and normalized text, so entity
+decoding cannot split one browser attribute into a safe URL and an ignored tail. Before URL splitting or policy comparison, the
+validator rejects whitespace, controls, backslashes and non-ASCII URL spelling;
+it never repairs a browser-normalized destination. Bare `www.` autolinks are
+recognized and rejected: use an explicitly verified absolute HTTPS URL instead.
+Exact external sources, repository visibility/route checks, same-page anchors,
+ordinary file-path prose and the unchanged policy allowlist retain their scope.

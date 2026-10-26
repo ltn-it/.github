@@ -352,6 +352,38 @@ class PublisherTests(unittest.TestCase):
                 self.publish(auth, wire)
             self.assertNotIn("PRIVATE", str(error.exception))
 
+    def test_inventory_expiry_during_second_attestation_burns_slot_and_cannot_retry(self):
+        from datetime import timedelta
+        auth, wire = self.subject("issue.create")
+        current = [self.now]
+        self.publisher.clock = lambda: current[0]
+        def attest(value):
+            self.attestations.append(value)
+            if len(self.attestations) == 2:
+                current[0] = self.now + timedelta(seconds=self.policy["inventory_max_age_seconds"])
+            return value.facts
+        self.publisher.attest = attest
+        self.assert_blocked(auth, wire)
+        self.assertEqual(2, len(self.attestations))
+        self.assertIn(auth.operation_id, self.ledger.claimed)
+        current[0] = self.now
+        self.assert_blocked(auth, wire)
+
+    def test_inventory_exact_deadline_after_second_attestation_preserves_one_effect(self):
+        from datetime import timedelta
+        auth, wire = self.subject("issue.create")
+        current = [self.now]
+        self.publisher.clock = lambda: current[0]
+        def attest(value):
+            self.attestations.append(value)
+            if len(self.attestations) == 2:
+                current[0] = self.now + timedelta(seconds=self.policy["inventory_max_age_seconds"] - 1)
+            return value.facts
+        self.publisher.attest = attest
+        self.assertEqual("response-observed", self.publish(auth, wire)["disposition"])
+        self.assertEqual(1, len(self.calls))
+        self.assert_blocked_after_effect(auth, wire)
+
     def test_inventory_expiring_during_evidence_reads_burns_slot_without_send(self):
         auth, wire = self.subject("issue.create")
         times = iter([self.now, datetime(2026, 10, 25, 13, tzinfo=timezone.utc)])

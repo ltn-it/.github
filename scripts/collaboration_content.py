@@ -13,6 +13,7 @@ import json
 import re
 import unicodedata
 from datetime import datetime, timezone
+from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
@@ -70,12 +71,11 @@ def validate_policy(policy):
     require(all(re.fullmatch(r"[0-9a-f]{64}", v) for v in policy["protected_value_sha256"]), "policy-hash")
     for value in policy["approved_public_urls"]:
         try:
-            url = urlsplit(value)
-            require(url.scheme == "https" and url.hostname and not url.username and not url.password
-                    and url.port is None and not url.query and not url.fragment
-                    and not private_host(url.hostname), "policy-public-source")
-        except ValueError:
+            url = strict_https_destination(value)
+            require(not url.query and not url.fragment and not private_host(url.hostname), "policy-public-source")
+        except AdmissionError:
             raise AdmissionError("policy-public-source") from None
+
 
 
 def inventory_repositories(inventory, policy, now):
@@ -157,7 +157,82 @@ def public_github_route(parts):
     return False
 
 
+def strict_https_destination(target):
+    """Parse only canonical transport syntax, before any URL allowlist checks.
+
+    Browsers remove ASCII whitespace and treat backslashes as path separators;
+    urlsplit does not implement that model. Reject these representations rather
+    than validating a different destination. Non-ASCII URL spelling is likewise
+    unsupported here; callers must supply an explicitly reviewed ASCII URL.
+    """
+    require(bool(target) and target.isascii()
+            and not any(c.isspace() or unicodedata.category(c) == "Cc" for c in target)
+            and "\\" not in target, "unsupported-link-destination")
+    try:
+        url = urlsplit(target)
+        require(url.scheme == "https" and url.hostname and not url.username and not url.password
+                and url.port is None, "unapproved-url")
+        return url
+    except ValueError:
+        raise AdmissionError("malformed-url") from None
+
+
+class HTMLDestinations(HTMLParser):
+    """Retain entire parsed attribute values, including internal whitespace."""
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.destinations = []
+
+    def handle_starttag(self, tag, attrs):
+        for name, value in attrs:
+            if name in {"href", "src"}:
+                self.destinations.append(value or "")
+
+
+def link_destinations(value):
+    """Extract candidates only; every representation uses the same validator.
+
+    Explicit destinations are never stripped or repaired. Punctuation removal
+    applies only to prose autolink candidates, preserving the previous public
+    technical-text contract. Bare www autolinks are recognized but unsupported.
+    """
+    parser = HTMLDestinations()
+    parser.feed(value)
+    parser.close()
+    targets = set(parser.destinations)
+    for pattern in (r"\]\(\s*(?:<([^>]*)>|([^\s)]+))",
+                    r"(?m)^[ \t]{0,3}\[[^\n]+\]:[ \t]*(?:<([^>]*)>|([^\s]+))"):
+        for match in re.finditer(pattern, value):
+            targets.add(next(group for group in match.groups() if group is not None))
+    for match in re.finditer(r"(?i)\b(?:[a-z][a-z0-9+.-]*://|www\.)[^\s<>\"'`]+", value):
+        targets.add(match.group().rstrip(".,;:!?)\]}"))
+    return targets
+
+
+def destination_categories(target, policy, repositories):
+    """One fail-closed destination policy for HTML, Markdown and autolinks."""
+    if re.fullmatch(r"#[A-Za-z0-9_.:-]+", target):
+        return []
+    try:
+        url = strict_https_destination(target)
+    except AdmissionError as error:
+        return [str(error)]
+    if private_host(url.hostname):
+        return ["private-system"]
+    if url.hostname.casefold() == "github.com":
+        parts = url.path.strip("/").split("/")
+        name = "/".join(parts[:2]).casefold()
+        if (len(parts) < 2 or any(part in ("", ".", "..") for part in parts)
+                or name not in repositories or repositories[name]["visibility"] != "public"
+                or not public_github_route(parts[2:]) or url.query or url.fragment):
+            return ["unverified-public-source"]
+    elif target not in policy["approved_public_urls"]:
+        return ["unapproved-url"]
+    return []
+
+
 def scan_text(value, policy, repositories):
+    original = value
     value = normalized(value, policy["max_text_bytes"])
     categories = set()
     if any(unicodedata.category(c) in ("Cf", "Cs") or (ord(c) < 32 and c not in "\n\r\t") for c in value):
@@ -187,42 +262,13 @@ def scan_text(value, policy, repositories):
     for token in re.findall(r"[^\s\"'<>`(),;]+", value):
         if sha256(token.casefold()) in policy["protected_value_sha256"]:
             categories.add("protected-value")
-    # GitHub renders protocol/root-relative destinations as links too. We have
-    # no trusted renderer/base-ref context for arbitrary relative paths, so
-    # reject them rather than infer visibility. In-page anchors do not cross a
-    # repository boundary; all their text still passes the other checks above.
-    destinations = []
-    for pattern in (r"\]\(\s*(?:<([^>\n]*)>|([^\s)]+))",
-                    r"(?m)^[ \t]{0,3}\[[^\n]+\]:\s*(?:<([^>\n]*)>|([^\s]+))",
-                    r"(?i)\b(?:href|src)\s*=\s*(?:[\"]([^\"]*)[\"]|[']([^']*)[']|([^\s>]+))"):
-        for match in re.finditer(pattern, value):
-            destinations.append(next(group for group in match.groups() if group is not None))
-    for target in destinations:
-        if (not re.match(r"(?i)^https://", target)
-                and not re.fullmatch(r"#[A-Za-z0-9_.:-]+", target)):
-            categories.add("unsupported-link-destination")
-    # Scan all absolute destinations, including code blocks and link labels.
-    for match in re.finditer(r"(?i)\b[a-z][a-z0-9+.-]*://[^\s<>\"'`]+", value):
-        target = match.group().rstrip(".,;:!?)\]}")
-        try:
-            url = urlsplit(target)
-            if url.scheme != "https" or not url.hostname or url.username or url.password or url.port is not None:
-                categories.add("unapproved-url")
-                continue
-            if private_host(url.hostname):
-                categories.add("private-system")
-                continue
-            if url.hostname.casefold() == "github.com":
-                parts = url.path.strip("/").split("/")
-                name = "/".join(parts[:2]).casefold()
-                if (len(parts) < 2 or any(part in ("", ".", "..") for part in parts)
-                        or name not in repositories or repositories[name]["visibility"] != "public"
-                        or not public_github_route(parts[2:]) or url.query or url.fragment):
-                    categories.add("unverified-public-source")
-            elif target not in policy["approved_public_urls"]:
-                categories.add("unapproved-url")
-        except ValueError:
-            categories.add("malformed-url")
+    # Extraction does not decide visibility or repair browser-normalized URLs.
+    # All recognized forms pass the exact same strict destination boundary.
+    # Retain raw HTML attribute boundaries too: decoding an entity to whitespace
+    # before parsing could split a single browser destination into attributes.
+    for target in link_destinations(original) | link_destinations(value):
+        target = normalized(target, policy["max_text_bytes"])
+        categories.update(destination_categories(target, policy, repositories))
     return sorted(categories)
 
 

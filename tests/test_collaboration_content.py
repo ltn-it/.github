@@ -34,6 +34,71 @@ class ContentTests(unittest.TestCase):
         return content.validate({"kind": kind, "repository": "ltn-it/.github", "title": title, "body": body},
                                 self.inventory, self.policy, now=NOW)
 
+    def assert_destination_blocked_before_send(self, body):
+        self.assertFalse(self.validate(body=body)["admitted"])
+        sends = []
+        with self.assertRaises(content.AdmissionError):
+            content.guarded_payload("comment", "ltn-it/.github", {"body": body},
+                self.inventory, self.policy, sends.append, now=NOW)
+        self.assertEqual([], sends)
+
+    def test_quoted_html_whitespace_cannot_split_exact_url_policy(self):
+        for whitespace in ("\n", "\r", "\t", " ", "&#10;", "%09"):
+            for attribute in ("href", "src"):
+                with self.subTest(whitespace=repr(whitespace), attribute=attribute):
+                    self.assert_destination_blocked_before_send(
+                        f'<a {attribute}="https://docs.github.com/en/rest{whitespace}?extra=value">x</a>')
+
+    def test_raw_html_attribute_boundaries_survive_global_entity_decoding(self):
+        # HTML resolves an entity inside an unquoted attribute without turning
+        # that decoded whitespace into a new attribute delimiter. Global text
+        # decoding before extraction would lose this original destination.
+        for encoded in ("&#10;", "&#x09;", "&NewLine;", "&Tab;"):
+            for attribute in ("href", "src"):
+                with self.subTest(encoded=encoded, attribute=attribute):
+                    self.assert_destination_blocked_before_send(
+                        f'<a {attribute}=https://docs.github.com/en/rest{encoded}?extra=value>x</a>')
+
+    def test_bare_www_autolinks_do_not_bypass_visibility_or_exact_url_policy(self):
+        for body in ("www.github.com/ltn-it/example/issues/1", "WWW.github.com/ltn-it/example/issues/1",
+                     "www.docs.github.com/en/rest?extra=value", "[source](www.github.com/ltn-it/example)"):
+            with self.subTest(case=content.sha256(body)):
+                self.assert_destination_blocked_before_send(body)
+
+    def test_backslash_traversal_and_browser_normalization_fail_before_url_policy(self):
+        for link in (r"https://github.com/ltn-it/.github/blob/main/..\..\..\example/issues/1",
+                     "https://github.com/ltn-it/.github/blob/main/..%5c..%5cexample/issues/1",
+                     "https://github.com/ltn-it/.github/blob/main/../other",
+                     "https://github.com/ltn-it/.github/blob/main/..//other"):
+            for body in (link, f'[source]({link})', f'<a href="{link}">source</a>'):
+                with self.subTest(case=content.sha256(body)):
+                    self.assert_destination_blocked_before_send(body)
+
+    def test_all_link_forms_share_exact_destination_policy_and_preserve_public_controls(self):
+        wrappers = (lambda url: url, lambda url: f'[source]({url})',
+                    lambda url: f'[source](<{url}>)', lambda url: f'[source][ref]\n[ref]: {url}',
+                    lambda url: f'<a href="{url}">source</a>', lambda url: f"<img src='{url}'/>")
+        for target, admitted in (("https://docs.github.com/en/rest", True),
+                ("https://github.com/ltn-it/.github/issues/1", True),
+                ("https://github.com/ltn-it/example/issues/1", False),
+                ("https://github.com/ltn-it/.github/settings", False),
+                ("https://docs.github.com/en/rest?extra=value", False),
+                ("https://user@docs.github.com/en/rest", False),
+                ("https://docs.github.com:443/en/rest", False)):
+            for wrap in wrappers:
+                body = wrap(target)
+                with self.subTest(case=content.sha256(body)):
+                    self.assertEqual(admitted, self.validate(body=body)["admitted"])
+        for body in ('<a href="#overview">section</a>', '[section](#overview)',
+                     'The relative file path src/a.py is ordinary text.'):
+            self.assertTrue(self.validate(body=body)["admitted"])
+        for target in ("https://docs.github.com/en/rest\n", "https://docs.github.com/en/rest\\",
+                       "https://docs.github.com/en/é"):
+            policy = copy.deepcopy(self.policy)
+            policy["approved_public_urls"].append(target)
+            with self.assertRaisesRegex(content.AdmissionError, "policy-public-source"):
+                content.validate_policy(policy)
+
     def test_decode_then_compatibility_normalization_blocks_sender_and_observer(self):
         for index, value in enumerate(("TEST&#xFF0D;123", "TEST%EF%BC%8D123", "TEST&amp;#xFF0D;123",
                                        "&#xFF34;&#xFF25;&#xFF33;&#xFF34;&#xFF0D;123")):
@@ -314,6 +379,17 @@ class ObservationTests(unittest.TestCase):
             clock.now.return_value = NOW
             clock.strptime.side_effect = datetime.strptime
             return observation.observe_open_issues(api or FakeAPI(self.responses), self.inventory, self.policy, ["ltn-it/.github"])
+
+    def test_observer_flags_all_three_url_bypasses_without_echoing_destinations(self):
+        for body in ('<a href="https://docs.github.com/en/rest\n?extra=value">x</a>',
+                     'www.github.com/ltn-it/example/issues/1',
+                     r'https://github.com/ltn-it/.github/blob/main/..\..\..\example/issues/1'):
+            with self.subTest(case=content.sha256(body)):
+                self.comment["body"] = body
+                report = self.observe()
+                self.assertFalse(report["clean"])
+                self.assertEqual("owner-remediation-required", report["objects"][1]["disposition"])
+                self.assertNotIn(body, json.dumps(report))
 
     def test_current_comments_report_only_safe_locator_categories_and_hash(self):
         report = self.observe()

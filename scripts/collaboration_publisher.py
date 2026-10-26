@@ -321,10 +321,14 @@ class Publisher:
                                     now=self.clock())
             require(final == wire, "publisher-final-byte-drift")
             # Native generation/ownership is the last potentially slow evidence
-            # read. No content processing or other evidence read follows it.
+            # read. Only local binding and freshness checks follow it.
             require(self.attest(auth) == facts, "publisher-generation-drift")
             require(auth.policy_sha256 == digest(json_bytes(policy))
                     and auth.inventory_sha256 == digest(json_bytes(inventory)), "publisher-input-drift")
+            # The final attestation may cross the inventory deadline without
+            # changing its bytes. Check the current clock after that read, while
+            # the target lock and consumed reservation are still held.
+            inventory_repositories(inventory, policy, self.clock())
             try:
                 result = self.transport.send_once(auth, wire)
                 confirmed = (type(result) is TransportResult and type(result.status) is int

@@ -191,3 +191,11 @@ wide, so the fixed endpoint in this client does not establish infrastructure
 denial of alternate writes. Real credential custody and denial evidence remain
 activation requirements. This change neither grants a permission nor admits a
 new job, source, principal, journal rule or publisher.
+
+
+Inventory freshness is checked again against the current clock after the final
+native attestation and before the one transport effect, while holding the target
+lock and the consumed reservation. A matching inventory hash is insufficient
+when the attestation crosses its age limit. Expiry burns the operation without
+sending; restoring the clock or retrying cannot reuse its reservation. This
+local freshness check grants no publisher, credential or operating admission.
