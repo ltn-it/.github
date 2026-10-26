@@ -99,6 +99,52 @@ class ContentTests(unittest.TestCase):
             with self.assertRaisesRegex(content.AdmissionError, "policy-public-source"):
                 content.validate_policy(policy)
 
+    def test_multiline_and_container_reference_destinations_cannot_bypass_visibility(self):
+        for body in ("[source][ref]\n\n[ref]:\n  //github.com/ltn-it/example/issues/1",
+                     "> [source][ref]\n>\n> [ref]: /ltn-it/example/issues/1",
+                     "- [source][ref]\n\n  [ref]:\n    //github.com/ltn-it/example/issues/1",
+                     "[source][ref]\n\n[ref]: /ltn-it/example/issues/1",
+                     "```markdown\n[source][ref]\n\n[ref]:\n  /ltn-it/example/issues/1\n```",
+                     "[source](javascript:alert(1))"):
+            with self.subTest(case=content.sha256(body)):
+                self.assert_destination_blocked_before_send(body)
+
+    def test_native_repository_issue_and_commit_references_use_inventory_policy(self):
+        for body in ("ltn-it/example#1", "ltn-it/example@" + "a" * 40,
+                     "unknown/example#1", "`ltn-it/example#1`", "ltn-it&#47;example&#35;1",
+                     "ltn-it/.github@" + "a" * 7):
+            with self.subTest(case=content.sha256(body)):
+                self.assert_destination_blocked_before_send(body)
+        for body in ("ltn-it/.github#556", "ltn-it/.github@" + "b" * 40,
+                     "[source][ref]\n\n[ref]:\n  https://docs.github.com/en/rest",
+                     "> [source][ref]\n>\n> [ref]: https://github.com/ltn-it/.github/issues/1"):
+            with self.subTest(case=content.sha256(body)):
+                self.assertTrue(self.validate(body=body)["admitted"])
+
+    def test_unavailable_or_unqualified_parser_never_falls_back_to_partial_scanning(self):
+        for name, value in (("MarkdownIt", None), ("MARKDOWN_VERSION", "0.0.0")):
+            with self.subTest(name=name), patch.object(content, name, value):
+                with self.assertRaisesRegex(content.AdmissionError, "content-parser-unavailable"):
+                    self.validate(body="Public ordinary text")
+                sends = []
+                with self.assertRaises(content.AdmissionError):
+                    content.guarded_payload("comment", "ltn-it/.github", {"body": "Safe"},
+                        self.inventory, self.policy, sends.append, now=NOW)
+                self.assertEqual([], sends)
+        with patch.object(content, "MarkdownIt", side_effect=RuntimeError("private")):
+            with self.assertRaisesRegex(content.AdmissionError, "content-parser-unavailable"):
+                self.validate()
+
+    def test_markdown_nesting_limit_is_unknown_without_partial_clean_or_send(self):
+        body = "> " * 25 + "[source][ref]\n\n" + "> " * 25 + "[ref]: /ltn-it/example/issues/1"
+        sends = []
+        with self.assertRaisesRegex(content.AdmissionError, "content-markdown-bound"):
+            self.validate(body=body)
+        with self.assertRaises(content.AdmissionError):
+            content.guarded_payload("comment", "ltn-it/.github", {"body": body},
+                self.inventory, self.policy, sends.append, now=NOW)
+        self.assertEqual([], sends)
+
     def test_decode_then_compatibility_normalization_blocks_sender_and_observer(self):
         for index, value in enumerate(("TEST&#xFF0D;123", "TEST%EF%BC%8D123", "TEST&amp;#xFF0D;123",
                                        "&#xFF34;&#xFF25;&#xFF33;&#xFF34;&#xFF0D;123")):
@@ -390,6 +436,22 @@ class ObservationTests(unittest.TestCase):
                 self.assertFalse(report["clean"])
                 self.assertEqual("owner-remediation-required", report["objects"][1]["disposition"])
                 self.assertNotIn(body, json.dumps(report))
+
+    def test_observer_detects_container_references_and_native_repository_references(self):
+        for body in ("[source][ref]\n\n[ref]:\n  //github.com/ltn-it/example/issues/1",
+                     "> [source][ref]\n>\n> [ref]: /ltn-it/example/issues/1",
+                     "ltn-it/example#1", "ltn-it/example@" + "a" * 40):
+            with self.subTest(case=content.sha256(body)):
+                self.comment["body"] = body
+                report = self.observe()
+                self.assertFalse(report["clean"])
+                self.assertEqual("owner-remediation-required", report["objects"][1]["disposition"])
+                self.assertNotIn(body, json.dumps(report))
+
+    def test_unavailable_parser_never_produces_a_clean_observation(self):
+        with patch.object(content, "MarkdownIt", None):
+            with self.assertRaisesRegex(content.AdmissionError, "content-parser-unavailable"):
+                self.observe()
 
     def test_current_comments_report_only_safe_locator_categories_and_hash(self):
         report = self.observe()

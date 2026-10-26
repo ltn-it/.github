@@ -180,3 +180,30 @@ it never repairs a browser-normalized destination. Bare `www.` autolinks are
 recognized and rejected: use an explicitly verified absolute HTTPS URL instead.
 Exact external sources, repository visibility/route checks, same-page anchors,
 ordinary file-path prose and the unchanged policy allowlist retain their scope.
+
+
+### Markdown grammar and native repository references
+
+Markdown destinations are extracted by the tested `markdown-it-py==4.2.0`
+CommonMark parser, including multiline reference definitions and blockquote/list
+containers. The parser's URI repair and scheme filter are disabled for inspection;
+the existing strict destination/visibility policy alone decides admission. Raw
+and normalized HTML values and prose autolinks retain their independent capture
+boundaries. Code text is inspected under explicit nesting/work limits; reaching
+a parsing bound produces an unknown rejection rather than a partial clean result.
+There is no fallback to the former incomplete Markdown destination regexes.
+
+GitHub-native `owner/repository#number` and `owner/repository@commit` references
+enter the same public inventory and URL-route policy. Issue numbers must be
+canonical, and commit references must contain the full forty hexadecimal digits;
+short commits remain unsupported even where GitHub can render them. Unknown or
+private repositories cannot gain visibility authority through shorthand spelling.
+Ordinary file-path prose, safe same-page anchors and existing exact sources keep
+their scope; no public-source exception was widened.
+
+The qualified dependency and its `mdurl` dependency are present in the tested,
+digest-pinned Devtools runtimes. The adopting caller must preserve its accepted
+runtime binding and this parser version. Missing, unqualified or failing parsers
+reject with the fixed safe category `content-parser-unavailable`; they never
+silently skip inspection or install dependencies at runtime. Declaring this
+requirement does not activate a credential controller or grant source admission.

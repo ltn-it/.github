@@ -14,8 +14,20 @@ import re
 import unicodedata
 from datetime import datetime, timezone
 from html.parser import HTMLParser
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
+
+
+try:
+    from markdown_it import MarkdownIt
+    MARKDOWN_VERSION = version("markdown-it-py")
+except (ImportError, PackageNotFoundError):
+    MarkdownIt, MARKDOWN_VERSION = None, None
+
+# The actual Root/Private digest-pinned runtimes contain this qualified parser.
+# An arbitrary host interpreter must not silently fall back to incomplete regex.
+SUPPORTED_MARKDOWN_VERSION = "4.2.0"
 
 
 # Includes stateless installation tokens with numeric IDs and base64url/dot
@@ -189,23 +201,78 @@ class HTMLDestinations(HTMLParser):
                 self.destinations.append(value or "")
 
 
-def link_destinations(value):
-    """Extract candidates only; every representation uses the same validator.
+def native_reference_destinations(value):
+    """GitHub-qualified issue/commit locators enter the existing URL policy.
 
-    Explicit destinations are never stripped or repaired. Punctuation removal
-    applies only to prose autolink candidates, preserving the previous public
-    technical-text contract. Bare www autolinks are recognized but unsupported.
+    CommonMark leaves GitHub's native locators as text. Short commits are still
+    rejected by the existing full-commit route contract; unknown repositories
+    never gain authority just because the spelling is a native reference.
     """
+    targets = set()
+    pattern = (r"(?<![\w./-])([A-Za-z0-9][A-Za-z0-9-]{0,38})/([A-Za-z0-9_.-]+)"
+               r"(?:#([0-9]+)(?![\w])|@([0-9a-fA-F]{7,40})(?![\w]))")
+    for match in re.finditer(pattern, value):
+        owner, repository, number, commit = match.groups()
+        suffix = "issues/" + number if number is not None else "commit/" + commit
+        targets.add("https://github.com/" + owner + "/" + repository + "/" + suffix)
+    return targets
+
+
+def markdown_destinations(value):
+    """Use the qualified CommonMark grammar, including container definitions.
+
+    Parse without URI repair or scheme filtering: admission belongs solely to
+    strict_https_destination and destination_categories. Code text is inspected
+    too, under a fixed nesting/work bound; it is not an escape from the guard.
+    """
+    require(MarkdownIt is not None and MARKDOWN_VERSION == SUPPORTED_MARKDOWN_VERSION,
+            "content-parser-unavailable")
+    try:
+        parser = MarkdownIt("commonmark", {"maxNesting": 20})
+        parser.normalizeLink = lambda target: target
+        parser.validateLink = lambda target: True
+    except Exception:
+        raise AdmissionError("content-parser-unavailable") from None
+    targets, pending, remaining = set(), [(value, 0)], max(1, len(value)) * 8
+    while pending:
+        text, depth = pending.pop()
+        remaining -= len(text)
+        require(depth <= 4 and remaining >= 0, "content-markdown-bound")
+        environment = {}
+        try:
+            tokens = parser.parse(text, environment)
+        except Exception:
+            raise AdmissionError("content-parser-unavailable") from None
+        for reference in environment.get("references", {}).values():
+            targets.add(reference["href"])
+        stack = list(tokens)
+        while stack:
+            token = stack.pop()
+            # Do not accept a partial parse at the grammar's nesting boundary.
+            require(token.level < parser.options["maxNesting"] - 2, "content-markdown-bound")
+            stack.extend(token.children or [])
+            for attribute in ("href", "src"):
+                target = token.attrGet(attribute)
+                if target is not None:
+                    targets.add(target)
+            if token.type == "text":
+                targets.update(native_reference_destinations(token.content))
+            elif token.type in {"fence", "code_block", "code_inline"} and token.content:
+                pending.append((token.content, depth + 1))
+    return targets
+
+
+def link_destinations(value):
+    """All grammar/HTML/native/prose candidates share one destination policy."""
     parser = HTMLDestinations()
     parser.feed(value)
     parser.close()
-    targets = set(parser.destinations)
-    for pattern in (r"\]\(\s*(?:<([^>]*)>|([^\s)]+))",
-                    r"(?m)^[ \t]{0,3}\[[^\n]+\]:[ \t]*(?:<([^>]*)>|([^\s]+))"):
-        for match in re.finditer(pattern, value):
-            targets.add(next(group for group in match.groups() if group is not None))
+    targets = set(parser.destinations) | markdown_destinations(value)
+    targets.update(native_reference_destinations(value))
+    # Inspect prose, code and labels as well. Only prose candidates lose terminal
+    # punctuation; parsed explicit destinations retain their exact full values.
     for match in re.finditer(r"(?i)\b(?:[a-z][a-z0-9+.-]*://|www\.)[^\s<>\"'`]+", value):
-        targets.add(match.group().rstrip(".,;:!?)\]}"))
+        targets.add(match.group().rstrip(".,;:!?)]}"))
     return targets
 
 
