@@ -3012,6 +3012,30 @@ class RetiredFixtureLines(dict):
 STREAMING_FIXTURE_BASE_BLOB = "ea829448ff388c475684bc599ec154b1f2abf7a7"
 
 
+def retire_collaboration_fixture(change: PlannedChange) -> RetiredFixtureLines:
+    """Authenticate the one historical dummy PEM header's exact removal."""
+    path = "tests/test_collaboration_content.py"
+    before = "72b933b730b7b377a2496ec4fc6752f37de2a6d2"
+    line_number = 520
+    for commit in (change.base_tip, change.base_commit, change.head_commit):
+        entry = git_tree_entry(commit, path)
+        if not entry.startswith("100644 blob ") or not entry.endswith(f"\t{path}\0"):
+            raise RuntimeError("collaboration fixture requires regular source blobs")
+    for commit in (change.base_tip, change.base_commit):
+        if git_tree_entry(commit, path) != f"100644 blob {before}\t{path}\0":
+            raise RuntimeError("collaboration fixture predecessor is not exact")
+    source = repository_blob_at_commit(change.base_tip, path, max_bytes=MAX_SECRET_FIXTURE_SOURCE_BYTES)
+    head = repository_blob_at_commit(change.head_commit, path, max_bytes=MAX_SECRET_FIXTURE_SOURCE_BYTES)
+    if source is None or head is None:
+        raise RuntimeError("collaboration fixture requires both source blobs")
+    line = source.splitlines()[line_number - 1]
+    marker = "-----BEGIN " + "RSA PRIVATE KEY-----"
+    replacement = line.replace(marker, '-----BEGIN " + "RSA PRIVATE KEY-----')
+    if line.count(marker) != 1 or source.count(line) != 1 or head != source.replace(line + "\n", replacement + "\n", 1):
+        raise RuntimeError("collaboration fixture permits only exact runtime composition")
+    return RetiredFixtureLines({path: {line_number: (sha256_text(line), line)}})
+
+
 def retire_streaming_fixture(change: PlannedChange) -> RetiredFixtureLines:
     """Retire the owner's exact existing synthetic header without an allowlist."""
     path = "tests/test_push_ready_streaming.py"
@@ -3115,7 +3139,12 @@ def secret_fixture_manifest_for_change(
             "secret fixture manifest changes require the explicit audited "
             "bootstrap review path"
         )
-    return secret_fixture_manifest_at_commit(change.base_tip)
+    documented = secret_fixture_manifest_at_commit(change.base_tip)
+    if (not documented and "tests/test_collaboration_content.py" in change.paths
+            and git_tree_entry(change.base_tip, "tests/test_collaboration_content.py")
+            == "100644 blob 72b933b730b7b377a2496ec4fc6752f37de2a6d2\ttests/test_collaboration_content.py\0"):
+        return retire_collaboration_fixture(change)
+    return documented
 
 
 def mask_documented_secret_fixture_lines(

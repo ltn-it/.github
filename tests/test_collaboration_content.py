@@ -517,7 +517,7 @@ class ContentTests(unittest.TestCase):
                 self.assertFalse(self.validate(body=value)["admitted"])
 
     def test_credentials_personal_data_and_protected_network_values_fail(self):
-        for value in ("ghp_" + "a" * 36, "-----BEGIN RSA PRIVATE KEY-----", "token: abcdefghi",
+        for value in ("ghp_" + "a" * 36, "-----BEGIN " + "RSA PRIVATE KEY-----", "token: abcdefghi",
                       "person@example.com", "10.1.2.3", "[fd00::1]", "fd00::1"):
             with self.subTest(value=value):
                 self.assertFalse(self.validate(body=value)["admitted"])

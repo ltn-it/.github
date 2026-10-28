@@ -18,6 +18,40 @@ class PushReadyStreamingTests(unittest.TestCase):
     def setUp(self):
         self.ns = runpy.run_path(str(ROOT / "scripts/lit-push-ready.py"))
 
+    def test_collaboration_fixture_retirement_binds_complete_blobs(self):
+        from types import SimpleNamespace
+        function = self.ns['retire_collaboration_fixture']
+        path = 'tests/test_collaboration_content.py'
+        before = '72b933b730b7b377a2496ec4fc6752f37de2a6d2'
+        source = subprocess.check_output(['git', '-c', f'safe.directory={ROOT}', 'show', before], cwd=ROOT).decode()
+        marker = '-----BEGIN ' + 'RSA PRIVATE KEY-----'
+        head = source.replace(marker, '-----BEGIN " + "RSA PRIVATE KEY-----', 1)
+        change = SimpleNamespace(base_tip='a' * 40, base_commit='b' * 40, head_commit='c' * 40)
+
+        def entry(commit, name):
+            return f'100644 blob {before}\t{path}\0'
+
+        def blob(commit, name, **kwargs):
+            return head if commit == change.head_commit else source
+
+        with mock.patch.dict(function.__globals__, git_tree_entry=entry, repository_blob_at_commit=blob):
+            result = function(change)
+            self.assertEqual({520}, set(result[path]))
+            self.assertEqual(source.splitlines()[519], result[path][520][1])
+        for invalid in (head + '\n# unrelated change\n', source):
+            with self.subTest(invalid=invalid == source), mock.patch.dict(
+                    function.__globals__, git_tree_entry=entry,
+                    repository_blob_at_commit=lambda commit, name, **kwargs:
+                    invalid if commit == change.head_commit else source):
+                with self.assertRaisesRegex(RuntimeError, 'exact runtime composition'):
+                    function(change)
+        with mock.patch.dict(function.__globals__, git_tree_entry=lambda *args: '120000 blob bad'):
+            with self.assertRaisesRegex(RuntimeError, 'regular source blobs'):
+                function(change)
+        with mock.patch.dict(function.__globals__, git_tree_entry=lambda *args: f'100644 blob {"d" * 40}\t{path}\0'):
+            with self.assertRaisesRegex(RuntimeError, 'predecessor is not exact'):
+                function(change)
+
     def test_regex_semantics_preserve_long_components_and_boundaries(self):
         patterns = (*self.ns["SECRET_CONTENT_PATTERNS"], self.ns["NPMRC_AUTH_PATTERN"])
         machine = self.ns["StreamingPatterns"](patterns)
