@@ -64,13 +64,19 @@ Classic human, CODEOWNER and last-push approvals do not require another person.
 Open review conversations remain a native merge condition. The applicable AI
 review and technical checks still need to succeed.
 
-Owner-approved funded Copilot authors are `litroc` (GitHub user ID `76040632`)
-and `litdeg` (GitHub user ID `247824904`). The protected common controller
-requires the exact login, numeric ID and `User` type at classification and
-request time. Both use the same finalization, at-most-once reservation and
-current-head review requirements. Other contributors supply their own review
-entitlement. This author allowance grants no owner, recovery, release or
-administrative authority and does not reactivate retired controllers.
+Owner-authorized Lightning IT operators are `litroc` (GitHub user ID `76040632`)
+and `litdeg` (GitHub user ID `247824904`), with equal operational entitlements.
+The protected common controller requires the exact login, numeric ID and `User`
+type for funded Copilot requests and owner-requested recovery. Both retain the
+same finalization, at-most-once reservation, current-head review and bounded
+recovery requirements. Duplicate requests across the two operators are still
+duplicates. Other contributors supply their own review entitlement.
+
+Normal release and administration approvals use the actual eligible identity
+and configured native environment. The managed environment rollout must retain
+the same approval protections for both operators. Historical proof continues to
+authenticate its original actor, while current authorization predicates admit
+both identities. Retired controllers remain retired.
 
 ### Finalize a correction to an already ready PR
 

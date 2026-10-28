@@ -10,7 +10,6 @@ import re
 import workflow_control as control
 
 MARKER = "<!-- lit-review-recovery/v1 "
-OWNER = ("litroc", 76040632, "User")
 LEGACY_SOURCE = "b815cefb4a5f18cd97b3947c789b6db59fedf991"
 require = control.require
 
@@ -54,7 +53,7 @@ def history(api, repo, pull, native):
 
 def request(api, repo, pull):
     comments = api.pages(f"repos/{repo}/issues/{pull['number']}/comments")
-    matches = [c for c in comments if control.identity(c.get("user", {})) == OWNER
+    matches = [c for c in comments if control.identity(c.get("user", {})) in control.AUTHORIZED_OPERATORS
                and MARKER in c.get("body", "")]
     if not matches:
         return None

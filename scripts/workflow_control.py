@@ -38,10 +38,11 @@ RELEASE = ("lightning-it-release-automation[bot]", 307565056, "Bot")
 SYNC = ("lightning-it-shared-assets-sync[bot]", 307342877, "Bot")
 RENOVATE = ("renovate[bot]", 29139614, "Bot")
 COPILOT = "copilot-pull-request-reviewer[bot]"
-FUNDED_COPILOT_AUTHORS = frozenset({
+AUTHORIZED_OPERATORS = frozenset({
     ("litroc", 76040632, "User"),
     ("litdeg", 247824904, "User"),
 })
+FUNDED_COPILOT_AUTHORS = AUTHORIZED_OPERATORS
 VERSION = "workflow-control/v1"
 MAX_OPERATION_BYTES = 262144
 MAX_PROOF_BYTES = 50 * 1024 * 1024
