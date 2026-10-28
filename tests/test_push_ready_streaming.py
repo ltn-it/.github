@@ -62,9 +62,11 @@ class PushReadyStreamingTests(unittest.TestCase):
         def workspace(name, **kwargs):
             return heads[name].encode(), 0o100644
 
-        valid = dict(git_tree_entry=entry, git_output=index, read_repository_file=workspace)
+        valid = dict(git_tree_entry=entry, git_output=index, read_repository_file=workspace,
+                     secret_fixture_manifest_at_commit=lambda commit: {})
         with mock.patch.dict(function.__globals__, valid):
-            result = function(change)
+            selector = self.ns['secret_fixture_manifest_for_change']
+            result = selector(change)
             self.assertEqual(set(sources), set(result))
             for path, _, _, line_number, *_ in self.ns['COLLABORATION_FIXTURES']:
                 self.assertEqual(sources[path].splitlines()[line_number - 1], result[path][line_number][1])
@@ -76,6 +78,20 @@ class PushReadyStreamingTests(unittest.TestCase):
             added = SimpleNamespace(paths=change.paths, patch=patch + '+"ghp_' + 'a' * 24 + '"\n')
             with self.assertRaisesRegex(RuntimeError, 'secret-like content'):
                 self.ns['streaming_review_safe'](added, result)
+            incomplete = SimpleNamespace(**{**vars(change), 'paths': change.paths[:1]})
+            with self.assertRaisesRegex(RuntimeError, 'complete migration'):
+                selector(incomplete)
+        with mock.patch.dict(function.__globals__, valid | {'git_tree_entry': lambda commit, name:
+                             f'100644 blob {"d" * 40}\t{name}\0'}):
+            no_exemption = selector(change)
+            self.assertEqual({}, no_exemption)
+            with self.assertRaisesRegex(RuntimeError, 'secret-like content'):
+                self.ns['streaming_review_safe'](change, no_exemption)
+        manifest = {'tests/other-fixture.py': {1: ('a' * 64, 'existing fixture')}}
+        with mock.patch.dict(function.__globals__, valid | {'secret_fixture_manifest_at_commit': lambda commit: manifest}):
+            self.assertIs(manifest, selector(change))
+            with self.assertRaisesRegex(RuntimeError, 'secret-like content'):
+                self.ns['streaming_review_safe'](change, manifest)
         for ending in ('\r\n', '\r'):
             def altered_entry(commit, name):
                 if commit != change.head_commit:
