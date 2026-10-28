@@ -96,7 +96,7 @@ def native_approval(api, repository, pull, source, run_id, *, allow_missing=Fals
     control.require(bindings[latest[0]["id"]] == expected, "collection-normal-approval-binding-changed")
     decisions = [entry for entry in history if entry.get("user", {}).get("type") == "User"
                  and type(entry["user"].get("id")) is int and entry["user"]["id"] > 0
-                 and str(entry.get("comment") or "").split("\n", 1)[0].strip() == purpose
+                 and str(entry.get("comment") or "").split("\n", 1)[0] == purpose
                  and any(environment.get("name") == "normal-release-promotion-approval"
                          for environment in entry.get("environments", []))]
     control.require(len(decisions) <= 1, "collection-main-approval-decision-ambiguous")

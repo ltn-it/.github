@@ -141,12 +141,22 @@ class CollectionApprovalTests(unittest.TestCase):
                         collection.native_approval(api, REPOSITORY, pull, SOURCE, 10)
 
     def test_scope_marker_cannot_be_quoted_or_copied_from_another_binding(self):
-        for comment in ("budget", "quoted", "old-binding"):
+        for comment in ("budget", "quoted", "old-binding", "indented", "tab-indented"):
             with self.subTest(comment=comment), fixture() as (api, state, pull):
                 marker = collection.approval_purpose(pull, REPOSITORY)
-                state["history"][10][0]["comment"] = ("Budget only\n" + marker if comment == "quoted" else
+                state["history"][10][0]["comment"] = ("    " + marker if comment == "indented" else
+                    "\t" + marker if comment == "tab-indented" else "Budget only\n" + marker if comment == "quoted" else
                     "[collection-main-approval/v1 " + "d" * 64 + "]" if comment == "old-binding" else "Budget only")
                 self.assertIsNone(collection.native_approval(api, REPOSITORY, pull, SOURCE, 10, allow_missing=True))
+
+    def test_rejected_rerun_of_an_older_run_blocks_reuse_from_a_newer_run_id(self):
+        with fixture() as (api, state, pull):
+            state["runs"][9] = state["runs"][10] | {"id": 9, "run_attempt": 2}
+            state["jobs"][9] = [state["jobs"][10][0] | {
+                "id": 90, "run_id": 9, "run_attempt": 2, "conclusion": "failure"}]
+            state["history"][9] = [state["history"][10][0] | {"state": "rejected"}]
+            state["operations"][(9, 2)] = copy.deepcopy(state["operations"][(10, 1)])
+            self.assertIsNone(control.previous_approval(api, REPOSITORY, pull, SOURCE, normal_collection=True))
 
     def test_changed_metadata_invalidates_the_old_normal_scope(self):
         for field, replacement in (("title", "Another release"), ("body", "changed"), ("labels", [{"name": "changed"}])):

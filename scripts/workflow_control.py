@@ -374,6 +374,7 @@ def native_approval(api, repo, run_id):
 def previous_approval(api, repo, pull, source, *, normal_collection=False):
     runs = api.pages(f"repos/{repo}/actions/runs?head_sha={pull['head']['sha']}", "workflow_runs")
     expected = binding(pull)
+    reusable_collection_run = None
     for run in sorted(runs, key=lambda r: r["id"], reverse=True):
         if not native_required(run, repo):
             continue
@@ -396,14 +397,17 @@ def previous_approval(api, repo, pull, source, *, normal_collection=False):
                     return None  # A newer normal decision must never fall back to an older approval.
                 raise
             if decision is not None:
-                return run["id"]
+                # A lower run ID can have a later rejected/pending rerun.
+                # Inspect every applicable run before reusing any decision.
+                if reusable_collection_run is None:
+                    reusable_collection_run = run["id"]
             continue
         history = api.call(f"repos/{repo}/actions/runs/{run['id']}/approvals")
         if any(a.get("state") == "approved" and any(e.get("name") == "normal-release-promotion-approval"
                for e in a.get("environments", [])) for a in history):
             native_approval(api, repo, run["id"])
             return run["id"]
-    return None
+    return reusable_collection_run
 
 
 def native_jobs(api, repo, run):

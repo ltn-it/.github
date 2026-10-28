@@ -27,9 +27,12 @@ comment line is the marker printed in the protected job summary:
 `[collection-main-approval/v1 <current-binding-sha256>]`. The hash binds the full
 current PR metadata as well as base/head. The agent includes that line when
 submitting an explicitly authorized Main approval. A recovery-only comment,
-quoted marker, different binding or absent successful normal job cannot be
+quoted or indented marker, different binding or absent successful normal job cannot be
 reused. Each job is checked against its own attempt's protected operation.
-An explicit later rejection stops fallback to older approvals. Verifier-only
+All applicable native runs are inspected before any decision is reused: a lower
+run ID may have a later rejected rerun. Any applicable negative or pending
+decision prevents reuse and requires a fresh normal approval in the current run.
+Verifier-only
 reruns may reuse the same actual normal decision; duplicate purpose decisions,
 generation drift and changed approval jobs fail closed. Final control reads the
 normal decision again after quality/review verification. Existing recovery
