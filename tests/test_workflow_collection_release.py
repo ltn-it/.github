@@ -16,9 +16,10 @@ import workflow_control as control
 
 def pull(repository, identifier):
     return {
+        "number": 3, "title": "Release v1.38.0", "body": "", "labels": [], "draft": False,
         "user": dict(zip(("login", "id", "type"), collection.RELEASE)),
-        "base": {"ref": "main", "repo": {"full_name": repository, "id": identifier}},
-        "head": {"ref": "release/v1.38.0", "repo": {"full_name": repository, "id": identifier}},
+        "base": {"sha": "a" * 40, "ref": "main", "repo": {"full_name": repository, "id": identifier}},
+        "head": {"sha": "b" * 40, "ref": "release/v1.38.0", "repo": {"full_name": repository, "id": identifier}},
     }
 
 
@@ -77,7 +78,7 @@ class CollectionReleaseTests(unittest.TestCase):
                 stack, _, _ = self.entry_context(directory, "finalize")
                 with stack, patch.object(control, "normal_environment"), \
                      patch.object(control, "previous_approval", return_value=None), \
-                     patch.object(control, "native_approval", side_effect=control.ControlError("missing-native-history")) as approval, \
+                     patch.object(collection, "native_approval", side_effect=control.ControlError("missing-native-history")) as approval, \
                      patch.object(control, "check_quality") as quality:
                     if missing_history:
                         os.environ["APPROVAL_RESULT"] = "success"
@@ -93,7 +94,7 @@ class CollectionReleaseTests(unittest.TestCase):
             native = {"user": {"login": "litroc", "id": 76040632, "type": "User"}}
             evidence = {"kind": "test-double-for-authenticated-current-codex-evidence"}
             with stack, patch.object(control, "normal_environment"), \
-                 patch.object(control, "native_approval", return_value=native) as approval, \
+                 patch.object(collection, "native_approval", return_value=native) as approval, \
                  patch.object(control, "check_quality", return_value=[]) as quality, \
                  patch.object(control, "validate_signal"), \
                  patch.object(control, "native_conversation_guard", return_value=[1]), \
@@ -104,14 +105,16 @@ class CollectionReleaseTests(unittest.TestCase):
                 self.assertEqual({"run": 10, "approval": native}, result["authorization"])
                 self.assertEqual("codex", result["route"])
                 self.assertEqual(evidence, result["evidence"])
-                approval.assert_called_once_with(api, repository, 10)
+                self.assertEqual(2, approval.call_count)
+                for call in approval.call_args_list:
+                    self.assertEqual((api, repository, review.call_args.args[2], "c" * 40, 10), call.args)
                 quality.assert_called_once()
                 self.assertEqual("codex", review.call_args.args[-1])
 
     def test_failed_codex_job_cannot_reach_normal_approval_or_quality_acceptance(self):
         with tempfile.TemporaryDirectory() as directory:
             stack, _, _ = self.entry_context(directory, "finalize")
-            with stack, patch.object(control, "native_approval") as approval, \
+            with stack, patch.object(collection, "native_approval") as approval, \
                  patch.object(control, "check_quality") as quality:
                 os.environ["REVIEW_RESULT"] = "failure"
                 with self.assertRaisesRegex(control.ControlError, "codex-review-job-not-successful"):
@@ -119,6 +122,22 @@ class CollectionReleaseTests(unittest.TestCase):
                 approval.assert_not_called()
                 quality.assert_not_called()
                 self.assertFalse((Path(directory) / "control-proof.json").exists())
+
+    def test_rejected_or_cancelled_main_job_never_falls_back_to_any_old_approval(self):
+        for result in ("failure", "cancelled", "unavailable"):
+            with self.subTest(result=result), tempfile.TemporaryDirectory() as directory:
+                stack, _, _ = self.entry_context(directory, "finalize")
+                with stack, patch.object(control, "normal_environment"), \
+                     patch.object(control, "previous_approval", return_value=9) as previous, \
+                     patch.object(collection, "native_approval") as approval, \
+                     patch.object(control, "check_quality") as quality:
+                    os.environ["APPROVAL_RESULT"] = result
+                    with self.assertRaisesRegex(control.ControlError, "normal-main-approval-rejected-or-unavailable"):
+                        control.main()
+                    previous.assert_not_called()
+                    approval.assert_not_called()
+                    quality.assert_not_called()
+                    self.assertFalse((Path(directory) / "control-proof.json").exists())
 
     def test_all_six_require_complete_codex_review_and_real_normal_approval(self):
         for repository, identifier in collection.COLLECTIONS.items():

@@ -20,6 +20,22 @@ native approval history. Final control revalidates the current tuple, actual
 review, product quality, conversations and approval before retaining its native
 proof. A skipped approval job without an authenticated prior approval fails.
 
+Recovery budget approval shares the existing Environment and grants no release
+authority. A normal Collection decision therefore requires both a successful
+native normal-approval job and a purpose-bound native User decision. Its first
+comment line is the marker printed in the protected job summary:
+`[collection-main-approval/v1 <current-binding-sha256>]`. The hash binds the full
+current PR metadata as well as base/head. The agent includes that line when
+submitting an explicitly authorized Main approval. A recovery-only comment,
+quoted marker, different binding or absent successful normal job cannot be
+reused. Each job is checked against its own attempt's protected operation.
+An explicit later rejection stops fallback to older approvals. Verifier-only
+reruns may reuse the same actual normal decision; duplicate purpose decisions,
+generation drift and changed approval jobs fail closed. Final control reads the
+normal decision again after quality/review verification. Existing recovery
+budget authorization and other repositories' approval-history contract remain
+separate.
+
 The normal approval job now follows the protected classifier's approval-needed
 output. Both ordinary Develop promotions and these normal Collection releases
 use it. Other feature PRs gain no Main route or approval authority. Security's

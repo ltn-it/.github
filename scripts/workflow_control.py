@@ -371,7 +371,7 @@ def native_approval(api, repo, run_id):
     return matches[0]
 
 
-def previous_approval(api, repo, pull, source):
+def previous_approval(api, repo, pull, source, *, normal_collection=False):
     runs = api.pages(f"repos/{repo}/actions/runs?head_sha={pull['head']['sha']}", "workflow_runs")
     expected = binding(pull)
     for run in sorted(runs, key=lambda r: r["id"], reverse=True):
@@ -385,6 +385,18 @@ def previous_approval(api, repo, pull, source):
             continue
         record = operation_record(api, repo, run)
         if record.get("source_sha") != source or not same_immutable_tuple(record.get("binding", {}), expected):
+            continue
+        if normal_collection:
+            from workflow_collection_release import native_approval as collection_approval
+            try:
+                decision = collection_approval(api, repo, pull, source, run["id"], allow_missing=True)
+            except ControlError as error:
+                if str(error) in {"collection-normal-approval-rejected", "collection-normal-approval-pending",
+                                  "collection-main-approval-rejected"}:
+                    return None  # A newer normal decision must never fall back to an older approval.
+                raise
+            if decision is not None:
+                return run["id"]
             continue
         history = api.call(f"repos/{repo}/actions/runs/{run['id']}/approvals")
         if any(a.get("state") == "approved" and any(e.get("name") == "normal-release-promotion-approval"
@@ -1397,6 +1409,7 @@ def main():
         security = authorize(api, repo, pull, config)
     route = classify(pull, repo, security=security)
     approval_required = normal_approval_required(pull, repo, route, security)
+    normal_collection = approval_required and route == "codex"
     security_summary = security.summary() if security is not None else None
     operation = {"version": 1, "source_sha": source_sha, "binding": expected}
     if security_summary is not None:
@@ -1408,8 +1421,16 @@ def main():
     if args.operation == "classify":
         if approval_required:
             normal_environment(api, repo)
-            prior = previous_approval(api, repo, pull, source_sha)
+            prior = previous_approval(api, repo, pull, source_sha, normal_collection=normal_collection)
             output("approval_needed", "false" if prior else "true")
+            if normal_collection:
+                from workflow_collection_release import approval_purpose
+                purpose = approval_purpose(pull, repo)
+                summary = os.environ.get("GITHUB_STEP_SUMMARY")
+                if summary:
+                    with open(summary, "a", encoding="utf-8") as file:
+                        file.write("\nNormal Collection Main approval must use this first comment line:\n\n`"
+                                   + purpose + "`\n\nA review-recovery budget decision grants no release approval.\n")
         else:
             output("approval_needed", "false")
         request_needed = False
@@ -1505,12 +1526,19 @@ def main():
         require(os.environ.get("REVIEW_RESULT") in {"success", "skipped"}, "codex-review-job-not-successful")
     if approval_required:
         normal_environment(api, repo)
+        require(os.environ.get("APPROVAL_RESULT") in {"success", "skipped"},
+                "normal-main-approval-rejected-or-unavailable")
         if os.environ.get("APPROVAL_RESULT") == "success":
             approval_run = int(os.environ["GITHUB_RUN_ID"])
         else:
-            approval_run = previous_approval(api, repo, pull, source_sha)
+            approval_run = previous_approval(api, repo, pull, source_sha, normal_collection=normal_collection)
             require(approval_run is not None, "native-human-approval-required")
-        authorization = {"run": approval_run, "approval": native_approval(api, repo, approval_run)}
+        if normal_collection:
+            from workflow_collection_release import native_approval as collection_approval
+            decision = collection_approval(api, repo, pull, source_sha, approval_run)
+        else:
+            decision = native_approval(api, repo, approval_run)
+        authorization = {"run": approval_run, "approval": decision}
         if route == "promotion":
             promotion_ingress(api, repo, pull, config)
     for observation in range(80):
@@ -1534,6 +1562,9 @@ def main():
         final_security = authorize(api, repo, current, config)
         require(final_security is not None and final_security.summary() == security_summary,
                 "security-current-proof-drift")
+    if normal_collection:
+        require(collection_approval(api, repo, current, source_sha, approval_run) == authorization["approval"],
+                "collection-main-approval-decision-drift")
     result = {"version": 1, "source_sha": source_sha, "binding": expected, "route": route,
                        "evidence": evidence, "authorization": authorization,
                        "native_conversation_guard": conversation_guard}
