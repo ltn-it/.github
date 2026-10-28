@@ -38,6 +38,11 @@ RELEASE = ("lightning-it-release-automation[bot]", 307565056, "Bot")
 SYNC = ("lightning-it-shared-assets-sync[bot]", 307342877, "Bot")
 RENOVATE = ("renovate[bot]", 29139614, "Bot")
 COPILOT = "copilot-pull-request-reviewer[bot]"
+AUTHORIZED_OPERATORS = frozenset({
+    ("litroc", 76040632, "User"),
+    ("litdeg", 247824904, "User"),
+})
+FUNDED_COPILOT_AUTHORS = AUTHORIZED_OPERATORS
 VERSION = "workflow-control/v1"
 MAX_OPERATION_BYTES = 262144
 MAX_PROOF_BYTES = 50 * 1024 * 1024
@@ -1398,7 +1403,7 @@ def main():
         else:
             output("approval_needed", "false")
         request_needed = False
-        if route == "copilot" and identity(pull["user"]) == ("litroc", 76040632, "User") and copilot_review(api, repo, pull) is None:
+        if route == "copilot" and identity(pull["user"]) in FUNDED_COPILOT_AUTHORS and copilot_review(api, repo, pull) is None:
             request_needed = not copilot_delivery_pending(api, repo, pull)
             if request_needed:
                 import workflow_funding
@@ -1410,7 +1415,7 @@ def main():
         output("head", pull["head"]["sha"])
         return
     if args.operation == "request-copilot":
-        require(route == "copilot" and identity(pull["user"]) == ("litroc", 76040632, "User"), "funded-author-not-allowed")
+        require(route == "copilot" and identity(pull["user"]) in FUNDED_COPILOT_AUTHORS, "funded-author-not-allowed")
         require(copilot_review(api, repo, pull) is None, "current-head-already-reviewed")
         if copilot_delivery_pending(api, repo, pull):
             return

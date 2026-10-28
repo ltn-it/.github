@@ -36,7 +36,7 @@ class RecoveryTests(unittest.TestCase):
                         ('Export protected native Codex evidence', 'skipped'))]}
         self.value = {'repository': REPO, 'pull': 9, 'head': 'b' * 40, 'base': 'c' * 40, 'failed_run': 10, 'failed_attempt': 1}
         self.comment = {'id': 40, 'updated_at': '2026-10-16T10:00:00Z',
-                        'user': dict(zip(('login', 'id', 'type'), recovery.OWNER)),
+                        'user': {'login': 'litroc', 'id': 76040632, 'type': 'User'},
                         'body': recovery.MARKER + json.dumps(self.value) + ' -->'}
         self.api = Mock()
         self.runs = [self.failed, self.native]
@@ -70,6 +70,27 @@ class RecoveryTests(unittest.TestCase):
         self.assertEqual(plan['original_provider_outcome'], 'unknown')
         self.assertFalse(plan['release_authorized'])
         self.assertEqual(plan['failed_job'], 30)
+
+    def test_both_authorized_operators_can_request_the_same_bounded_recovery(self):
+        for login, identifier in (('litroc', 76040632), ('litdeg', 247824904)):
+            with self.subTest(login=login):
+                self.comment['user'] = {'login': login, 'id': identifier, 'type': 'User'}
+                result = self.plan()
+                self.assertEqual(1, result['additional_attempts'])
+                self.assertFalse(result['release_authorized'])
+
+    def test_recovery_operator_identity_cannot_be_spoofed_or_duplicated(self):
+        for login, identifier, kind in (('litdeg', 76040632, 'User'), ('litroc', 247824904, 'User'),
+                                        ('litdeg', 247824904, 'Bot'), ('other', 247824904, 'User')):
+            with self.subTest(login=login, identifier=identifier, kind=kind):
+                self.comment['user'] = {'login': login, 'id': identifier, 'type': kind}
+                self.assertIsNone(self.plan())
+        self.comment['user'] = {'login': 'litroc', 'id': 76040632, 'type': 'User'}
+        other = copy.deepcopy(self.comment)
+        other['user'] = {'login': 'litdeg', 'id': 247824904, 'type': 'User'}
+        self.comments = [self.comment, other]
+        with self.assertRaisesRegex(control.ControlError, 'single-owner-request'):
+            self.plan()
 
     def test_no_owner_request_keeps_ordinary_funding_unchanged(self):
         self.comments = []
