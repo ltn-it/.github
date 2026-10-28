@@ -32,7 +32,7 @@ def fixture():
                 "environments": [{"name": "normal-release-promotion-approval", "id": 50}]}
     state = {"runs": {10: native}, "jobs": {10: [job]}, "history": {10: [decision]},
              "operations": {(10, 1): {"version": 1, "source_sha": SOURCE, "binding": control.binding(pull)}},
-             "reads": {}, "generation_drift": False, "job_drift": False}
+             "reads": {}, "generation_drift": False, "job_drift": False, "advance_during_job_read": False}
     api = Mock()
     def call(path):
         match = re.fullmatch(rf"repos/{re.escape(REPOSITORY)}/actions/runs/([0-9]+)(/approvals)?", path)
@@ -49,6 +49,8 @@ def fixture():
         if match:
             jobs = [job for jobs in state["jobs"].values() for job in jobs if job["id"] == int(match[1])]
             result = copy.deepcopy(jobs[0])
+            if state["advance_during_job_read"]:
+                state["runs"][result["run_id"]]["run_attempt"] += 1
             if state["job_drift"]:
                 result["conclusion"] = "failure"
             return result
@@ -181,3 +183,9 @@ class CollectionApprovalTests(unittest.TestCase):
                     state[defect] = True
                 with self.assertRaises(control.ControlError):
                     collection.native_approval(api, REPOSITORY, pull, SOURCE, 10)
+
+    def test_rerun_during_selected_job_read_is_caught_by_the_final_generation_read(self):
+        with fixture() as (api, state, pull):
+            state["advance_during_job_read"] = True
+            with self.assertRaisesRegex(control.ControlError, "collection-approval-generation-drift"):
+                collection.native_approval(api, REPOSITORY, pull, SOURCE, 10)

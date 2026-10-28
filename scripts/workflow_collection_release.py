@@ -99,12 +99,13 @@ def native_approval(api, repository, pull, source, run_id, *, allow_missing=Fals
         control.require(allow_missing, "collection-main-approval-purpose-required")
         return None
     control.require(decisions[0].get("state") == "approved", "collection-main-approval-rejected")
-    current = api.call(f"repos/{repository}/actions/runs/{run_id}")
-    generation = ("id", "run_attempt", "head_sha", "path", "workflow_id", "workflow_url")
-    control.require(all(current.get(key) == observed.get(key) for key in generation),
-                    "collection-approval-generation-drift")
     current_job = api.call(f"repos/{repository}/actions/jobs/{latest[0]['id']}")
     fields = ("id", "run_id", "run_attempt", "name", "status", "conclusion")
     control.require(all(current_job.get(key) == latest[0].get(key) for key in fields),
                     "collection-approval-job-drift")
+    # This is the final native read: a job lookup can itself race a new attempt.
+    current = api.call(f"repos/{repository}/actions/runs/{run_id}")
+    generation = ("id", "run_attempt", "head_sha", "path", "workflow_id", "workflow_url")
+    control.require(all(current.get(key) == observed.get(key) for key in generation),
+                    "collection-approval-generation-drift")
     return decisions[0]

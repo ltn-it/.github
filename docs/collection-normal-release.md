@@ -36,6 +36,11 @@ normal decision again after quality/review verification. Existing recovery
 budget authorization and other repositories' approval-history contract remain
 separate.
 
+The selected job is reread before the final run-generation comparison. No native
+read follows that comparison inside approval authentication. A rerun that starts
+during the selected-job lookup therefore invalidates the observation. This is a
+generation fence, not an atomic transaction with GitHub.
+
 The normal approval job now follows the protected classifier's approval-needed
 output. Both ordinary Develop promotions and these normal Collection releases
 use it. Other feature PRs gain no Main route or approval authority. Security's
