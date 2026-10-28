@@ -3010,30 +3010,37 @@ class RetiredFixtureLines(dict):
 
 
 STREAMING_FIXTURE_BASE_BLOB = "ea829448ff388c475684bc599ec154b1f2abf7a7"
+COLLABORATION_FIXTURES = (
+    ("tests/test_collaboration_content.py", "72b933b730b7b377a2496ec4fc6752f37de2a6d2", 520,
+     "-----BEGIN " + "RSA PRIVATE KEY-----", '-----BEGIN " + "RSA PRIVATE KEY-----'),
+    ("tests/test_collaboration_private_evidence.py", "91aa8b193d58bd530ff6d06bb94a6c5aec4a3670", 367,
+     "ghp_" + "a" * 24, "ghp_' + b'a' * 24 + b'"),
+)
 
 
 def retire_collaboration_fixture(change: PlannedChange) -> RetiredFixtureLines:
-    """Authenticate the one historical dummy PEM header's exact removal."""
-    path = "tests/test_collaboration_content.py"
-    before = "72b933b730b7b377a2496ec4fc6752f37de2a6d2"
-    line_number = 520
-    for commit in (change.base_tip, change.base_commit, change.head_commit):
-        entry = git_tree_entry(commit, path)
-        if not entry.startswith("100644 blob ") or not entry.endswith(f"\t{path}\0"):
-            raise RuntimeError("collaboration fixture requires regular source blobs")
-    for commit in (change.base_tip, change.base_commit):
-        if git_tree_entry(commit, path) != f"100644 blob {before}\t{path}\0":
-            raise RuntimeError("collaboration fixture predecessor is not exact")
-    source = repository_blob_at_commit(change.base_tip, path, max_bytes=MAX_SECRET_FIXTURE_SOURCE_BYTES)
-    head = repository_blob_at_commit(change.head_commit, path, max_bytes=MAX_SECRET_FIXTURE_SOURCE_BYTES)
-    if source is None or head is None:
-        raise RuntimeError("collaboration fixture requires both source blobs")
-    line = source.splitlines()[line_number - 1]
-    marker = "-----BEGIN " + "RSA PRIVATE KEY-----"
-    replacement = line.replace(marker, '-----BEGIN " + "RSA PRIVATE KEY-----')
-    if line.count(marker) != 1 or source.count(line) != 1 or head != source.replace(line + "\n", replacement + "\n", 1):
-        raise RuntimeError("collaboration fixture permits only exact runtime composition")
-    return RetiredFixtureLines({path: {line_number: (sha256_text(line), line)}})
+    """Authenticate both historical dummy markers' exact removal."""
+    retired = RetiredFixtureLines()
+    for path, before, line_number, marker, composed in COLLABORATION_FIXTURES:
+        if path not in change.paths:
+            raise RuntimeError("collaboration fixture requires the complete migration")
+        for commit in (change.base_tip, change.base_commit, change.head_commit):
+            entry = git_tree_entry(commit, path)
+            if not entry.startswith("100644 blob ") or not entry.endswith(f"\t{path}\0"):
+                raise RuntimeError("collaboration fixture requires regular source blobs")
+        for commit in (change.base_tip, change.base_commit):
+            if git_tree_entry(commit, path) != f"100644 blob {before}\t{path}\0":
+                raise RuntimeError("collaboration fixture predecessor is not exact")
+        source = repository_blob_at_commit(change.base_tip, path, max_bytes=MAX_SECRET_FIXTURE_SOURCE_BYTES)
+        head = repository_blob_at_commit(change.head_commit, path, max_bytes=MAX_SECRET_FIXTURE_SOURCE_BYTES)
+        if source is None or head is None:
+            raise RuntimeError("collaboration fixture requires both source blobs")
+        line = source.splitlines()[line_number - 1]
+        replacement = line.replace(marker, composed)
+        if line.count(marker) != 1 or source.count(line) != 1 or head != source.replace(line + "\n", replacement + "\n", 1):
+            raise RuntimeError("collaboration fixture permits only exact runtime composition")
+        retired[path] = {line_number: (sha256_text(line), line)}
+    return retired
 
 
 def retire_streaming_fixture(change: PlannedChange) -> RetiredFixtureLines:
@@ -3140,9 +3147,9 @@ def secret_fixture_manifest_for_change(
             "bootstrap review path"
         )
     documented = secret_fixture_manifest_at_commit(change.base_tip)
-    if (not documented and "tests/test_collaboration_content.py" in change.paths
-            and git_tree_entry(change.base_tip, "tests/test_collaboration_content.py")
-            == "100644 blob 72b933b730b7b377a2496ec4fc6752f37de2a6d2\ttests/test_collaboration_content.py\0"):
+    if not documented and any(path in change.paths and git_tree_entry(change.base_tip, path)
+                              == f"100644 blob {before}\t{path}\0"
+                              for path, before, *_ in COLLABORATION_FIXTURES):
         return retire_collaboration_fixture(change)
     return documented
 
