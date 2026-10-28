@@ -78,9 +78,22 @@ class PushReadyStreamingTests(unittest.TestCase):
             added = SimpleNamespace(paths=change.paths, patch=patch + '+"ghp_' + 'a' * 24 + '"\n')
             with self.assertRaisesRegex(RuntimeError, 'secret-like content'):
                 self.ns['streaming_review_safe'](added, result)
-            incomplete = SimpleNamespace(**{**vars(change), 'paths': change.paths[:1]})
-            with self.assertRaisesRegex(RuntimeError, 'complete migration'):
-                selector(incomplete)
+            for remaining in change.paths:
+                incomplete = SimpleNamespace(**{**vars(change), 'paths': (remaining,)})
+                with self.subTest(remaining=remaining), self.assertRaisesRegex(RuntimeError, 'complete migration'):
+                    selector(incomplete)
+        # Vary each trust binding independently, keeping all other files and
+        # commits valid. In particular, a merge-base-only mismatch must fail.
+        for target_path in change.paths:
+            for target_commit in (change.base_tip, change.base_commit, change.head_commit):
+                for invalid in ('', f'100644 blob {"d" * 40}\t{target_path}\0',
+                                entry(target_commit, target_path).replace('100644', '100755', 1)):
+                    def changed_binding(commit, name):
+                        return invalid if (commit, name) == (target_commit, target_path) else entry(commit, name)
+                    with self.subTest(path=target_path, commit=target_commit, invalid=invalid[:10]), mock.patch.dict(
+                            function.__globals__, valid | {'git_tree_entry': changed_binding}):
+                        with self.assertRaisesRegex(RuntimeError, 'exact regular source blobs'):
+                            selector(change)
         with mock.patch.dict(function.__globals__, valid | {'git_tree_entry': lambda commit, name:
                              f'100644 blob {"d" * 40}\t{name}\0'}):
             no_exemption = selector(change)
@@ -101,16 +114,22 @@ class PushReadyStreamingTests(unittest.TestCase):
             with self.subTest(ending=repr(ending)), mock.patch.dict(function.__globals__, valid | {'git_tree_entry': altered_entry}):
                 with self.assertRaisesRegex(RuntimeError, 'exact regular source blobs'):
                     function(change)
-        with mock.patch.dict(function.__globals__, valid | {'git_output': lambda *args: 'changed index'}):
-            with self.assertRaisesRegex(RuntimeError, 'index drift'):
-                function(change)
-        for suffix, ending, mode in (('\n# unrelated change\n', '\n', 0o100644),
-                                     ('', '\r\n', 0o100644), ('', '\r', 0o100644), ('', '\n', 0o100755)):
-            with self.subTest(suffix=bool(suffix), ending=repr(ending), mode=mode), mock.patch.dict(
-                    function.__globals__, valid | {'read_repository_file': lambda name, **kwargs:
-                    ((heads[name] + suffix).replace('\n', ending).encode(), mode)}):
-                with self.assertRaisesRegex(RuntimeError, 'workspace drift'):
-                    function(change)
+        for target_path in change.paths:
+            for invalid in ('', index(target_path).replace(' 0\t', ' 2\t'),
+                            index(target_path).replace(successors[target_path], 'd' * 40),
+                            index(target_path).replace('100644', '100755', 1), index(target_path) * 2):
+                with self.subTest(path=target_path, index=invalid[:10]), mock.patch.dict(
+                        function.__globals__, valid | {'git_output': lambda *args:
+                        invalid if args[-1] == target_path else index(*args)}):
+                    with self.assertRaisesRegex(RuntimeError, 'index drift'):
+                        selector(change)
+            for suffix, ending, mode in (('\n# unrelated change\n', '\n', 0o100644),
+                                         ('', '\r\n', 0o100644), ('', '\r', 0o100644), ('', '\n', 0o100755)):
+                with self.subTest(path=target_path, suffix=bool(suffix), ending=repr(ending), mode=mode), mock.patch.dict(
+                        function.__globals__, valid | {'read_repository_file': lambda name, **kwargs:
+                        ((heads[name] + suffix).replace('\n', ending).encode(), mode) if name == target_path else workspace(name)}):
+                    with self.assertRaisesRegex(RuntimeError, 'workspace drift'):
+                        selector(change)
         with mock.patch.dict(function.__globals__, git_tree_entry=lambda *args: '120000 blob bad'):
             with self.assertRaisesRegex(RuntimeError, 'exact regular source blobs'):
                 function(change)
