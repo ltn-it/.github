@@ -26,9 +26,9 @@ def fixture():
               "workflow_id": 77, "workflow_url": f"https://api.github.com/repos/{REPOSITORY}/actions/required_workflows/77",
               "pull_requests": [{"number": 3, "base": {"sha": "a" * 40}, "head": {"sha": "b" * 40}}]}
     job = {"id": 100, "run_id": 10, "run_attempt": 1, "name": collection.APPROVAL_JOB,
-           "status": "completed", "conclusion": "success"}
+           "status": "completed", "conclusion": "success", "created_at": "2026-10-28T00:01:00Z"}
     decision = {"state": "approved", "user": {"login": "litroc", "id": 76040632, "type": "User"},
-                "comment": collection.approval_purpose(pull, REPOSITORY) + "\nExplicit normal release authorization.",
+                "comment": collection.approval_purpose(pull, REPOSITORY, 10, 1) + "\nExplicit normal release authorization.",
                 "environments": [{"name": "normal-release-promotion-approval", "id": 50}]}
     state = {"runs": {10: native}, "jobs": {10: [job]}, "history": {10: [decision]},
              "operations": {(10, 1): {"version": 1, "source_sha": SOURCE, "binding": control.binding(pull)}},
@@ -121,13 +121,13 @@ class CollectionApprovalTests(unittest.TestCase):
     def test_later_rejection_does_not_fall_back_to_an_older_approved_job_or_run(self):
         with fixture() as (api, state, pull):
             state["runs"][9] = state["runs"][10] | {"id": 9}
-            state["jobs"][9] = [state["jobs"][10][0] | {"id": 90, "run_id": 9}]
+            state["jobs"][9] = [state["jobs"][10][0] | {"id": 90, "run_id": 9, "created_at": "2026-10-28T00:00:00Z"}]
             state["history"][9] = copy.deepcopy(state["history"][10])
+            state["history"][9][0]["comment"] = collection.approval_purpose(pull, REPOSITORY, 9, 1)
             state["operations"][(9, 1)] = copy.deepcopy(state["operations"][(10, 1)])
             state["runs"][10]["run_attempt"] = 2
             state["jobs"][10].append(state["jobs"][10][0] | {"id": 101, "run_attempt": 2, "conclusion": "failure"})
             self.assertIsNone(control.previous_approval(api, REPOSITORY, pull, SOURCE, normal_collection=True))
-            self.assertNotIn(9, state["reads"])
 
     def test_another_attempts_binding_or_source_cannot_supply_the_approving_job(self):
         for defect in ("binding", "source"):
@@ -143,7 +143,7 @@ class CollectionApprovalTests(unittest.TestCase):
     def test_scope_marker_cannot_be_quoted_or_copied_from_another_binding(self):
         for comment in ("budget", "quoted", "old-binding", "indented", "tab-indented"):
             with self.subTest(comment=comment), fixture() as (api, state, pull):
-                marker = collection.approval_purpose(pull, REPOSITORY)
+                marker = collection.approval_purpose(pull, REPOSITORY, 10, 1)
                 state["history"][10][0]["comment"] = ("    " + marker if comment == "indented" else
                     "\t" + marker if comment == "tab-indented" else "Budget only\n" + marker if comment == "quoted" else
                     "[collection-main-approval/v1 " + "d" * 64 + "]" if comment == "old-binding" else "Budget only")
@@ -153,7 +153,8 @@ class CollectionApprovalTests(unittest.TestCase):
         with fixture() as (api, state, pull):
             state["runs"][9] = state["runs"][10] | {"id": 9, "run_attempt": 2}
             state["jobs"][9] = [state["jobs"][10][0] | {
-                "id": 90, "run_id": 9, "run_attempt": 2, "conclusion": "failure"}]
+                "id": 90, "run_id": 9, "run_attempt": 2, "conclusion": "failure",
+                "created_at": "2026-10-28T00:02:00Z"}]
             state["history"][9] = [state["history"][10][0] | {"state": "rejected"}]
             state["operations"][(9, 2)] = copy.deepcopy(state["operations"][(10, 1)])
             self.assertIsNone(control.previous_approval(api, REPOSITORY, pull, SOURCE, normal_collection=True))
@@ -183,8 +184,12 @@ class CollectionApprovalTests(unittest.TestCase):
             rejected = copy.deepcopy(state["history"][10][0])
             rejected.update(state="rejected", comment="")
             state["history"][10].append(rejected)
+            state["runs"][10]["run_attempt"] = 2
+            state["jobs"][10].append(state["jobs"][10][0] | {
+                "id": 101, "run_attempt": 2, "conclusion": "failure",
+                "created_at": "2026-10-28T00:02:00Z"})
             self.assertIsNone(control.previous_approval(api, REPOSITORY, pull, SOURCE, normal_collection=True))
-            with self.assertRaisesRegex(control.ControlError, "collection-main-approval-rejected"):
+            with self.assertRaisesRegex(control.ControlError, "collection-normal-approval-rejected"):
                 collection.native_approval(api, REPOSITORY, pull, SOURCE, 10)
 
     def test_native_generation_job_mutation_and_foreign_job_fail_closed(self):
@@ -207,8 +212,9 @@ class CollectionApprovalTests(unittest.TestCase):
         for outcome in ("failure", "pending", "history-only"):
             with self.subTest(outcome=outcome), fixture() as (api, state, pull):
                 state["runs"][9] = state["runs"][10] | {"id": 9}
-                state["jobs"][9] = [state["jobs"][10][0] | {"id": 90, "run_id": 9}]
+                state["jobs"][9] = [state["jobs"][10][0] | {"id": 90, "run_id": 9, "created_at": "2026-10-28T00:00:00Z"}]
                 state["history"][9] = copy.deepcopy(state["history"][10])
+                state["history"][9][0]["comment"] = collection.approval_purpose(pull, REPOSITORY, 9, 1)
                 state["operations"][(9, 1)] = copy.deepcopy(state["operations"][(10, 1)])
                 # Run9 approved A. Run10 saw B at the same PR/base/head, and A is restored.
                 state["operations"][(10, 1)]["binding"]["title"] = "Metadata B"
@@ -219,7 +225,6 @@ class CollectionApprovalTests(unittest.TestCase):
                     state["jobs"][10][0]["conclusion"] = "failure" if outcome == "failure" else "skipped"
                     state["history"][10][0].update(state="rejected", comment="")
                 self.assertIsNone(control.previous_approval(api, REPOSITORY, pull, SOURCE, normal_collection=True))
-                self.assertNotIn(9, state["reads"])
 
     def test_skipped_pre_classification_attempt_needs_no_missing_operation_artifact(self):
         with fixture() as (api, state, pull):
@@ -228,4 +233,43 @@ class CollectionApprovalTests(unittest.TestCase):
             state["jobs"][10].append(state["jobs"][10][0] | {
                 "id": 101, "run_attempt": 2, "conclusion": "success"})
             state["operations"][(10, 2)] = state["operations"].pop((10, 1))
+            state["history"][10][0]["comment"] = collection.approval_purpose(pull, REPOSITORY, 10, 2)
             self.assertEqual(state["history"][10][0], collection.native_approval(api, REPOSITORY, pull, SOURCE, 10))
+
+    def test_fresh_approval_supersedes_an_older_rejection_across_runs_and_replays(self):
+        with fixture() as (api, state, pull):
+            state["runs"][9] = state["runs"][10] | {"id": 9}
+            state["jobs"][9] = [state["jobs"][10][0] | {
+                "id": 90, "run_id": 9, "conclusion": "failure",
+                "created_at": "2026-10-28T00:00:00Z"}]
+            state["history"][9] = [state["history"][10][0] | {"state": "rejected"}]
+            state["operations"][(9, 1)] = copy.deepcopy(state["operations"][(10, 1)])
+            state["runs"][10]["run_attempt"] = 2
+            state["jobs"][10].append(state["jobs"][10][0] | {
+                "id": 101, "run_attempt": 2, "conclusion": "skipped",
+                "created_at": "2026-10-28T00:03:00Z"})
+            self.assertEqual(10, control.previous_approval(api, REPOSITORY, pull, SOURCE, normal_collection=True))
+
+    def test_attempt_marker_prevents_recovery_from_reusing_an_old_normal_decision(self):
+        with fixture() as (api, state, pull):
+            state["runs"][10]["run_attempt"] = 2
+            state["jobs"][10].append(state["jobs"][10][0] | {
+                "id": 101, "run_attempt": 2, "created_at": "2026-10-28T00:02:00Z"})
+            self.assertIsNone(collection.native_approval(api, REPOSITORY, pull, SOURCE, 10, allow_missing=True))
+            state["history"][10].append(state["history"][10][0] | {
+                "comment": collection.approval_purpose(pull, REPOSITORY, 10, 2)})
+            self.assertEqual(10, control.previous_approval(api, REPOSITORY, pull, SOURCE, normal_collection=True))
+            state["history"][10][0]["state"] = "rejected"
+            self.assertEqual(10, control.previous_approval(api, REPOSITORY, pull, SOURCE, normal_collection=True))
+
+    def test_ambiguous_or_missing_native_job_times_never_order_decisions(self):
+        for defect in ("missing", "tie"):
+            with self.subTest(defect=defect), fixture() as (api, state, pull):
+                if defect == "missing":
+                    state["jobs"][10][0].pop("created_at")
+                else:
+                    state["runs"][9] = state["runs"][10] | {"id": 9}
+                    state["jobs"][9] = [state["jobs"][10][0] | {"id": 90, "run_id": 9}]
+                    state["operations"][(9, 1)] = copy.deepcopy(state["operations"][(10, 1)])
+                with self.assertRaises(control.ControlError):
+                    control.previous_approval(api, REPOSITORY, pull, SOURCE, normal_collection=True)

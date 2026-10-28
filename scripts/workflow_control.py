@@ -374,7 +374,7 @@ def native_approval(api, repo, run_id):
 def previous_approval(api, repo, pull, source, *, normal_collection=False):
     runs = api.pages(f"repos/{repo}/actions/runs?head_sha={pull['head']['sha']}", "workflow_runs")
     expected = binding(pull)
-    reusable_collection_run = None
+    applicable = []
     for run in sorted(runs, key=lambda r: r["id"], reverse=True):
         if not native_required(run, repo):
             continue
@@ -388,26 +388,17 @@ def previous_approval(api, repo, pull, source, *, normal_collection=False):
         if record.get("source_sha") != source or not same_immutable_tuple(record.get("binding", {}), expected):
             continue
         if normal_collection:
-            from workflow_collection_release import native_approval as collection_approval
-            try:
-                decision = collection_approval(api, repo, pull, source, run["id"], allow_missing=True)
-            except ControlError as error:
-                if str(error) in {"collection-normal-approval-rejected", "collection-normal-approval-pending",
-                                  "collection-main-approval-rejected", "collection-normal-approval-binding-changed"}:
-                    return None  # A newer normal decision must never fall back to an older approval.
-                raise
-            if decision is not None:
-                # A lower run ID can have a later rejected/pending rerun.
-                # Inspect every applicable run before reusing any decision.
-                if reusable_collection_run is None:
-                    reusable_collection_run = run["id"]
+            applicable.append(run)
             continue
         history = api.call(f"repos/{repo}/actions/runs/{run['id']}/approvals")
         if any(a.get("state") == "approved" and any(e.get("name") == "normal-release-promotion-approval"
                for e in a.get("environments", [])) for a in history):
             native_approval(api, repo, run["id"])
             return run["id"]
-    return reusable_collection_run
+    if normal_collection:
+        from workflow_collection_release import previous_approval as collection_previous
+        return collection_previous(api, repo, pull, source, applicable)
+    return None
 
 
 def native_jobs(api, repo, run):
@@ -1429,7 +1420,7 @@ def main():
             output("approval_needed", "false" if prior else "true")
             if normal_collection:
                 from workflow_collection_release import approval_purpose
-                purpose = approval_purpose(pull, repo)
+                purpose = approval_purpose(pull, repo, native["id"], native["run_attempt"])
                 summary = os.environ.get("GITHUB_STEP_SUMMARY")
                 if summary:
                     with open(summary, "a", encoding="utf-8") as file:

@@ -24,16 +24,20 @@ Recovery budget approval shares the existing Environment and grants no release
 authority. A normal Collection decision therefore requires both a successful
 native normal-approval job and a purpose-bound native User decision. Its first
 comment line is the marker printed in the protected job summary:
-`[collection-main-approval/v1 <current-binding-sha256>]`. The hash binds the full
-current PR metadata as well as base/head. The agent includes that line when
+`[collection-main-approval/v2 <current-binding-sha256> <run-id>/<attempt>]`.
+The hash binds full PR metadata and base/head; the native run and attempt prevent
+an earlier decision from becoming authority for a later recovery attempt.
+The agent includes that line when
 submitting an explicitly authorized Main approval. A recovery-only comment,
 quoted or indented marker, different binding or absent successful normal job cannot be
 reused. Each job is checked against its own attempt's protected operation.
-All applicable native runs are inspected before any decision is reused: a lower
-run ID may have a later rejected rerun. Any applicable negative or pending
-decision prevents reuse and requires a fresh normal approval in the current run.
-Verifier-only
-reruns may reuse the same actual normal decision; duplicate purpose decisions,
+All applicable native runs are inspected before any decision is reused. The
+common workflow serializes executions for the same PR. Normal jobs are ordered
+by GitHub's native creation timestamp, including reruns of lower run IDs; equal
+timestamps fail closed. The latest pending or negative job prevents reuse.
+A later successful normal job with its own explicit attempt-bound decision can
+supersede an earlier rejection. Verifier-only reruns may reuse the same actual
+normal decision; duplicate decisions for one attempt,
 generation drift and changed approval jobs fail closed. Final control reads the
 normal decision again after quality/review verification. Existing recovery
 budget authorization and other repositories' approval-history contract remain

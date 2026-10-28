@@ -39,7 +39,7 @@ class CollectionReleaseTests(unittest.TestCase):
         stack.enter_context(chdir(directory))
         stack.enter_context(patch.dict(os.environ, environment, clear=True))
         stack.enter_context(patch.object(sys, "argv", ["control", operation]))
-        api = Mock(); api.call.return_value = {"id": 10}
+        api = Mock(); api.call.return_value = {"id": 10, "run_attempt": 1}
         stack.enter_context(patch.object(control, "API", return_value=api))
         stack.enter_context(patch.object(control, "current_repository", return_value=identifier))
         stack.enter_context(patch.object(control, "source_identity", return_value="c" * 40))
