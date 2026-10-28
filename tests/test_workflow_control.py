@@ -335,6 +335,18 @@ class NativeGenerationReaderTests(unittest.TestCase):
 
 
 class ControlTests(unittest.TestCase):
+    def test_funded_copilot_authors_require_exact_human_identity(self):
+        for author in (('litroc', 76040632, 'User'), ('litdeg', 247824904, 'User')):
+            with self.subTest(author=author):
+                value = pull(author)
+                self.assertEqual('copilot', control.classify(value, REPO))
+                self.assertIn(control.identity(value['user']), control.FUNDED_COPILOT_AUTHORS)
+        for author in (('litdeg', 76040632, 'User'), ('litroc', 247824904, 'User'),
+                       ('litdeg', 247824904, 'Bot'), ('LitDeg', 247824904, 'User'),
+                       ('external', 247824904, 'User')):
+            with self.subTest(author=author):
+                self.assertNotIn(control.identity(pull(author)['user']), control.FUNDED_COPILOT_AUTHORS)
+
     def setUp(self):
         guard = patch.object(control, "current_repository", return_value=1112629689)
         guard.start()

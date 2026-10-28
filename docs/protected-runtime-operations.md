@@ -64,6 +64,14 @@ Classic human, CODEOWNER and last-push approvals do not require another person.
 Open review conversations remain a native merge condition. The applicable AI
 review and technical checks still need to succeed.
 
+Owner-approved funded Copilot authors are `litroc` (GitHub user ID `76040632`)
+and `litdeg` (GitHub user ID `247824904`). The protected common controller
+requires the exact login, numeric ID and `User` type at classification and
+request time. Both use the same finalization, at-most-once reservation and
+current-head review requirements. Other contributors supply their own review
+entitlement. This author allowance grants no owner, recovery, release or
+administrative authority and does not reactivate retired controllers.
+
 ### Finalize a correction to an already ready PR
 
 Finish the correction, run the deterministic profile and push the finalized
