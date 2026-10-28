@@ -41,6 +41,12 @@ read follows that comparison inside approval authentication. A rerun that starts
 during the selected-job lookup therefore invalidates the observation. This is a
 generation fence, not an atomic transaction with GitHub.
 
+Negative or pending normal decisions are considered for the same immutable
+PR/base/head before reusable positive decisions are filtered by full metadata.
+Restoring an older title/body therefore cannot hide a newer rejection. Skipped
+pre-classification jobs are ignored before requesting an operation artifact;
+they never supply authority and do not invalidate a later fully bound approval.
+
 The normal approval job now follows the protected classifier's approval-needed
 output. Both ordinary Develop promotions and these normal Collection releases
 use it. Other feature PRs gain no Main route or approval authority. Security's

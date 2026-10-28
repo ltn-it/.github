@@ -69,6 +69,7 @@ def fixture():
     def operation(api, repository, run, source=None):
         attempts = [attempt for identifier, attempt in state["operations"]
                     if identifier == run["id"] and attempt <= run["run_attempt"]]
+        control.require(attempts, "protected-operation-missing")
         result = copy.deepcopy(state["operations"][(run["id"], max(attempts))])
         control.require(source is None or result["source_sha"] == source, "protected-operation-source-drift")
         return result
@@ -151,7 +152,9 @@ class CollectionApprovalTests(unittest.TestCase):
         for field, replacement in (("title", "Another release"), ("body", "changed"), ("labels", [{"name": "changed"}])):
             with self.subTest(field=field), fixture() as (api, state, pull):
                 pull[field] = replacement
-                self.assertIsNone(collection.native_approval(api, REPOSITORY, pull, SOURCE, 10, allow_missing=True))
+                with self.assertRaisesRegex(control.ControlError, "collection-normal-approval-binding-changed"):
+                    collection.native_approval(api, REPOSITORY, pull, SOURCE, 10, allow_missing=True)
+                self.assertIsNone(control.previous_approval(api, REPOSITORY, pull, SOURCE, normal_collection=True))
 
     def test_ambiguous_decisions_bots_and_explicit_rejection_fail_closed(self):
         for defect in ("duplicate", "bot", "rejected"):
@@ -189,3 +192,30 @@ class CollectionApprovalTests(unittest.TestCase):
             state["advance_during_job_read"] = True
             with self.assertRaisesRegex(control.ControlError, "collection-approval-generation-drift"):
                 collection.native_approval(api, REPOSITORY, pull, SOURCE, 10)
+
+    def test_restoring_metadata_never_bypasses_a_newer_rejection_or_pending_decision(self):
+        for outcome in ("failure", "pending", "history-only"):
+            with self.subTest(outcome=outcome), fixture() as (api, state, pull):
+                state["runs"][9] = state["runs"][10] | {"id": 9}
+                state["jobs"][9] = [state["jobs"][10][0] | {"id": 90, "run_id": 9}]
+                state["history"][9] = copy.deepcopy(state["history"][10])
+                state["operations"][(9, 1)] = copy.deepcopy(state["operations"][(10, 1)])
+                # Run9 approved A. Run10 saw B at the same PR/base/head, and A is restored.
+                state["operations"][(10, 1)]["binding"]["title"] = "Metadata B"
+                if outcome == "pending":
+                    state["jobs"][10][0].update(status="waiting", conclusion=None)
+                    state["history"][10] = []
+                else:
+                    state["jobs"][10][0]["conclusion"] = "failure" if outcome == "failure" else "skipped"
+                    state["history"][10][0].update(state="rejected", comment="")
+                self.assertIsNone(control.previous_approval(api, REPOSITORY, pull, SOURCE, normal_collection=True))
+                self.assertNotIn(9, state["reads"])
+
+    def test_skipped_pre_classification_attempt_needs_no_missing_operation_artifact(self):
+        with fixture() as (api, state, pull):
+            state["runs"][10]["run_attempt"] = 2
+            state["jobs"][10][0]["conclusion"] = "skipped"
+            state["jobs"][10].append(state["jobs"][10][0] | {
+                "id": 101, "run_attempt": 2, "conclusion": "success"})
+            state["operations"][(10, 2)] = state["operations"].pop((10, 1))
+            self.assertEqual(state["history"][10][0], collection.native_approval(api, REPOSITORY, pull, SOURCE, 10))

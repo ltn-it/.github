@@ -392,7 +392,7 @@ def previous_approval(api, repo, pull, source, *, normal_collection=False):
                 decision = collection_approval(api, repo, pull, source, run["id"], allow_missing=True)
             except ControlError as error:
                 if str(error) in {"collection-normal-approval-rejected", "collection-normal-approval-pending",
-                                  "collection-main-approval-rejected"}:
+                                  "collection-main-approval-rejected", "collection-normal-approval-binding-changed"}:
                     return None  # A newer normal decision must never fall back to an older approval.
                 raise
             if decision is not None:
