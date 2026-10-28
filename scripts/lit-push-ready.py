@@ -3011,34 +3011,31 @@ class RetiredFixtureLines(dict):
 
 STREAMING_FIXTURE_BASE_BLOB = "ea829448ff388c475684bc599ec154b1f2abf7a7"
 COLLABORATION_FIXTURES = (
-    ("tests/test_collaboration_content.py", "72b933b730b7b377a2496ec4fc6752f37de2a6d2", 520,
-     "-----BEGIN " + "RSA PRIVATE KEY-----", '-----BEGIN " + "RSA PRIVATE KEY-----'),
-    ("tests/test_collaboration_private_evidence.py", "91aa8b193d58bd530ff6d06bb94a6c5aec4a3670", 367,
-     "ghp_" + "a" * 24, "ghp_' + b'a' * 24 + b'"),
+    ("tests/test_collaboration_content.py", "72b933b730b7b377a2496ec4fc6752f37de2a6d2",
+     "43cb06c1a31e719ea4dbe4ceba93cf9aaa9f7d79", 520,
+     "2020202020202020666f722076616c756520696e2028226768705f22202b20226122202a2033362c20222d2d2d2d2d424547494e205253412050524956415445204b45592d2d2d2d2d222c2022746f6b656e3a20616263646566676869222c"),
+    ("tests/test_collaboration_private_evidence.py", "91aa8b193d58bd530ff6d06bb94a6c5aec4a3670",
+     "9ad85ca5a5f5d9d86d5b6465fae482da0c20083d", 367,
+     "202020202020202020202020202020202020202062277b22626f6479223a22417574686f72697a6174696f6e3a2050726976617465227d272c2062277b22626f6479223a226768705f616161616161616161616161616161616161616161616161227d272c"),
 )
 
 
 def retire_collaboration_fixture(change: PlannedChange) -> RetiredFixtureLines:
     """Authenticate both historical dummy markers' exact removal."""
     retired = RetiredFixtureLines()
-    for path, before, line_number, marker, composed in COLLABORATION_FIXTURES:
+    for path, before, after, line_number, line_hex in COLLABORATION_FIXTURES:
         if path not in change.paths:
             raise RuntimeError("collaboration fixture requires the complete migration")
-        for commit in (change.base_tip, change.base_commit, change.head_commit):
-            entry = git_tree_entry(commit, path)
-            if not entry.startswith("100644 blob ") or not entry.endswith(f"\t{path}\0"):
-                raise RuntimeError("collaboration fixture requires regular source blobs")
-        for commit in (change.base_tip, change.base_commit):
-            if git_tree_entry(commit, path) != f"100644 blob {before}\t{path}\0":
-                raise RuntimeError("collaboration fixture predecessor is not exact")
-        source = repository_blob_at_commit(change.base_tip, path, max_bytes=MAX_SECRET_FIXTURE_SOURCE_BYTES)
-        head = repository_blob_at_commit(change.head_commit, path, max_bytes=MAX_SECRET_FIXTURE_SOURCE_BYTES)
-        if source is None or head is None:
-            raise RuntimeError("collaboration fixture requires both source blobs")
-        line = source.splitlines()[line_number - 1]
-        replacement = line.replace(marker, composed)
-        if line.count(marker) != 1 or source.count(line) != 1 or head != source.replace(line + "\n", replacement + "\n", 1):
-            raise RuntimeError("collaboration fixture permits only exact runtime composition")
+        for commit, expected in ((change.base_tip, before), (change.base_commit, before), (change.head_commit, after)):
+            if git_tree_entry(commit, path) != f"100644 blob {expected}\t{path}\0":
+                raise RuntimeError("collaboration fixture requires exact regular source blobs")
+        if git_output("ls-files", "--stage", "-z", "--", path) != f"100644 {after} 0\t{path}\0":
+            raise RuntimeError("collaboration fixture index drift")
+        payload, mode = read_repository_file(path, purpose="Fixture retirement", max_bytes=MAX_SECRET_FIXTURE_SOURCE_BYTES)
+        actual = hashlib.sha1(b"blob " + str(len(payload)).encode() + b"\0" + payload).hexdigest()
+        if mode & 0o111 or actual != after:
+            raise RuntimeError("collaboration fixture workspace drift")
+        line = bytes.fromhex(line_hex).decode("utf-8")
         retired[path] = {line_number: (sha256_text(line), line)}
     return retired
 

@@ -27,14 +27,24 @@ class PushReadyStreamingTests(unittest.TestCase):
         fixture = json.loads((ROOT / 'tests/fixtures/push-ready-collaboration-predecessors.json').read_text())
         self.assertEqual(1, fixture['version'])
         snapshots = {item['path']: item for item in fixture['fixtures']}
-        sources, heads, entries, patch = {}, {}, {}, ''
-        for path, before, line_number, marker, composed in self.ns['COLLABORATION_FIXTURES']:
+        replacements = {
+            'tests/test_collaboration_content.py': ('-----BEGIN ' + 'RSA PRIVATE KEY-----', '-----BEGIN " + "RSA PRIVATE KEY-----'),
+            'tests/test_collaboration_private_evidence.py': ('ghp_' + 'a' * 24, "ghp_' + b'a' * 24 + b'"),
+        }
+        sources, heads, entries, successors, patch = {}, {}, {}, {}, ''
+        def blob_hash(payload):
+            return hashlib.sha1(b'blob ' + str(len(payload)).encode() + b'\0' + payload).hexdigest()
+        for path, before, after, line_number, line_hex in self.ns['COLLABORATION_FIXTURES']:
             self.assertEqual(before, snapshots[path]['git_blob'])
             payload = zlib.decompress(base64.b64decode(snapshots[path]['zlib_base64'], validate=True))
-            self.assertEqual(before, hashlib.sha1(b'blob ' + str(len(payload)).encode() + b'\0' + payload).hexdigest())
+            self.assertEqual(before, blob_hash(payload))
             source = payload.decode()
+            marker, composed = replacements[path]
             head = source.replace(marker, composed, 1)
+            self.assertEqual(after, blob_hash(head.encode()))
+            self.assertEqual(source.splitlines()[line_number - 1].encode().hex(), line_hex)
             sources[path], heads[path], entries[path] = source, head, before
+            successors[path] = after
             patch += f'diff --git a/{path} b/{path}\n' + ''.join(difflib.unified_diff(
                 source.splitlines(keepends=True), head.splitlines(keepends=True),
                 fromfile=f'a/{path}', tofile=f'b/{path}'))
@@ -42,15 +52,21 @@ class PushReadyStreamingTests(unittest.TestCase):
                                  paths=tuple(sources), patch=patch)
 
         def entry(commit, name):
-            return f'100644 blob {entries[name]}\t{name}\0'
+            selected = successors if commit == change.head_commit else entries
+            return f'100644 blob {selected[name]}\t{name}\0'
 
-        def blob(commit, name, **kwargs):
-            return heads[name] if commit == change.head_commit else sources[name]
+        def index(*args):
+            name = args[-1]
+            return f'100644 {successors[name]} 0\t{name}\0'
 
-        with mock.patch.dict(function.__globals__, git_tree_entry=entry, repository_blob_at_commit=blob):
+        def workspace(name, **kwargs):
+            return heads[name].encode(), 0o100644
+
+        valid = dict(git_tree_entry=entry, git_output=index, read_repository_file=workspace)
+        with mock.patch.dict(function.__globals__, valid):
             result = function(change)
             self.assertEqual(set(sources), set(result))
-            for path, _, line_number, *_ in self.ns['COLLABORATION_FIXTURES']:
+            for path, _, _, line_number, *_ in self.ns['COLLABORATION_FIXTURES']:
                 self.assertEqual(sources[path].splitlines()[line_number - 1], result[path][line_number][1])
             # Exercise the entire actual two-file diff, including the removed
             # dummy token. No historical Git objects are needed by this test.
@@ -60,19 +76,30 @@ class PushReadyStreamingTests(unittest.TestCase):
             added = SimpleNamespace(paths=change.paths, patch=patch + '+"ghp_' + 'a' * 24 + '"\n')
             with self.assertRaisesRegex(RuntimeError, 'secret-like content'):
                 self.ns['streaming_review_safe'](added, result)
-        for invalid in ('collateral', 'unchanged'):
-            with self.subTest(invalid=invalid), mock.patch.dict(
-                    function.__globals__, git_tree_entry=entry,
-                    repository_blob_at_commit=lambda commit, name, **kwargs:
-                    (heads[name] + '\n# unrelated change\n' if invalid == 'collateral' else sources[name])
-                    if commit == change.head_commit else sources[name]):
-                with self.assertRaisesRegex(RuntimeError, 'exact runtime composition'):
+        for ending in ('\r\n', '\r'):
+            def altered_entry(commit, name):
+                if commit != change.head_commit:
+                    return entry(commit, name)
+                altered = blob_hash(heads[name].replace('\n', ending).encode())
+                return f'100644 blob {altered}\t{name}\0'
+            with self.subTest(ending=repr(ending)), mock.patch.dict(function.__globals__, valid | {'git_tree_entry': altered_entry}):
+                with self.assertRaisesRegex(RuntimeError, 'exact regular source blobs'):
+                    function(change)
+        with mock.patch.dict(function.__globals__, valid | {'git_output': lambda *args: 'changed index'}):
+            with self.assertRaisesRegex(RuntimeError, 'index drift'):
+                function(change)
+        for suffix, ending, mode in (('\n# unrelated change\n', '\n', 0o100644),
+                                     ('', '\r\n', 0o100644), ('', '\r', 0o100644), ('', '\n', 0o100755)):
+            with self.subTest(suffix=bool(suffix), ending=repr(ending), mode=mode), mock.patch.dict(
+                    function.__globals__, valid | {'read_repository_file': lambda name, **kwargs:
+                    ((heads[name] + suffix).replace('\n', ending).encode(), mode)}):
+                with self.assertRaisesRegex(RuntimeError, 'workspace drift'):
                     function(change)
         with mock.patch.dict(function.__globals__, git_tree_entry=lambda *args: '120000 blob bad'):
-            with self.assertRaisesRegex(RuntimeError, 'regular source blobs'):
+            with self.assertRaisesRegex(RuntimeError, 'exact regular source blobs'):
                 function(change)
         with mock.patch.dict(function.__globals__, git_tree_entry=lambda commit, name: f'100644 blob {"d" * 40}\t{name}\0'):
-            with self.assertRaisesRegex(RuntimeError, 'predecessor is not exact'):
+            with self.assertRaisesRegex(RuntimeError, 'exact regular source blobs'):
                 function(change)
 
     def test_regex_semantics_preserve_long_components_and_boundaries(self):
