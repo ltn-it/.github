@@ -3010,6 +3010,34 @@ class RetiredFixtureLines(dict):
 
 
 STREAMING_FIXTURE_BASE_BLOB = "ea829448ff388c475684bc599ec154b1f2abf7a7"
+COLLABORATION_FIXTURES = (
+    ("tests/test_collaboration_content.py", "72b933b730b7b377a2496ec4fc6752f37de2a6d2",
+     "43cb06c1a31e719ea4dbe4ceba93cf9aaa9f7d79", 520,
+     "2020202020202020666f722076616c756520696e2028226768705f22202b20226122202a2033362c20222d2d2d2d2d424547494e205253412050524956415445204b45592d2d2d2d2d222c2022746f6b656e3a20616263646566676869222c"),
+    ("tests/test_collaboration_private_evidence.py", "91aa8b193d58bd530ff6d06bb94a6c5aec4a3670",
+     "9ad85ca5a5f5d9d86d5b6465fae482da0c20083d", 367,
+     "202020202020202020202020202020202020202062277b22626f6479223a22417574686f72697a6174696f6e3a2050726976617465227d272c2062277b22626f6479223a226768705f616161616161616161616161616161616161616161616161227d272c"),
+)
+
+
+def retire_collaboration_fixture(change: PlannedChange) -> RetiredFixtureLines:
+    """Authenticate both historical dummy markers' exact removal."""
+    retired = RetiredFixtureLines()
+    for path, before, after, line_number, line_hex in COLLABORATION_FIXTURES:
+        if path not in change.paths:
+            raise RuntimeError("collaboration fixture requires the complete migration")
+        for commit, expected in ((change.base_tip, before), (change.base_commit, before), (change.head_commit, after)):
+            if git_tree_entry(commit, path) != f"100644 blob {expected}\t{path}\0":
+                raise RuntimeError("collaboration fixture requires exact regular source blobs")
+        if git_output("ls-files", "--stage", "-z", "--", path) != f"100644 {after} 0\t{path}\0":
+            raise RuntimeError("collaboration fixture index drift")
+        payload, mode = read_repository_file(path, purpose="Fixture retirement", max_bytes=MAX_SECRET_FIXTURE_SOURCE_BYTES)
+        actual = hashlib.sha1(b"blob " + str(len(payload)).encode() + b"\0" + payload).hexdigest()
+        if mode & 0o111 or actual != after:
+            raise RuntimeError("collaboration fixture workspace drift")
+        line = bytes.fromhex(line_hex).decode("utf-8")
+        retired[path] = {line_number: (sha256_text(line), line)}
+    return retired
 
 
 def retire_streaming_fixture(change: PlannedChange) -> RetiredFixtureLines:
@@ -3115,7 +3143,12 @@ def secret_fixture_manifest_for_change(
             "secret fixture manifest changes require the explicit audited "
             "bootstrap review path"
         )
-    return secret_fixture_manifest_at_commit(change.base_tip)
+    documented = secret_fixture_manifest_at_commit(change.base_tip)
+    if not documented and any(path in change.paths and git_tree_entry(change.base_tip, path)
+                              == f"100644 blob {before}\t{path}\0"
+                              for path, before, *_ in COLLABORATION_FIXTURES):
+        return retire_collaboration_fixture(change)
+    return documented
 
 
 def mask_documented_secret_fixture_lines(
