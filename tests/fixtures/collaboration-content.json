@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "positive": [
+    "Public technical issue #556; SHA-256 and UTF-8.",
+    "https://github.com/ltn-it/.github/issues/556",
+    "https://github.com/ltn-it/.github/blob/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/README.md",
+    "https://github.com/ltn-it/.github/actions/runs/123/job/456",
+    "https://github.com/ltn-it/.github/security/policy",
+    "https://docs.github.com/en/rest",
+    "https://www.bestpractices.dev/projects/15886",
+    "RFC-9110 and CVE-2026-12345"
+  ],
+  "negative": [
+    "TEST-123",
+    "test%2D123",
+    "example.atlassian.net",
+    "10.1.2.3",
+    "host.internal",
+    "person@example.com",
+    "password: synthetic-value",
+    "https://github.com/ltn-it/example/issues/1",
+    "https://github.com/ltn-it/.github/settings/environments/123",
+    "https://github.com/ltn-it/.github/security/advisories/GHSA-abcd-efgh-ijkl",
+    "https://github.com/ltn-it/.github/releases/tag/v1.0.0",
+    "https://github.com/ltn-it/.github/unknown-private-route/123",
+    "https://docs.github.com/en/rest?private=value",
+    "https://www.bestpractices.dev/projects/15886?private=value",
+    "https://www.bestpractices.dev/projects/15887"
+  ]
+}
