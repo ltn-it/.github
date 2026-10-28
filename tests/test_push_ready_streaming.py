@@ -19,15 +19,21 @@ class PushReadyStreamingTests(unittest.TestCase):
         self.ns = runpy.run_path(str(ROOT / "scripts/lit-push-ready.py"))
 
     def test_collaboration_fixture_retirement_binds_complete_blobs(self):
+        import base64
         import difflib
+        import zlib
         from types import SimpleNamespace
         function = self.ns['retire_collaboration_fixture']
+        fixture = json.loads((ROOT / 'tests/fixtures/push-ready-collaboration-predecessors.json').read_text())
+        self.assertEqual(1, fixture['version'])
+        snapshots = {item['path']: item for item in fixture['fixtures']}
         sources, heads, entries, patch = {}, {}, {}, ''
         for path, before, line_number, marker, composed in self.ns['COLLABORATION_FIXTURES']:
-            head = (ROOT / path).read_text()
-            source = head.replace(composed, marker, 1)
-            payload = source.encode()
+            self.assertEqual(before, snapshots[path]['git_blob'])
+            payload = zlib.decompress(base64.b64decode(snapshots[path]['zlib_base64'], validate=True))
             self.assertEqual(before, hashlib.sha1(b'blob ' + str(len(payload)).encode() + b'\0' + payload).hexdigest())
+            source = payload.decode()
+            head = source.replace(marker, composed, 1)
             sources[path], heads[path], entries[path] = source, head, before
             patch += f'diff --git a/{path} b/{path}\n' + ''.join(difflib.unified_diff(
                 source.splitlines(keepends=True), head.splitlines(keepends=True),
