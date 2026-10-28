@@ -364,7 +364,7 @@ class EvidenceTests(unittest.TestCase):
 
     def test_authentication_material_and_headers_cannot_be_inputs(self):
         for raw in [b'{"headers":{"Authorization":"Private"}}', b'{"access_token":"Private"}',
-                    b'{"body":"Authorization: Private"}', b'{"body":"ghp_aaaaaaaaaaaaaaaaaaaaaaaa"}',
+                    b'{"body":"Authorization: Private"}', b'{"body":"ghp_' + b'a' * 24 + b'"}',
                     b'x' * (custody.MAX_PROVIDER + 1)]:
             auth, wire, proof, _, _ = self.fixture()
             with self.assertRaises(AdmissionError) as error:
