@@ -165,6 +165,23 @@ The final control rechecks the current base, head and authorization. It can reus
 that same real approval for the same unchanged operation; a different operation
 must not inherit it. There is no administrator merge bypass.
 
+The common workflow cancels older runs when a replacement run for the same
+repository and PR enters its concurrency group, including runs waiting for
+environment approval. Different PRs remain independent. The final control runs
+after failed dependencies but does not run after workflow cancellation. A new
+head must pass its own current-revision checks and applicable approval; cancelled
+runs grant no acceptance and do not refund or erase funded review reservations.
+The final tuple freshness check remains necessary for changes racing cancellation
+or changes that do not create a replacement run.
+
+This cancellation behavior takes effect only after the revised immutable common
+source is qualified and selected through the protected Management rollout. A PR
+or Develop merge alone does not update an admitted Required Workflow source.
+For native qualification, hold a promotion at environment approval, advance its
+head, and observe the older run become cancelled without approval or a final
+acceptance proof. Confirm the replacement run targets the new head, a different
+PR is unaffected, and an actual quality failure still blocks final acceptance.
+
 A merely evaluated ruleset cannot enforce this procedure. A deliberately admitted
 scope needs an active native requirement bound to an immutable, previously
 qualified central source. Candidate code must not select its own verifier.
