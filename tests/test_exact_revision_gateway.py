@@ -435,6 +435,7 @@ class SingleReviewGatewayTests(unittest.TestCase):
     def test_actual_source_installs_gateway_before_model_and_collects_without_engine(self):
         import yaml
         workflow = yaml.safe_load((ROOT / '.github/workflows/change-control-required.yml').read_text())
+        self.assertEqual('ubuntu-24.04', workflow['jobs']['review']['runs-on'])
         steps = workflow['jobs']['review']['steps']
         install = next(i for i, step in enumerate(steps) if step.get('id') == 'gateway')
         action = next(i for i, step in enumerate(steps) if step.get('uses', '').startswith('openai/codex-action@'))
