@@ -58,14 +58,17 @@ current authority comes from the independently effective native settings.
 | --- | --- |
 | `develop` | Default integration branch for normal changes and managed synchronization |
 | `main` | Protected stable branch; updated through a normal Develop promotion PR |
-| `lit-review-operations` | Protected historical operation-data ref; retained for audit integrity |
-| `recovery/ltn-it-identity-v1` | Explicitly protected namespace-migration recovery point |
+
+The retired operation-data and namespace-recovery branches were removed on
+2026-10-29 by explicit owner instruction. Their exact historical states remain
+available as the tags `archive/lit-review-operations-20261029` and
+`archive/ltn-it-identity-v1-20261029`. Their branch-specific protection rules were
+removed; normal Main and Develop protection remains in force.
 
 Use a short-lived branch and a PR into `develop`. Include current Main ancestry
 when Main is ahead, preserve both branches' intended content, and finish the
 applicable current-revision checks and ingress review before integration. Delete
 completed working and qualification branches after checking for unmerged work.
-The protected data and recovery refs are not development branches.
 
 The admitted Root Main route requires its prescribed native review evidence,
 technical checks and genuine one-person normal release approval. One authorized
