@@ -1,45 +1,32 @@
 # Lightning IT
 
-Engineering secure, automated platforms for modern infrastructure – from Linux and Kubernetes to DevSecOps and GitOps.
+We design, automate and operate secure infrastructure, from Linux and OpenShift
+to identity, GitOps and platform engineering.
 
-We design, build, and operate opinionated platform building blocks for teams that care about:
+## Our portfolio
 
-- 🔐 **Security & governance** – ISO 27001-, BSI- and NIS2-ready patterns instead of ad-hoc hardening
-- ☁️ **Modern infrastructure** – Linux, Kubernetes, OpenShift and cloud-native tooling
-- 🧱 **Reusable building blocks** – Terraform modules, Ansible collections, Kubernetes operators and automation libraries
-- 🚀 **Automation first** – repeatable, documented workflows for provisioning, upgrades, migrations and patchdays
+| Offering | Focus |
+| --- | --- |
+| Solution Modules | Focused infrastructure capabilities, including identity and access management, secrets management, monitoring and backup |
+| Platforms | Integrated Linux, Kubernetes and OpenShift foundations with repeatable automation and operational standards |
+| Engineering Services | Architecture, implementation, integration and ongoing technical improvement |
 
----
+These offerings share a Secure Infrastructure Foundation: security, automation,
+documented architecture and verifiable technical delivery. Individual modules
+can complement an existing customer platform or form part of a broader solution.
 
-## Lightning IT Control Platform (LCP)
+Our delivery lifecycle connects Assess, Design, Deliver, Operate and Improve.
 
-Our flagship product, **Lightning IT Control Platform (LCP)**, is *the DevSecOps platform for policy-driven IT delivery*.
+## Technical transparency
 
-LCP brings together:
+Our repositories contain reusable Terraform modules, Ansible collections and
+automation tooling. Each repository documents its own scope, validation and
+contribution process. Public technical documentation provides supporting detail
+at [docs.l-it.io](https://docs.l-it.io).
 
-- 🛡️ **ISMS component** – governance & security with a certifiable ISMS (ISO 27001, BSI), roles, policies, risk analysis and audit preparation  
-- 📘 **PGF component** – structure & operational safety with governance frameworks, operating handbooks, fine-concepts and requirement catalogs  
-- ⚙️ **ModuLix component** – automation & DevSecOps with GitOps, CI/CD, Git platforms (GitLab/GitHub), Vault, monitoring, backup and SCAP-based hardening
+## Contact
 
-LCP is built for organizations that don’t just want to define rules, but enforce them **securely, automatically and traceably** – from ISMS-only up to a complete delivery stack.
-
----
-
-## Technology highlights
-
-Across our products and open repositories you will find:
-
-- 🧩 Native integration with OpenShift and common Git platforms (GitLab/GitHub)
-- 🔑 Vault-based secrets and policy management
-- 📊 Monitoring and observability with Prometheus, Loki and Grafana
-- 🧰 Infrastructure as Code with Terraform, Ansible and Helm
-- 🛡️ SCAP-based hardening and compliance mappings for ISO 27001, BSI, NIS2 and CIS Benchmarks
-
----
-
-## Stay in touch
-
-- 🌐 Website: [www.lightning-it.de](https://www.lightning-it.de) – more information about our products and services
-- 💼 LinkedIn: [Lightning IT](https://www.linkedin.com/company/42858844)
-- 📧 Email: [info@l-it.io](mailto:info@l-it.io)
-- 💬 Issues and discussions in the individual repositories
+- [Website](https://www.lightning-it.de)
+- [LinkedIn](https://www.linkedin.com/company/42858844)
+- [Email](mailto:info@l-it.io)
+- Technical questions and contributions: use the relevant repository's issue templates and contribution guide.
