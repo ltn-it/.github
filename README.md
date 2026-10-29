@@ -1,35 +1,92 @@
-# .github
+# Lightning IT · GitHub organization and common workflows
 
-This public repository owns the common workflow definitions. The Root reference
-has an active protected Main control; other repositories keep their documented
-POC transition until their own scope is explicitly admitted and accepted.
-Installing a caller or changing these files does not activate a private scope.
+This public repository contains the Lightning IT GitHub organization profile,
+contribution templates, and common quality, review and delivery workflow source.
+It is maintained in [`ltn-it/.github`](https://github.com/ltn-it/.github).
 
-The process is defined in the [workflow target](docs/workflow-target.md),
+The Root reference has an active protected Main control. Other repositories
+remain in their documented POC transition until their individual scope is
+explicitly admitted. Copying a workflow or changing a configuration file does
+not activate that scope or select its trusted verifier.
+
+<!-- BEGIN LIT_QUALITY_BADGES -->
+
+[![CI](https://github.com/ltn-it/.github/actions/workflows/repository-quality.yml/badge.svg?branch=develop)](https://github.com/ltn-it/.github/actions/workflows/repository-quality.yml)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/ltn-it/.github/badge)](https://scorecard.dev/viewer/?uri=github.com/ltn-it/.github)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/15886/badge)](https://www.bestpractices.dev/projects/15886)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+
+<!-- END LIT_QUALITY_BADGES -->
+
+## Repository contents
+
+| Path | Purpose |
+| --- | --- |
+| [`profile/README.md`](profile/README.md) | Public GitHub organization profile |
+| [`.github/ISSUE_TEMPLATE/`](.github/ISSUE_TEMPLATE/) | Bug, feature, change, task and security-readiness issue forms |
+| [`.github/pull_request_template.md`](.github/pull_request_template.md) | Pull request description template |
+| [`.github/workflows/`](.github/workflows/) | Common control, delivery, repository quality and Scorecard definitions |
+| [`scripts/`](scripts/) | Workflow policy, review transport, evidence and deterministic validation helpers |
+| [`tests/`](tests/) | Regression tests and sanitized fixtures for those helpers |
+| [`.lit/`](.lit/) | Repository classification, workflow contracts and policy metadata |
+| [`docs/`](docs/) | Operating guides, architecture decisions and historical migration records |
+
+## Workflow entry points
+
+| Workflow | Responsibility |
+| --- | --- |
+| [`repository-quality.yml`](.github/workflows/repository-quality.yml) | Run the pinned deterministic profile on PRs and protected pushes; signal Root promotion preparation after successful current Develop quality |
+| [`change-control-required.yml`](.github/workflows/change-control-required.yml) | Apply the independently selected native control to the current revision, including applicable review, quality/security checks and normal promotion approval |
+| [`delivery-operations.yml`](.github/workflows/delivery-operations.yml) | Refresh the original verifier after native review/metadata events and signal preparation for explicitly admitted consumers |
+| [`review-events.yml`](.github/workflows/review-events.yml) | Emit an unprivileged, checkout-free review event for the protected receiver |
+| [`openssf-scorecard.yml`](.github/workflows/openssf-scorecard.yml) | Assess repository security posture |
+
+Privileged promotion preparation belongs to the protected Management path.
+Preparation grants no approval or merge authority. Consumers retain their own
+product tests, builds and publishing checks; private code, credentials and
+results remain in the consumer's visibility boundary.
+
+Use the [workflow contract](docs/workflow-target.md),
 [entry-point catalog](docs/workflow-target-catalog.md) and
-[operator guide](docs/protected-runtime-operations.md). The
-[POC description](docs/poc-workflows.md) remains historical transition guidance
-for scopes that have not migrated; it does not waive active native requirements.
-Repository quality, security and applicable product release checks remain required.
+[operator guide](docs/protected-runtime-operations.md) for the full procedure.
+Historical ADRs and qualification records describe their original revision;
+current authority comes from the independently effective native settings.
 
-For changes entering the admitted Root Main route, prepare locally, submit a PR,
-and complete the current checks and prescribed ingress AI review before Main
-promotion. Unadmitted scopes retain the ordinary POC contribution process; this
-does not introduce a universal review gate for every ordinary PR. Relevant successful Develop quality signals
-the preparation of at most one Main PR. Preparation grants no approval. One
-authorized person can grant the actual normal release approval, including their
-own operation, after its current technical checks pass. Private consumers keep
-their code, sensitive configuration, validation credentials and results private.
-The public Root reference sends only a bounded preparation request with a
-short-lived dispatch token; it reads no private implementation or approval data.
+## Branches and contribution flow
 
-These organization-wide controls implement the accepted
-[repository topology ADR](https://lit.atlassian.net/wiki/spaces/LIT/pages/2878636297),
-[branching and release governance ADR](https://lit.atlassian.net/wiki/spaces/LIT/pages/2878603438),
-[mandatory CI and artifact assurance ADR](https://lit.atlassian.net/wiki/spaces/LIT/pages/2878636340),
-[secure SDLC standard](https://lit.atlassian.net/wiki/spaces/LIT/pages/2887778335),
-[quality gates](https://lit.atlassian.net/wiki/spaces/LIT/pages/2887123058), and
-[software supply-chain assurance standard](https://lit.atlassian.net/wiki/spaces/LIT/pages/2887024876).
+| Branch | Role |
+| --- | --- |
+| `develop` | Default integration branch for normal changes and managed synchronization |
+| `main` | Protected stable branch; updated through a normal Develop promotion PR |
+| `lit-review-operations` | Protected historical operation-data ref; retained for audit integrity |
+| `recovery/ltn-it-identity-v1` | Explicitly protected namespace-migration recovery point |
+
+Use a short-lived branch and a PR into `develop`. Include current Main ancestry
+when Main is ahead, preserve both branches' intended content, and finish the
+applicable current-revision checks and ingress review before integration. Delete
+completed working and qualification branches after checking for unmerged work.
+The protected data and recovery refs are not development branches.
+
+The admitted Root Main route requires its prescribed native review evidence,
+technical checks and genuine one-person normal release approval. One authorized
+person can approve their own operation. Unadmitted scopes retain the documented
+[POC process](docs/poc-workflows.md); it does not waive active native requirements.
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md) and [AGENTS.md](AGENTS.md) before making
+changes. Do not reactivate retired review, retry or promotion controllers.
+
+## Local validation
+
+From a clean, committed checkout with `origin/develop` available, run:
+
+```bash
+scripts/lit-ci-profile.sh repository-quality
+```
+
+The dispatcher uses the existing digest-pinned Devtools container through
+Docker or Podman. It checks instruction binding, repository policy, the workflow
+contract, unit tests, Actions syntax and Git diffs. Local validation never calls
+an AI reviewer. See [TESTING.md](./TESTING.md) for prerequisites and interpretation.
 
 <!-- BEGIN LIT_SHARED_RELEASE_MODEL -->
 
@@ -37,111 +94,42 @@ These organization-wide controls implement the accepted
 
 This repository follows the Lightning IT shared release and quality model.
 
-See [RELEASE.md](./RELEASE.md) for:
-
-- branch and release flow
-- required quality checks
-- test matrix
-- release evidence
-- artifact publishing
-- supported repository-specific release behavior
-
 Repository classification: **Repository Profile**.
 Required test profiles: `markdown, repository-profile`.
 Publishing targets: `none`.
+
+See [RELEASE.md](./RELEASE.md) for the branch flow and managed release model.
+This repository publishes no product artifacts. Protected Main promotion and
+its native control requirements still apply.
 
 ## Supported and Tested Platforms
 
-| Platform / Product |                  Status | Validation         |
-| ------------------ | ----------------------: | ------------------ |
-| ubuntu-latest      |               Supported | Repository quality |
-| github-profile     | Tested where applicable | Repository quality |
-
-<!-- END LIT_SHARED_RELEASE_MODEL -->
-
-<!-- BEGIN LIT_QUALITY_BADGES -->
-
-[![CI](https://github.com/lightning-it/.github/actions/workflows/repository-quality.yml/badge.svg?branch=develop)](https://github.com/lightning-it/.github/actions/workflows/repository-quality.yml)
-[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/lightning-it/.github/badge)](https://scorecard.dev/viewer/?uri=github.com/lightning-it/.github)
-[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/15886/badge)](https://www.bestpractices.dev/projects/15886)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
-
-<!-- END LIT_QUALITY_BADGES -->
-
-`.github` is managed by the Lightning IT shared release and quality model.
-
-## Features
-
-- Public common quality, current-revision review and delivery definitions.
-- Explicit scope admission, one-person normal approval and private consumer boundaries.
-- Standard release, testing and security documentation.
-
-## Documentation
-
-- [RELEASE.md](./RELEASE.md)
-- [TESTING.md](./TESTING.md)
-- [ModuLix validation lanes](./MODULIX-VALIDATION.md)
-- [SECURITY.md](./SECURITY.md)
-- [Root CodeQL merge protection](docs/root-codeql-merge-protection.md)
-
-## Security
-
-See [SECURITY.md](./SECURITY.md) for supported versions and vulnerability reporting.
-
-## Contributing
-
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for contribution and review expectations.
-
-<!-- BEGIN LIT_RELEASE_QUALITY_MODEL -->
-
-## Release and Quality Model
-
-This repository follows the Lightning IT shared release and quality model.
-The README shows the current supported and tested matrix.
-Exact per-version validation proof is stored with each GitHub Release as `release-evidence.md` and `release-evidence.json`.
-Releases are created from the protected `main` branch after a reviewed `develop -> main` release promotion.
-Repository checks validate the managed structure, documentation, and release model for this repository type.
-
-See:
-
-- [RELEASE.md](./RELEASE.md)
-- [TESTING.md](./TESTING.md)
-- [GitHub Releases](../../releases)
-
-Repository classification: **Repository Profile**.
-Required test profiles: `markdown, repository-profile`.
-Publishing targets: `none`.
-
-<!-- END LIT_RELEASE_QUALITY_MODEL -->
-
-<!-- BEGIN LIT_COMPATIBILITY_MATRIX -->
-
-## Compatibility Matrix
-
 | Platform / Product | Status | Validation |
-|---|---:|---|
+| --- | --- | --- |
 | ubuntu-latest | Supported | Repository quality |
 | github-profile | Tested where applicable | Repository quality |
 
-Validation proof for each released version is stored in the corresponding GitHub Release evidence.
+<!-- END LIT_SHARED_RELEASE_MODEL -->
 
-<!-- END LIT_COMPATIBILITY_MATRIX -->
+## Evidence and rollout status
 
-## Release Evidence
+Ordinary Develop PRs retain native GitHub checks and review evidence without
+creating duplicate durable release packages. Full Main release acceptance still
+requires its complete audit package and verified seven-year immutable retention.
+Native GitHub artifacts or storage qualification alone do not establish that
+archive. The complete native archive producer and private rollout acceptance
+remain separate acceptance items; the public reference does not establish fleet
+production acceptance.
 
-This repository does not publish product artifacts by default. A Main promotion
-still needs its one complete audit package and verified seven-year immutable
-retention before full release acceptance. Native GitHub artifacts or storage
-qualification alone do not prove that archive. The complete native archive
-producer remains a separate rollout acceptance item; the Root reference is not
-a claim of completed fleet production acceptance. Develop PRs keep native GitHub
-evidence and do not create duplicate durable release packages.
-The evidence records:
+## Documentation and security
 
-- tested matrix combinations
-- GitHub Actions run links
-- artifact references
-- publish status
-- security scan status
+- [Protected runtime operations](docs/protected-runtime-operations.md)
+- [Source-owned common quality](docs/source-owned-common-quality.md)
+- [Root control reference checks](docs/root-control-reference-checks.md)
+- [Root CodeQL merge protection](docs/root-codeql-merge-protection.md)
+- [Validation lanes](./MODULIX-VALIDATION.md)
+- [OpenSSF readiness](OPENSSF.md)
+- [Security policy and private vulnerability reporting](./SECURITY.md)
+- [Code of conduct](CODE_OF_CONDUCT.md)
 
-See [GitHub Releases](../../releases), [RELEASE.md](./RELEASE.md), and [TESTING.md](./TESTING.md) for the release process and validation model.
+Licensed under the [MIT License](./LICENSE).
