@@ -14,7 +14,8 @@ permissions:
   pull-requests: read
 concurrency:
   group: protected-control-${{ github.repository_id }}-${{ github.event.pull_request.number }}
-  cancel-in-progress: false
+  # A replacement PR run also cancels an obsolete environment approval wait.
+  cancel-in-progress: true
 jobs:
   common-quality:
     name: Source common quality
@@ -252,7 +253,8 @@ jobs:
   required:
     name: Current revision review
     needs: [review, normal-approval, common-quality]
-    if: always()
+    # Still finalize failed dependencies, but never resume a cancelled run.
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
