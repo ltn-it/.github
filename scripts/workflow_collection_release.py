@@ -91,6 +91,7 @@ def native_approval(api, repository, pull, source, run_id, *, expected_attempt=N
                          for environment in entry.get("environments", []))]
     control.require(len(decisions) == 1 and decisions[0].get("state") == "approved",
                     "collection-current-purpose-approval-required")
+    control.live_pull(api, repository, pull["number"], expected)
     current_job = api.call(f"repos/{repository}/actions/jobs/{job['id']}")
     fields = ("id", "run_id", "run_attempt", "name", "status", "conclusion")
     control.require(all(current_job.get(key) == job.get(key) for key in fields),

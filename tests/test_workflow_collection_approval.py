@@ -35,10 +35,20 @@ def fixture():
              "reads": {}, "generation_drift": False, "job_drift": False, "advance_during_job_read": False}
     api = Mock()
     def call(path):
+        if path == f"repos/{REPOSITORY}/pulls/{pull['number']}":
+            return copy.deepcopy(state.get("live_pull", pull) | {"state": "open"})
         match = re.fullmatch(rf"repos/{re.escape(REPOSITORY)}/actions/runs/([0-9]+)(/approvals)?", path)
         if match:
             identifier = int(match[1])
             if match[2]:
+                if state.get("drift_on_approval_history"):
+                    changed = copy.deepcopy(pull)
+                    field = state["drift_on_approval_history"]
+                    if field == "base":
+                        changed["base"]["sha"] = "d" * 40
+                    else:
+                        changed[field] = [{"name": "changed"}] if field == "labels" else "changed after approval"
+                    state["live_pull"] = changed
                 return copy.deepcopy(state["history"][identifier])
             state["reads"][identifier] = state["reads"].get(identifier, 0) + 1
             result = copy.deepcopy(state["runs"][identifier])
@@ -186,3 +196,10 @@ class CollectionApprovalTests(unittest.TestCase):
         with fixture() as (api, state, pull):
             with self.assertRaisesRegex(control.ControlError, "collection-approval-executing-attempt-drift"):
                 self.approve(api, pull, 2)
+
+    def test_live_metadata_drift_during_the_approval_probe_is_rejected(self):
+        for field in ("title", "body", "labels", "base"):
+            with self.subTest(field=field), fixture() as (api, state, pull):
+                state["drift_on_approval_history"] = field
+                with self.assertRaisesRegex(control.ControlError, "stale-not-applicable"):
+                    self.approve(api, pull)
