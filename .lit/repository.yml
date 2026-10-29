@@ -1,0 +1,31 @@
+---
+schema_version: 1
+managed_by: lightning-it/shared-assets-lit
+repository: .github
+visibility: public
+license_spdx: MIT
+repository_type: repository_profile
+release_type: none
+artifact_type: none
+test_profiles:
+  - markdown
+  - repository-profile
+os_matrix:
+  - ubuntu-latest
+product_matrix:
+  - github-profile
+publishing_targets: []
+galaxy_publish: false
+quay_publish: false
+release_evidence: false
+heavy_incus_required: false
+preserve_main_merge_ancestry: true
+openssf_best_practices:
+  required: true
+  project_id: 15886
+  target_level: passing
+  exception: null
+readme_badges:
+  - license
+workflows:
+  ci: repository-quality.yml
