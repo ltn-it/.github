@@ -22,3 +22,17 @@ native runs establish event, approval and cancellation behavior.
 Read back the actual run, attempt, head, source and approval after each native
 operation. Keep native CI and review history authoritative. Unknown outcomes
 permit observation; they do not authorize another funded request or a bypass.
+
+## Check the source after a metadata refresh
+
+Read the defining workflow SHA from the native job's resolved source. A run's
+head SHA identifies the reviewed candidate and does not identify its verifier.
+Compare the defining SHA with the independently selected immutable source before
+accepting ingress for a Main promotion.
+
+The metadata receiver refreshes an existing native job. Updating the selection
+does not rewrite that original run's source. Finish its actual review and all
+following receivers before using a normal reopen to obtain a newly selected
+native run for an unchanged head. Authenticate the new run rather than relabeling
+the historical result. A completed current-head Copilot review can be reused by
+the normal reader; do not request another review merely to change the verifier.
