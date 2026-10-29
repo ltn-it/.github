@@ -364,3 +364,12 @@ receipt can replace those checks, ordinary Main approval or release eligibility.
 An unknown dispatch outcome is terminal; no POST retry is introduced. Other
 Collections remain unprofiled until their actual identities and independent
 Management contract have been reviewed and accepted.
+
+The protected Codex reviewer uses `ubuntu-24.04`. The same immutable Action and
+`drop-sudo` strategy successfully restricted the D-Bus socket in native run
+`38792419221`, attempt 3, on Ubuntu 24.04. Native qualification `40803876226`,
+attempt 1, failed at that restriction after `ubuntu-latest` moved to Ubuntu 26.04.
+The explicit reviewer-host version preserves the Action, gateway, read-only
+permission profile and privilege-removal strategy. A new Source still requires
+native qualification; the failed allocation remains failed/unknown and is not
+retried or reset by this compatibility change.
