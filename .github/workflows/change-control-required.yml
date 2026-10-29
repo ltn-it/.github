@@ -242,7 +242,7 @@ jobs:
   normal-approval:
     name: Approve exact main promotion
     needs: [review, common-quality]
-    if: needs.review.outputs.route == 'promotion' && needs.review.outputs.approval_needed == 'true'
+    if: needs.review.outputs.approval_needed == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions: {}

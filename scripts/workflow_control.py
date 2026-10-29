@@ -216,6 +216,9 @@ def classify(pull, repo, *, security=None):
         from workflow_security_profile import permits
         require(permits(security, repo, pull), "security-independent-proof-required")
         return "codex"
+    from workflow_collection_release import normal_release
+    if normal_release(pull, repo):
+        return "codex"
     require(base != "main", "main-requires-exact-protected-promotion")
     if (same and base == "develop" and head.startswith("backmerge/") and head.endswith("-main")
             and (author == RELEASE or repo == SOURCE and author == SYNC)):
@@ -368,7 +371,9 @@ def native_approval(api, repo, run_id):
     return matches[0]
 
 
-def previous_approval(api, repo, pull, source):
+def previous_approval(api, repo, pull, source, *, normal_collection=False):
+    if normal_collection:
+        return None  # Stable Collections always execute a fresh normal gate.
     runs = api.pages(f"repos/{repo}/actions/runs?head_sha={pull['head']['sha']}", "workflow_runs")
     expected = binding(pull)
     for run in sorted(runs, key=lambda r: r["id"], reverse=True):
@@ -1347,6 +1352,12 @@ def verify_existing_route(api, repo, pull, config, route):
     raise ControlError("unclassified-review-route")
 
 
+def normal_approval_required(pull, repo, route, security=None):
+    """Only Source determines whether an independently verified route needs approval."""
+    from workflow_collection_release import normal_release
+    return route == "promotion" or (route == "codex" and security is None and normal_release(pull, repo))
+
+
 def output(name, value):
     require(re.fullmatch(r"[a-z_]+", name) and "\n" not in str(value), "output-shape")
     with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as file:
@@ -1387,6 +1398,8 @@ def main():
         from workflow_security_profile import authorize
         security = authorize(api, repo, pull, config)
     route = classify(pull, repo, security=security)
+    approval_required = normal_approval_required(pull, repo, route, security)
+    normal_collection = approval_required and route == "codex"
     security_summary = security.summary() if security is not None else None
     operation = {"version": 1, "source_sha": source_sha, "binding": expected}
     if security_summary is not None:
@@ -1396,10 +1409,18 @@ def main():
     snapshot = canonical(operation)
     require(len(snapshot) <= MAX_OPERATION_BYTES, "operation-snapshot-size-before-funding")
     if args.operation == "classify":
-        if route == "promotion":
+        if approval_required:
             normal_environment(api, repo)
-            prior = previous_approval(api, repo, pull, source_sha)
+            prior = previous_approval(api, repo, pull, source_sha, normal_collection=normal_collection)
             output("approval_needed", "false" if prior else "true")
+            if normal_collection:
+                from workflow_collection_release import approval_purpose
+                purpose = approval_purpose(pull, repo, native["id"], native["run_attempt"])
+                summary = os.environ.get("GITHUB_STEP_SUMMARY")
+                if summary:
+                    with open(summary, "a", encoding="utf-8") as file:
+                        file.write("\nNormal Collection Main approval must use this first comment line:\n\n`"
+                                   + purpose + "`\n\nA review-recovery budget decision grants no release approval.\n")
         else:
             output("approval_needed", "false")
         request_needed = False
@@ -1493,15 +1514,25 @@ def main():
     authorization = None
     if route == "codex":
         require(os.environ.get("REVIEW_RESULT") in {"success", "skipped"}, "codex-review-job-not-successful")
-    if route == "promotion":
+    if approval_required:
         normal_environment(api, repo)
+        permitted = {"success"} if normal_collection else {"success", "skipped"}
+        require(os.environ.get("APPROVAL_RESULT") in permitted,
+                "normal-main-approval-rejected-or-unavailable")
         if os.environ.get("APPROVAL_RESULT") == "success":
             approval_run = int(os.environ["GITHUB_RUN_ID"])
         else:
-            approval_run = previous_approval(api, repo, pull, source_sha)
+            approval_run = previous_approval(api, repo, pull, source_sha, normal_collection=normal_collection)
             require(approval_run is not None, "native-human-approval-required")
-        authorization = {"run": approval_run, "approval": native_approval(api, repo, approval_run)}
-        promotion_ingress(api, repo, pull, config)
+        if normal_collection:
+            from workflow_collection_release import native_approval as collection_approval
+            decision = collection_approval(api, repo, pull, source_sha, approval_run,
+                                           expected_attempt=int(os.environ["GITHUB_RUN_ATTEMPT"]))
+        else:
+            decision = native_approval(api, repo, approval_run)
+        authorization = {"run": approval_run, "approval": decision}
+        if route == "promotion":
+            promotion_ingress(api, repo, pull, config)
     for observation in range(80):
         live_pull(api, repo, number, expected)
         try:
@@ -1523,6 +1554,10 @@ def main():
         final_security = authorize(api, repo, current, config)
         require(final_security is not None and final_security.summary() == security_summary,
                 "security-current-proof-drift")
+    if normal_collection:
+        require(collection_approval(api, repo, current, source_sha, approval_run,
+                                    expected_attempt=int(os.environ["GITHUB_RUN_ATTEMPT"])) == authorization["approval"],
+                "collection-main-approval-decision-drift")
     result = {"version": 1, "source_sha": source_sha, "binding": expected, "route": route,
                        "evidence": evidence, "authorization": authorization,
                        "native_conversation_guard": conversation_guard}
