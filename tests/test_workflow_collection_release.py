@@ -31,7 +31,7 @@ class CollectionReleaseTests(unittest.TestCase):
         value["base"]["sha"], value["head"]["sha"] = "a" * 40, "b" * 40
         event = Path(directory) / "event.json"
         event.write_text(json.dumps({"pull_request": value}))
-        environment = {"GITHUB_REPOSITORY": repository, "GITHUB_RUN_ID": "10", "NATIVE_JOB": "{}",
+        environment = {"GITHUB_REPOSITORY": repository, "GITHUB_RUN_ID": "10", "GITHUB_RUN_ATTEMPT": "1", "NATIVE_JOB": "{}",
                        "GITHUB_EVENT_PATH": str(event), "GITHUB_OUTPUT": str(Path(directory) / "output"),
                        "COMMON_QUALITY_RESULT": "success", "REVIEW_RESULT": "success",
                        "APPROVAL_RESULT": "skipped"}
@@ -82,7 +82,7 @@ class CollectionReleaseTests(unittest.TestCase):
                      patch.object(control, "check_quality") as quality:
                     if missing_history:
                         os.environ["APPROVAL_RESULT"] = "success"
-                    with self.assertRaisesRegex(control.ControlError, "missing-native-history|native-human-approval-required"):
+                    with self.assertRaisesRegex(control.ControlError, "missing-native-history|normal-main-approval-rejected-or-unavailable"):
                         control.main()
                     quality.assert_not_called()
                     self.assertEqual(int(missing_history), approval.call_count)

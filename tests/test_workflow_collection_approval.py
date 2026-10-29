@@ -56,6 +56,10 @@ def fixture():
             return result
         raise AssertionError(path)
     def pages(path, key):
+        current = re.fullmatch(rf"repos/{re.escape(REPOSITORY)}/actions/runs/([0-9]+)/attempts/([0-9]+)/jobs", path)
+        if current:
+            return copy.deepcopy([job for job in state["jobs"][int(current[1])]
+                                  if job["run_attempt"] == int(current[2])])
         if path == f"repos/{REPOSITORY}/actions/runs?head_sha={pull['head']['sha']}":
             return copy.deepcopy(list(state["runs"].values()))
         match = re.fullmatch(rf"repos/{re.escape(REPOSITORY)}/actions/runs/([0-9]+)/(jobs\?filter=all|artifacts)", path)
@@ -79,197 +83,106 @@ def fixture():
 
 
 class CollectionApprovalTests(unittest.TestCase):
-    def test_native_normal_job_and_scoped_user_decision_are_both_required(self):
+    def approve(self, api, pull, attempt=1):
+        return collection.native_approval(api, REPOSITORY, pull, SOURCE, 10, expected_attempt=attempt)
+
+    def test_fresh_current_job_and_native_decision_authorize(self):
         with fixture() as (api, state, pull):
-            result = collection.native_approval(api, REPOSITORY, pull, SOURCE, 10)
-            self.assertEqual(state["history"][10][0], result)
-            self.assertEqual(10, control.previous_approval(api, REPOSITORY, pull, SOURCE, normal_collection=True))
+            self.assertEqual(state["history"][10][0], self.approve(api, pull))
 
-    def test_budget_only_history_never_authorizes_even_with_successful_recovery_job(self):
-        for normal_job in (False, True):
-            with self.subTest(normal_job=normal_job), fixture() as (api, state, pull):
-                state["history"][10][0]["comment"] = "Approve one extra review budget; no release authority."
-                if not normal_job:
-                    state["jobs"][10][0]["name"] = "Protected current revision"
-                self.assertIsNone(collection.native_approval(api, REPOSITORY, pull, SOURCE, 10, allow_missing=True))
-                self.assertIsNone(control.previous_approval(api, REPOSITORY, pull, SOURCE, normal_collection=True))
-                with self.assertRaises(control.ControlError):
-                    collection.native_approval(api, REPOSITORY, pull, SOURCE, 10)
-
-    def test_scoped_decision_without_successful_normal_job_does_not_authorize(self):
-        for conclusion in ("failure", "cancelled", "skipped"):
-            with self.subTest(conclusion=conclusion), fixture() as (api, state, pull):
-                state["jobs"][10][0]["conclusion"] = conclusion
-                with self.assertRaises(control.ControlError):
-                    collection.native_approval(api, REPOSITORY, pull, SOURCE, 10)
-                self.assertIsNone(control.previous_approval(api, REPOSITORY, pull, SOURCE, normal_collection=True))
-
-    def test_explicit_main_decision_is_distinct_from_budget_in_the_same_run(self):
+    def test_stable_route_never_reuses_historical_approval(self):
         with fixture() as (api, state, pull):
-            budget = copy.deepcopy(state["history"][10][0])
-            budget["comment"] = "Review recovery budget only."
-            state["history"][10].insert(0, budget)
-            result = collection.native_approval(api, REPOSITORY, pull, SOURCE, 10)
-            self.assertEqual(state["history"][10][1], result)
-
-    def test_skipped_verifier_attempt_reuses_only_the_unchanged_actual_normal_decision(self):
-        with fixture() as (api, state, pull):
-            state["runs"][10]["run_attempt"] = 2
-            state["jobs"][10].append(state["jobs"][10][0] | {"id": 101, "run_attempt": 2, "conclusion": "skipped"})
-            self.assertEqual(10, control.previous_approval(api, REPOSITORY, pull, SOURCE, normal_collection=True))
-
-    def test_later_rejection_does_not_fall_back_to_an_older_approved_job_or_run(self):
-        with fixture() as (api, state, pull):
-            state["runs"][9] = state["runs"][10] | {"id": 9}
-            state["jobs"][9] = [state["jobs"][10][0] | {"id": 90, "run_id": 9, "created_at": "2026-10-28T00:00:00Z"}]
-            state["history"][9] = copy.deepcopy(state["history"][10])
-            state["history"][9][0]["comment"] = collection.approval_purpose(pull, REPOSITORY, 9, 1)
-            state["operations"][(9, 1)] = copy.deepcopy(state["operations"][(10, 1)])
-            state["runs"][10]["run_attempt"] = 2
-            state["jobs"][10].append(state["jobs"][10][0] | {"id": 101, "run_attempt": 2, "conclusion": "failure"})
             self.assertIsNone(control.previous_approval(api, REPOSITORY, pull, SOURCE, normal_collection=True))
+            api.call.assert_not_called()
+            api.pages.assert_not_called()
 
-    def test_another_attempts_binding_or_source_cannot_supply_the_approving_job(self):
-        for defect in ("binding", "source"):
-            with self.subTest(defect=defect), fixture() as (api, state, pull):
-                if defect == "binding":
-                    state["operations"][(10, 1)]["binding"]["base"] = "d" * 40
-                    self.assertIsNone(collection.native_approval(api, REPOSITORY, pull, SOURCE, 10, allow_missing=True))
-                else:
-                    state["operations"][(10, 1)]["source_sha"] = "d" * 40
-                    with self.assertRaisesRegex(control.ControlError, "protected-operation-source-drift"):
-                        collection.native_approval(api, REPOSITORY, pull, SOURCE, 10)
-
-    def test_scope_marker_cannot_be_quoted_or_copied_from_another_binding(self):
-        for comment in ("budget", "quoted", "old-binding", "indented", "tab-indented"):
-            with self.subTest(comment=comment), fixture() as (api, state, pull):
+    def test_budget_quoted_indented_and_other_attempt_decisions_do_not_authorize(self):
+        for variant in ("budget", "quoted", "spaces", "tab", "other-attempt", "other-run", "old-binding"):
+            with self.subTest(variant=variant), fixture() as (api, state, pull):
                 marker = collection.approval_purpose(pull, REPOSITORY, 10, 1)
-                state["history"][10][0]["comment"] = ("    " + marker if comment == "indented" else
-                    "\t" + marker if comment == "tab-indented" else "Budget only\n" + marker if comment == "quoted" else
-                    "[collection-main-approval/v1 " + "d" * 64 + "]" if comment == "old-binding" else "Budget only")
-                self.assertIsNone(collection.native_approval(api, REPOSITORY, pull, SOURCE, 10, allow_missing=True))
+                choices = {"budget": "Review recovery only.", "quoted": "Budget only\n" + marker,
+                           "spaces": "    " + marker, "tab": "\t" + marker,
+                           "other-attempt": collection.approval_purpose(pull, REPOSITORY, 10, 2),
+                           "other-run": collection.approval_purpose(pull, REPOSITORY, 9, 1),
+                           "old-binding": "[collection-main-approval/v2 " + "d" * 64 + " 10/1]"}
+                state["history"][10][0]["comment"] = choices[variant]
+                with self.assertRaises(control.ControlError):
+                    self.approve(api, pull)
 
-    def test_rejected_rerun_of_an_older_run_blocks_reuse_from_a_newer_run_id(self):
+    def test_failed_skipped_missing_or_pending_current_jobs_never_reuse_old_success(self):
+        for outcome in ("failure", "cancelled", "pending", "skipped", "missing"):
+            with self.subTest(outcome=outcome), fixture() as (api, state, pull):
+                state["runs"][10]["run_attempt"] = 2
+                state["operations"][(10, 2)] = copy.deepcopy(state["operations"][(10, 1)])
+                if outcome != "missing":
+                    state["jobs"][10].append(state["jobs"][10][0] | {
+                        "id": 101, "run_attempt": 2, "status": "waiting" if outcome == "pending" else "completed",
+                        "conclusion": None if outcome == "pending" else outcome})
+                with self.assertRaises(control.ControlError):
+                    self.approve(api, pull, 2)
+
+    def test_verifier_only_rerun_has_no_fresh_operation_or_normal_gate(self):
         with fixture() as (api, state, pull):
-            state["runs"][9] = state["runs"][10] | {"id": 9, "run_attempt": 2}
-            state["jobs"][9] = [state["jobs"][10][0] | {
-                "id": 90, "run_id": 9, "run_attempt": 2, "conclusion": "failure",
-                "created_at": "2026-10-28T00:02:00Z"}]
-            state["history"][9] = [state["history"][10][0] | {"state": "rejected"}]
-            state["operations"][(9, 2)] = copy.deepcopy(state["operations"][(10, 1)])
-            self.assertIsNone(control.previous_approval(api, REPOSITORY, pull, SOURCE, normal_collection=True))
+            state["runs"][10]["run_attempt"] = 2
+            with self.assertRaisesRegex(control.ControlError, "collection-current-operation-required"):
+                self.approve(api, pull, 2)
 
-    def test_changed_metadata_invalidates_the_old_normal_scope(self):
-        for field, replacement in (("title", "Another release"), ("body", "changed"), ("labels", [{"name": "changed"}])):
-            with self.subTest(field=field), fixture() as (api, state, pull):
-                pull[field] = replacement
-                with self.assertRaisesRegex(control.ControlError, "collection-normal-approval-binding-changed"):
-                    collection.native_approval(api, REPOSITORY, pull, SOURCE, 10, allow_missing=True)
-                self.assertIsNone(control.previous_approval(api, REPOSITORY, pull, SOURCE, normal_collection=True))
+    def test_complete_new_attempt_requires_and_accepts_its_own_explicit_approval(self):
+        with fixture() as (api, state, pull):
+            state["runs"][10]["run_attempt"] = 2
+            state["operations"][(10, 2)] = copy.deepcopy(state["operations"][(10, 1)])
+            state["jobs"][10].append(state["jobs"][10][0] | {"id": 101, "run_attempt": 2})
+            with self.assertRaises(control.ControlError):
+                self.approve(api, pull, 2)
+            state["history"][10][0]["state"] = "rejected"
+            state["history"][10].append(state["history"][10][0] | {
+                "state": "approved", "comment": collection.approval_purpose(pull, REPOSITORY, 10, 2)})
+            self.assertEqual(state["history"][10][1], self.approve(api, pull, 2))
 
-    def test_ambiguous_decisions_bots_and_explicit_rejection_fail_closed(self):
-        for defect in ("duplicate", "bot", "rejected"):
+    def test_rejection_bots_and_duplicate_current_decisions_fail_closed(self):
+        for defect in ("rejected", "bot", "duplicate"):
             with self.subTest(defect=defect), fixture() as (api, state, pull):
-                if defect == "duplicate":
-                    state["history"][10].append(copy.deepcopy(state["history"][10][0]))
+                if defect == "rejected":
+                    state["history"][10][0]["state"] = "rejected"
                 elif defect == "bot":
                     state["history"][10][0]["user"]["type"] = "Bot"
                 else:
-                    state["history"][10][0]["state"] = "rejected"
+                    state["history"][10].append(copy.deepcopy(state["history"][10][0]))
                 with self.assertRaises(control.ControlError):
-                    collection.native_approval(api, REPOSITORY, pull, SOURCE, 10)
+                    self.approve(api, pull)
 
-    def test_unmarked_native_rejection_cannot_reuse_an_older_scoped_approval(self):
-        with fixture() as (api, state, pull):
-            rejected = copy.deepcopy(state["history"][10][0])
-            rejected.update(state="rejected", comment="")
-            state["history"][10].append(rejected)
-            state["runs"][10]["run_attempt"] = 2
-            state["jobs"][10].append(state["jobs"][10][0] | {
-                "id": 101, "run_attempt": 2, "conclusion": "failure",
-                "created_at": "2026-10-28T00:02:00Z"})
-            self.assertIsNone(control.previous_approval(api, REPOSITORY, pull, SOURCE, normal_collection=True))
-            with self.assertRaisesRegex(control.ControlError, "collection-normal-approval-rejected"):
-                collection.native_approval(api, REPOSITORY, pull, SOURCE, 10)
-
-    def test_native_generation_job_mutation_and_foreign_job_fail_closed(self):
-        for defect in ("generation_drift", "job_drift", "foreign-job"):
+    def test_operation_binding_source_and_current_artifact_are_required(self):
+        for defect in ("metadata", "source", "missing-artifact"):
             with self.subTest(defect=defect), fixture() as (api, state, pull):
-                if defect == "foreign-job":
+                if defect == "metadata":
+                    pull["title"] = "Changed after approval"
+                elif defect == "source":
+                    state["operations"][(10, 1)]["source_sha"] = "d" * 40
+                else:
+                    state["operations"].clear()
+                with self.assertRaises(control.ControlError):
+                    self.approve(api, pull)
+
+    def test_foreign_duplicate_or_missing_current_jobs_fail_closed(self):
+        for defect in ("foreign", "duplicate", "missing"):
+            with self.subTest(defect=defect), fixture() as (api, state, pull):
+                if defect == "foreign":
                     state["jobs"][10][0]["run_id"] = 11
+                elif defect == "duplicate":
+                    state["jobs"][10].append(state["jobs"][10][0] | {"id": 101})
                 else:
-                    state[defect] = True
+                    state["jobs"][10].clear()
                 with self.assertRaises(control.ControlError):
-                    collection.native_approval(api, REPOSITORY, pull, SOURCE, 10)
+                    self.approve(api, pull)
 
-    def test_rerun_during_selected_job_read_is_caught_by_the_final_generation_read(self):
-        with fixture() as (api, state, pull):
-            state["advance_during_job_read"] = True
-            with self.assertRaisesRegex(control.ControlError, "collection-approval-generation-drift"):
-                collection.native_approval(api, REPOSITORY, pull, SOURCE, 10)
-
-    def test_restoring_metadata_never_bypasses_a_newer_rejection_or_pending_decision(self):
-        for outcome in ("failure", "pending", "history-only"):
-            with self.subTest(outcome=outcome), fixture() as (api, state, pull):
-                state["runs"][9] = state["runs"][10] | {"id": 9}
-                state["jobs"][9] = [state["jobs"][10][0] | {"id": 90, "run_id": 9, "created_at": "2026-10-28T00:00:00Z"}]
-                state["history"][9] = copy.deepcopy(state["history"][10])
-                state["history"][9][0]["comment"] = collection.approval_purpose(pull, REPOSITORY, 9, 1)
-                state["operations"][(9, 1)] = copy.deepcopy(state["operations"][(10, 1)])
-                # Run9 approved A. Run10 saw B at the same PR/base/head, and A is restored.
-                state["operations"][(10, 1)]["binding"]["title"] = "Metadata B"
-                if outcome == "pending":
-                    state["jobs"][10][0].update(status="waiting", conclusion=None)
-                    state["history"][10] = []
-                else:
-                    state["jobs"][10][0]["conclusion"] = "failure" if outcome == "failure" else "skipped"
-                    state["history"][10][0].update(state="rejected", comment="")
-                self.assertIsNone(control.previous_approval(api, REPOSITORY, pull, SOURCE, normal_collection=True))
-
-    def test_skipped_pre_classification_attempt_needs_no_missing_operation_artifact(self):
-        with fixture() as (api, state, pull):
-            state["runs"][10]["run_attempt"] = 2
-            state["jobs"][10][0]["conclusion"] = "skipped"
-            state["jobs"][10].append(state["jobs"][10][0] | {
-                "id": 101, "run_attempt": 2, "conclusion": "success"})
-            state["operations"][(10, 2)] = state["operations"].pop((10, 1))
-            state["history"][10][0]["comment"] = collection.approval_purpose(pull, REPOSITORY, 10, 2)
-            self.assertEqual(state["history"][10][0], collection.native_approval(api, REPOSITORY, pull, SOURCE, 10))
-
-    def test_fresh_approval_supersedes_an_older_rejection_across_runs_and_replays(self):
-        with fixture() as (api, state, pull):
-            state["runs"][9] = state["runs"][10] | {"id": 9}
-            state["jobs"][9] = [state["jobs"][10][0] | {
-                "id": 90, "run_id": 9, "conclusion": "failure",
-                "created_at": "2026-10-28T00:00:00Z"}]
-            state["history"][9] = [state["history"][10][0] | {"state": "rejected"}]
-            state["operations"][(9, 1)] = copy.deepcopy(state["operations"][(10, 1)])
-            state["runs"][10]["run_attempt"] = 2
-            state["jobs"][10].append(state["jobs"][10][0] | {
-                "id": 101, "run_attempt": 2, "conclusion": "skipped",
-                "created_at": "2026-10-28T00:03:00Z"})
-            self.assertEqual(10, control.previous_approval(api, REPOSITORY, pull, SOURCE, normal_collection=True))
-
-    def test_attempt_marker_prevents_recovery_from_reusing_an_old_normal_decision(self):
-        with fixture() as (api, state, pull):
-            state["runs"][10]["run_attempt"] = 2
-            state["jobs"][10].append(state["jobs"][10][0] | {
-                "id": 101, "run_attempt": 2, "created_at": "2026-10-28T00:02:00Z"})
-            self.assertIsNone(collection.native_approval(api, REPOSITORY, pull, SOURCE, 10, allow_missing=True))
-            state["history"][10].append(state["history"][10][0] | {
-                "comment": collection.approval_purpose(pull, REPOSITORY, 10, 2)})
-            self.assertEqual(10, control.previous_approval(api, REPOSITORY, pull, SOURCE, normal_collection=True))
-            state["history"][10][0]["state"] = "rejected"
-            self.assertEqual(10, control.previous_approval(api, REPOSITORY, pull, SOURCE, normal_collection=True))
-
-    def test_ambiguous_or_missing_native_job_times_never_order_decisions(self):
-        for defect in ("missing", "tie"):
+    def test_native_generation_and_job_drift_are_rejected(self):
+        for defect in ("generation_drift", "job_drift", "advance_during_job_read"):
             with self.subTest(defect=defect), fixture() as (api, state, pull):
-                if defect == "missing":
-                    state["jobs"][10][0].pop("created_at")
-                else:
-                    state["runs"][9] = state["runs"][10] | {"id": 9}
-                    state["jobs"][9] = [state["jobs"][10][0] | {"id": 90, "run_id": 9}]
-                    state["operations"][(9, 1)] = copy.deepcopy(state["operations"][(10, 1)])
+                state[defect] = True
                 with self.assertRaises(control.ControlError):
-                    control.previous_approval(api, REPOSITORY, pull, SOURCE, normal_collection=True)
+                    self.approve(api, pull)
+
+    def test_executing_attempt_is_independent_of_the_mutable_api_generation(self):
+        with fixture() as (api, state, pull):
+            with self.assertRaisesRegex(control.ControlError, "collection-approval-executing-attempt-drift"):
+                self.approve(api, pull, 2)

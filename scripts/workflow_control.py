@@ -372,9 +372,10 @@ def native_approval(api, repo, run_id):
 
 
 def previous_approval(api, repo, pull, source, *, normal_collection=False):
+    if normal_collection:
+        return None  # Stable Collections always execute a fresh normal gate.
     runs = api.pages(f"repos/{repo}/actions/runs?head_sha={pull['head']['sha']}", "workflow_runs")
     expected = binding(pull)
-    applicable = []
     for run in sorted(runs, key=lambda r: r["id"], reverse=True):
         if not native_required(run, repo):
             continue
@@ -387,17 +388,11 @@ def previous_approval(api, repo, pull, source, *, normal_collection=False):
         record = operation_record(api, repo, run)
         if record.get("source_sha") != source or not same_immutable_tuple(record.get("binding", {}), expected):
             continue
-        if normal_collection:
-            applicable.append(run)
-            continue
         history = api.call(f"repos/{repo}/actions/runs/{run['id']}/approvals")
         if any(a.get("state") == "approved" and any(e.get("name") == "normal-release-promotion-approval"
                for e in a.get("environments", [])) for a in history):
             native_approval(api, repo, run["id"])
             return run["id"]
-    if normal_collection:
-        from workflow_collection_release import previous_approval as collection_previous
-        return collection_previous(api, repo, pull, source, applicable)
     return None
 
 
@@ -1521,7 +1516,8 @@ def main():
         require(os.environ.get("REVIEW_RESULT") in {"success", "skipped"}, "codex-review-job-not-successful")
     if approval_required:
         normal_environment(api, repo)
-        require(os.environ.get("APPROVAL_RESULT") in {"success", "skipped"},
+        permitted = {"success"} if normal_collection else {"success", "skipped"}
+        require(os.environ.get("APPROVAL_RESULT") in permitted,
                 "normal-main-approval-rejected-or-unavailable")
         if os.environ.get("APPROVAL_RESULT") == "success":
             approval_run = int(os.environ["GITHUB_RUN_ID"])
@@ -1530,7 +1526,8 @@ def main():
             require(approval_run is not None, "native-human-approval-required")
         if normal_collection:
             from workflow_collection_release import native_approval as collection_approval
-            decision = collection_approval(api, repo, pull, source_sha, approval_run)
+            decision = collection_approval(api, repo, pull, source_sha, approval_run,
+                                           expected_attempt=int(os.environ["GITHUB_RUN_ATTEMPT"]))
         else:
             decision = native_approval(api, repo, approval_run)
         authorization = {"run": approval_run, "approval": decision}
@@ -1558,7 +1555,8 @@ def main():
         require(final_security is not None and final_security.summary() == security_summary,
                 "security-current-proof-drift")
     if normal_collection:
-        require(collection_approval(api, repo, current, source_sha, approval_run) == authorization["approval"],
+        require(collection_approval(api, repo, current, source_sha, approval_run,
+                                    expected_attempt=int(os.environ["GITHUB_RUN_ATTEMPT"])) == authorization["approval"],
                 "collection-main-approval-decision-drift")
     result = {"version": 1, "source_sha": source_sha, "binding": expected, "route": route,
                        "evidence": evidence, "authorization": authorization,

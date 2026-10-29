@@ -18,41 +18,36 @@ existing request, budget, receipt and stale-input guards. Normal Main approval
 uses the existing credential-free self-reviewable Environment and genuine
 native approval history. Final control revalidates the current tuple, actual
 review, product quality, conversations and approval before retaining its native
-proof. A skipped approval job without an authenticated prior approval fails.
+proof. A skipped approval job always fails on this normal Collection route.
+
+The bounded implementation deliberately has no approval-reuse algorithm for
+stable Collection Main releases. GitHub's run-level approval history does not
+reliably associate an unmarked rejection with an individual attempt. Inferring
+that association from skipped jobs or timestamps can either restore rejected
+authority or prevent a legitimate fresh approval. Each complete execution
+therefore requires its own successful normal job and explicit native User
+decision. Ordinary Develop promotions retain their existing contract.
 
 Recovery budget approval shares the existing Environment and grants no release
-authority. A normal Collection decision therefore requires both a successful
-native normal-approval job and a purpose-bound native User decision. Its first
-comment line is the marker printed in the protected job summary:
+authority. The exact first comment line for normal release approval is printed
+in the protected summary:
 `[collection-main-approval/v2 <current-binding-sha256> <run-id>/<attempt>]`.
-The hash binds full PR metadata and base/head; the native run and attempt prevent
-an earlier decision from becoming authority for a later recovery attempt.
-The agent includes that line when
-submitting an explicitly authorized Main approval. A recovery-only comment,
-quoted or indented marker, different binding or absent successful normal job cannot be
-reused. Each job is checked against its own attempt's protected operation.
-All applicable native runs are inspected before any decision is reused. The
-common workflow serializes executions for the same PR. Normal jobs are ordered
-by GitHub's native creation timestamp, including reruns of lower run IDs; equal
-timestamps fail closed. The latest pending or negative job prevents reuse.
-A later successful normal job with its own explicit attempt-bound decision can
-supersede an earlier rejection. Verifier-only reruns may reuse the same actual
-normal decision; duplicate decisions for one attempt,
-generation drift and changed approval jobs fail closed. Final control reads the
-normal decision again after quality/review verification. Existing recovery
-budget authorization and other repositories' approval-history contract remain
-separate.
+It binds full PR metadata, base/head, the native run and the executing attempt.
+Budget-only, quoted, indented, earlier-run or earlier-attempt decisions do not
+qualify. The current attempt must have its own protected operation artifact
+with the exact source and binding, and exactly one successful normal job.
 
-The selected job is reread before the final run-generation comparison. No native
-read follows that comparison inside approval authentication. A rerun that starts
-during the selected-job lookup therefore invalidates the observation. This is a
-generation fence, not an atomic transaction with GitHub.
+A verifier-only rerun cannot obtain release authority from an older operation
+or approval. If another execution is needed, use the complete protected route
+and a fresh normal approval. This does not grant a provider retry or reset a
+review budget: previously successful byte-identical review evidence follows
+the existing cache contract; failures retain their existing recovery rules.
 
-Negative or pending normal decisions are considered for the same immutable
-PR/base/head before reusable positive decisions are filtered by full metadata.
-Restoring an older title/body therefore cannot hide a newer rejection. Skipped
-pre-classification jobs are ignored before requesting an operation artifact;
-they never supply authority and do not invalidate a later fully bound approval.
+The selected job is reread before the final run-generation comparison. The
+executing attempt is independently pinned by the native job environment.
+Final control authenticates the same decision again after actual quality and
+current-review verification. This is a generation fence, not an atomic GitHub
+transaction. No approval-history sorting or timestamp inference is used.
 
 The normal approval job now follows the protected classifier's approval-needed
 output. Both ordinary Develop promotions and these normal Collection releases
