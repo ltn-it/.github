@@ -34,6 +34,7 @@ RENAMED_REPOSITORIES = {
     "container-ee-wunder-devtools-ubi9": 1110305651,
 }
 WORKFLOW = ".github/workflows/change-control-required.yml"
+SUPPLEMENTARY_GENESIS_BRANCH = "qualification/supplementary-funding-v2"
 RELEASE = ("lightning-it-release-automation[bot]", 307565056, "Bot")
 SYNC = ("lightning-it-shared-assets-sync[bot]", 307342877, "Bot")
 RENOVATE = ("renovate[bot]", 29139614, "Bot")
@@ -1299,6 +1300,8 @@ def supplementary_qualification_genesis(api, repo, pull, source_sha):
     """
     if repo != "ltn-it/ansible-collection-supplementary" or not pull.get("head", {}).get("ref", "").startswith("qualification/"):
         return
+    require(pull["head"]["ref"] == SUPPLEMENTARY_GENESIS_BRANCH,
+            "supplementary-single-canonical-genesis-branch-required")
     from workflow_ingress import instant, normal_merge_parent
     require(identity(pull.get("user", {})) == RELEASE and pull.get("base", {}).get("ref") == "develop",
             "supplementary-fresh-app-qualification-required")

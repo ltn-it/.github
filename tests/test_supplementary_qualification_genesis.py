@@ -44,7 +44,7 @@ class SupplementaryQualificationGenesisTests(unittest.TestCase):
     def fixture(self):
         bot = dict(zip(('login', 'id', 'type'), control.RELEASE))
         pull = {'user': bot, 'base': {'ref': 'develop', 'sha': PARENT},
-                'head': {'ref': 'qualification/funding-v2', 'sha': HEAD}}
+                'head': {'ref': 'qualification/supplementary-funding-v2', 'sha': HEAD}}
         merged = {'number': 7, 'state': 'closed', 'merged': True, 'merge_commit_sha': PARENT,
                   'merged_at': '2026-10-29T01:44:39Z', 'merged_by': ACTOR,
                   'base': {'ref': 'develop', 'sha': BASE, 'repo': {'id': 1103407173}},
@@ -89,6 +89,16 @@ class SupplementaryQualificationGenesisTests(unittest.TestCase):
         self.assertIsNone(proof['candidate_sha'])
         self.assertEqual(PARENT, proof['parent'])
         self.assertTrue(all(not call.kwargs for call in api.call.call_args_list))
+
+    def test_another_qualification_branch_cannot_recreate_the_canonical_genesis(self):
+        for branch in ('qualification/funding-v2', 'qualification/supplementary-funding-v2-copy'):
+            api, pull, _, _, _ = self.fixture()
+            pull['head']['ref'] = branch
+            with self.subTest(branch=branch), self.assertRaisesRegex(control.ControlError, 'single-canonical-genesis'):
+                control.supplementary_qualification_genesis(api, REPO, pull, SOURCE)
+            api.call.assert_not_called()
+            api.pages.assert_not_called()
+            api.file.assert_not_called()
 
     def test_commit_dates_are_never_used_instead_of_native_merge(self):
         api, pull, records, _, _ = self.fixture()
