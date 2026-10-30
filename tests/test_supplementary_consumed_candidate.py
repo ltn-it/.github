@@ -188,6 +188,40 @@ class SupplementaryConsumedCandidateTests(unittest.TestCase):
                 control.ControlError, 'consumed-legacy'):
             control.reserve_request(api, REPO, {'head': {'sha': HEAD}}, 'f' * 40, 20, 1)
 
+    def test_own_prior_attempt_must_prove_both_boundaries_before_normal_or_recovery(self):
+        native = {'id': 20, 'head_sha': HEAD, 'run_attempt': 2, 'status': 'in_progress', 'workflow_id': 77,
+                  'workflow_url': f'https://api.github.com/repos/{REPO}/actions/required_workflows/77',
+                  'path': control.WORKFLOW, 'pull_requests': [
+                      {'number': 7, 'base': {'sha': OLD_BASE}, 'head': {'sha': HEAD}}]}
+        pull = {'number': 7, 'base': {'sha': OLD_BASE}, 'head': {'sha': HEAD}}
+        final = {'id': 101, 'run_id': 20, 'run_attempt': 1, 'head_sha': HEAD, 'status': 'completed',
+                 'name': 'Current revision review'}
+        partial = final | {'id': 102, 'name': 'Protected current revision', 'steps': [
+            {'name': 'Reserve protected Codex request', 'status': 'completed', 'conclusion': 'skipped'}]}
+        for recovery in ('', 'e' * 64):
+            for jobs in ([final], [partial, final]):
+                api = self.api(runs=[native], jobs=jobs)
+                api.call.return_value = native
+                with (self.subTest(recovery=bool(recovery), jobs=jobs),
+                      patch.dict(os.environ, {'REVIEW_RECOVERY_PLAN_SHA256': recovery}),
+                      patch.object(control, 'supplementary_consumed_candidate'),
+                      patch.object(control, 'supplementary_qualification_genesis'),
+                      patch.object(control, 'supplementary_live_funding_bases'),
+                      patch('workflow_recovery.authorize') as authorize,
+                      self.assertRaises(control.ControlError)):
+                    control.reserve_request(api, REPO, pull, 'f' * 40, 20, 2)
+                authorize.assert_not_called()
+        complete = partial | {'steps': [
+            {'name': name, 'status': 'completed', 'conclusion': 'skipped'} for name in control.FUNDING_STEPS]}
+        api = self.api(runs=[native], jobs=[complete, final])
+        api.call.return_value = native
+        with (patch.dict(os.environ, {'REVIEW_RECOVERY_PLAN_SHA256': ''}),
+              patch.object(control, 'supplementary_consumed_candidate'),
+              patch.object(control, 'supplementary_qualification_genesis'),
+              patch.object(control, 'supplementary_live_funding_bases')):
+            self.assertEqual(20, control.reserve_request(api, REPO, pull, 'f' * 40, 20, 2))
+
+
     def test_other_five_and_modulix_do_not_change(self):
         for name in ('foundational', 'rhel', 'ubuntu', 'ocp', 'cloud'):
             api = Mock()

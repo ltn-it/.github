@@ -1103,12 +1103,15 @@ def supplementary_durable_legacy(api, repo, head):
                 "supplementary-durable-legacy-generation-drift")
 
 
-def supplementary_unfunded_common(api, repo, owner, head):
+def supplementary_unfunded_common(api, repo, owner, head, *, before_attempt=None):
     require(owner.get("head_sha") == head and type(owner.get("run_attempt")) is int
-            and 1 <= owner["run_attempt"] <= 32 and owner.get("status") == "completed",
+            and 1 <= owner["run_attempt"] <= 32
+            and (owner.get("status") == "completed" if before_attempt is None else
+                 owner.get("status") == "in_progress" and before_attempt == owner["run_attempt"]),
             "supplementary-native-history-unknown")
     original = False
-    for attempt in range(1, owner["run_attempt"] + 1):
+    stop = owner["run_attempt"] + 1 if before_attempt is None else before_attempt
+    for attempt in range(1, stop):
         jobs = supplementary_inventory(api.pages(
             f"repos/{repo}/actions/runs/{owner['id']}/attempts/{attempt}/jobs", "jobs"), head)
         protected = [job for job in jobs if job.get("name") == "Protected current revision"]
@@ -1289,7 +1292,8 @@ def reserve_request(api, repo, pull, source_sha, run_id, attempt):
     supplementary_qualification_genesis(api, repo, pull, source_sha)
     supplementary_live_funding_bases(api, repo, pull)
     if repo == "ltn-it/ansible-collection-supplementary":
-        slot_consumed_before(api, repo, run, attempt)
+        if attempt > 1:
+            supplementary_unfunded_common(api, repo, run, pull["head"]["sha"], before_attempt=attempt)
     recovery = os.environ.get("REVIEW_RECOVERY_PLAN_SHA256", "")
     if recovery:
         require(classify(pull, repo) == "codex", "recovery-codex-only")
@@ -1298,7 +1302,8 @@ def reserve_request(api, repo, pull, source_sha, run_id, attempt):
         with Path("control-recovery.json").open("xb") as stream:
             stream.write(canonical(receipt))
         return run_id
-    slot_consumed_before(api, repo, run, attempt)
+    if repo != "ltn-it/ansible-collection-supplementary":
+        slot_consumed_before(api, repo, run, attempt)
     runs = api.pages(f"repos/{repo}/actions/runs?head_sha={pull['head']['sha']}", "workflow_runs")
     owners = [r for r in runs if native_required(r, repo)
               and any(pr.get("number") == pull["number"]
