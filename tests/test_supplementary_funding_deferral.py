@@ -19,6 +19,8 @@ REPO, SOURCE = deferral.REPO, 'f' * 40
 class SupplementaryFundingDeferralTests(unittest.TestCase):
     def fixture(self):
         pull = complete_pull()
+        for role in ('base', 'head'):
+            pull[role]['repo']['full_name'] = REPO
         head = pull['head']['sha']
         native = {'id': 20, 'head_sha': head, 'status': 'in_progress', 'run_attempt': 1, 'workflow_id': 77,
                   'workflow_url': f'https://api.github.com/repos/{REPO}/actions/required_workflows/77',
@@ -128,6 +130,36 @@ class SupplementaryFundingDeferralTests(unittest.TestCase):
                                                  pull['head']['sha'], source=SOURCE)
         with self.assertRaises(control.ControlError):
             control.supplementary_unfunded_common(api, REPO, native | {'status': 'completed'}, pull['head']['sha'])
+
+    def test_deferred_copilot_invocation_never_reuses_evidence_to_write_acceptance(self):
+        api, pull, native, _, operation, context, _, _ = self.fixture()
+        pull['user'] = {'login': 'litroc', 'id': 76040632, 'type': 'User'}
+        operation['binding'] = control.binding(pull)
+        api.call.side_effect = lambda path: native if '/actions/runs/' in path else pull
+        previous = Path.cwd()
+        with tempfile.TemporaryDirectory() as temp:
+            try:
+                os.chdir(temp)
+                event = Path(temp) / 'event.json'
+                event.write_text(json.dumps({'pull_request': pull}))
+                environment = {'GITHUB_REPOSITORY': REPO, 'GITHUB_RUN_ID': '20', 'GITHUB_RUN_ATTEMPT': '1',
+                               'GITHUB_EVENT_PATH': str(event), 'NATIVE_JOB': json.dumps(context),
+                               'COMMON_QUALITY_RESULT': 'success', 'REVIEW_RESULT': 'failure', 'REVIEW_DEFERRED': 'true'}
+                with (patch.dict(os.environ, environment), patch.object(sys, 'argv', ['control', 'finalize']),
+                      patch.object(control, 'API', return_value=api),
+                      patch.object(control, 'current_repository', return_value=1103407173),
+                      patch.object(control, 'operation_record', return_value=operation),
+                      patch.object(control, 'policy', return_value={'mode': 'reference'}),
+                      patch.object(control, 'check_quality', return_value={}),
+                      patch.object(control, 'validate_signal'), patch.object(control, 'native_conversation_guard', return_value={}),
+                      patch.object(control, 'complete_generated_lock_quality'),
+                      patch.object(control, 'verify_existing_route', return_value={'review': 9}) as evidence):
+                    with self.assertRaisesRegex(control.ControlError, 'deferred-invocation'):
+                        control.main()
+                    evidence.assert_not_called()
+                self.assertFalse(Path('control-proof.json').exists())
+            finally:
+                os.chdir(previous)
 
 
 if __name__ == '__main__':

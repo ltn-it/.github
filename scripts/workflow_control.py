@@ -1407,6 +1407,10 @@ def reserve_request(api, repo, pull, source_sha, run_id, attempt):
     supplementary_qualification_genesis(api, repo, pull, source_sha)
     supplementary_live_funding_bases(api, repo, pull)
     if recovery:
+        if repo == "ltn-it/ansible-collection-supplementary":
+            later = supplementary_defer_generation(api, repo, pull, run)
+            if later:
+                raise SupplementaryDeferred(later)
         with Path("control-recovery.json").open("xb") as stream:
             stream.write(canonical(receipt))
         return run_id
@@ -1918,6 +1922,9 @@ def main():
         print(f"Verified {route} for exact current revision; native evidence retained.")
         return
     require(os.environ.get("COMMON_QUALITY_RESULT") == "success", "source-common-quality-not-successful")
+    if repo == "ltn-it/ansible-collection-supplementary":
+        require(os.environ.get("REVIEW_DEFERRED") != "true", "deferred-invocation-cannot-produce-acceptance")
+        require(os.environ.get("REVIEW_RESULT") in {"success", "skipped"}, "supplementary-review-job-not-successful")
     authorization = None
     if route == "codex":
         require(os.environ.get("REVIEW_RESULT") in {"success", "skipped"}, "codex-review-job-not-successful")

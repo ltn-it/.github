@@ -17,6 +17,7 @@ concurrency:
     ${{ github.repository_id == '1103407173' && format('sup-funded-review-{0}-{1}', github.repository_id, github.event.pull_request.head.sha) || format('protected-control-{0}-{1}', github.repository_id, github.event.pull_request.number) }}
   # A replacement PR run also cancels an obsolete environment approval wait.
   cancel-in-progress: ${{ github.repository_id != '1103407173' }}
+  queue: ${{ github.repository_id == '1103407173' && 'max' || 'single' }}
 jobs:
   common-quality:
     name: Source common quality
@@ -94,6 +95,7 @@ jobs:
     outputs:
       route: ${{ steps.classify.outputs.route }}
       approval_needed: ${{ steps.classify.outputs.approval_needed }}
+      deferred: ${{ steps.generation.outputs.deferred == 'true' || steps.request.outputs.deferred == 'true' || steps.reserve.outputs.deferred == 'true' }}
     steps:
       - name: Resolve native defining source
         id: source
@@ -304,6 +306,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           NATIVE_JOB: ${{ toJSON(job) }}
           REVIEW_RESULT: ${{ needs.review.result }}
+          REVIEW_DEFERRED: ${{ needs.review.outputs.deferred }}
           APPROVAL_RESULT: ${{ needs.normal-approval.result }}
           COMMON_QUALITY_RESULT: ${{ needs.common-quality.result }}
         run: python3 -B scripts/workflow_control.py finalize

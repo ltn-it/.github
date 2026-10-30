@@ -147,6 +147,29 @@ class SupplementaryRecoveryTests(unittest.TestCase):
             finally:
                 os.chdir(previous)
 
+    def test_recovery_follower_after_candidate_audit_aborts_at_last_receipt_fence(self):
+        digest = control.digest(self.plan())
+        pending = self.native | {'id': 21, 'status': 'pending'}
+        native_call = self.api.call.side_effect
+        self.api.call.side_effect = lambda path: pending if path.endswith('/runs/21') else native_call(path)
+        context = {'check_run_id': 80, 'workflow_sha': SOURCE,
+                   'workflow_repository': control.SOURCE, 'workflow_file_path': control.WORKFLOW}
+        previous = Path.cwd()
+        with tempfile.TemporaryDirectory() as temp:
+            try:
+                os.chdir(temp)
+                with (patch.dict(os.environ, {'REVIEW_RECOVERY_PLAN_SHA256': digest,
+                                              'NATIVE_JOB': json.dumps(context), 'GITHUB_OUTPUT': str(Path(temp) / 'output')}),
+                      patch.object(control, 'supplementary_qualification_genesis', side_effect=lambda *_: self.extra.append(pending)),
+                      patch.object(control, 'supplementary_live_funding_bases')):
+                    self.assertFalse(control.reserve_or_defer(self.api, REPO, self.pull, SOURCE,
+                                                             self.native, self.record, 'Reserve protected Codex request'))
+                self.assertFalse(Path('control-recovery.json').exists())
+                evidence = json.loads(Path('control-funding-deferred.json').read_bytes())
+                self.assertFalse(evidence['provider_request'])
+            finally:
+                os.chdir(previous)
+
 
 if __name__ == '__main__':
     unittest.main()
