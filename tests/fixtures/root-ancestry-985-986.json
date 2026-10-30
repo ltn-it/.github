@@ -1,0 +1,1865 @@
+{
+  "capture_kind": "field projections of original public Native API; test data grants no authority",
+  "captured_at": "2026-10-30T08:13:08.583480+00:00",
+  "raw_capture_sha256": {
+    "repos/ltn-it/.github": "683482602e4ea3b175ec06dd08a5534146d0480e1910d8fcd4d697666ddd9db2",
+    "repos/ltn-it/.github/branches/main": "0f7daed1bda4a692c06b8a7d468f2250ff2e33414970c07668885886b84eaa43",
+    "repos/ltn-it/.github/branches/develop": "b53c709738c0b254056cce98b9dd4bff8535b2f5bbcee72dbf90779b37729afb",
+    "repos/ltn-it/.github/git/ref/heads/main": "a23b1438b4b6dd4a25028b2ff6b67ee55d7d134708a2a196e8af61a9eec38123",
+    "repos/ltn-it/.github/git/ref/heads/develop": "f1a405a48f0a433f3a671a415aff0a88372dd10270edb6bdacea0bf512406bdd",
+    "repos/ltn-it/.github/git/commits/c353913fc261e193b60876219820e9714b0122b9": "de9d6003bdede9bf15df2da3a954c3b634f0cbde2dc97d1e9e1e64e3cff71ba7",
+    "repos/ltn-it/.github/git/commits/1d19405fefd66e5f1b007bddcd1920e3a1287866": "3316d1627c901858adbbbe42f7ec1cc907a4d383155739ce26a63afdd51d82b9",
+    "repos/ltn-it/.github/actions/runs/40885286707": "a7c051251ebb39682a43ad4365c28a2b404621d9d96b770ac4bff749485a0e7e",
+    "repos/ltn-it/.github/actions/runs/40885286707/attempts/1/jobs?per_page=100": "f1315e8e1cf5ad967942da43d5685cb612141350de256911a469e0cf7e4f6943",
+    "repos/ltn-it/.github/actions/runs/40885286707/approvals": "8b2c6537cd11c33f65ce13201c79b2271f5839b32a3bc08cbf91c1c9b8de537a",
+    "repos/ltn-it/.github/actions/runs/40885286707/artifacts?per_page=100": "e7c61c0c5c3008c2483d51cef4fb7b860f9f34aa151e8775ac5a40ab3787430a",
+    "repos/ltn-it/.github/actions/runs/40895680515": "997ccaf94cd0603fa3314a1607810d0bb392c195cee256e5f1a7f320770734ed",
+    "repos/ltn-it/.github/actions/runs/40895680515/attempts/1/jobs?per_page=100": "557d18128ca61494df83f1813daf870ed09624164a5bac3f6ab1ca314153a7e2",
+    "repos/ltn-it/.github/actions/runs/40895680515/artifacts?per_page=100": "5ebbe3e59494f2be1048c8b1a8971ddbe193d711d1be677655fbf82c840a923b",
+    "repos/ltn-it/.github/pulls/985": "1939768c0cacea202d1f676a5ae17bd7a2b35f198aedf09eff586e382cacb9eb",
+    "repos/ltn-it/.github/pulls/986": "9689fd11128fdc9d61794ea38ca9f492f05fa38274376b97eb0a7972d806b436",
+    "repos/ltn-it/.github/issues/985/events?per_page=100": "903e9689cdfe1afe2609a5b1e726162aa400f1f36aea143a538cb8bc56143789",
+    "repos/ltn-it/.github/issues/986/events?per_page=100": "9196245ebf06422f659963c60d81d2b933681f84e16ccc3ebb28e49f22a2bd77",
+    "repos/ltn-it/.github/actions/runs/41018682524": "8de5959c092dd72ec39d08a2b877c8eb34ae83a3cc2d82ef27c3b6ff5f2893b0",
+    "repos/ltn-it/.github/actions/runs/41018682524/attempts/3/jobs?per_page=100": "192439d919a775f4390da0e10005defafd137e001debb467464a2874118902b9",
+    "repos/ltn-it/.github/actions/runs/41018682524/artifacts?per_page=100": "a11762e97655191931fb63fd9a7565a68b8bf4334b483824436b6d8a3c95dcec",
+    "repos/ltn-it/.github/pulls/987": "410985a927741f106ff5d8774009a2f30435c9217ac2e6dc300d6a8084d3d9ac",
+    "repos/ltn-it/.github/actions/runs?head_sha=a7f826492c5ae5757512e5ddfb4523b298068121&per_page=100": "13e726489a9aeae449abd1940ad4a357a5161e84be6feb1839424e2cb089c5bb",
+    "repos/ltn-it/.github/actions/runs?head_sha=c353913fc261e193b60876219820e9714b0122b9&per_page=100": "b0b7875bf80088310d875ab9014a8b0c4e8afe4a9935619804189a153f4dcdff",
+    "repos/ltn-it/.github/actions/runs?head_sha=000ed477a7af21e0accec549531966f095523bc2&per_page=100": "555c6fe873abb2000023a17fa41034a1dad87a731317eb1dfeb4f0e3544927b0"
+  },
+  "records": {
+    "repos/ltn-it/.github": {
+      "id": 1112629689,
+      "full_name": "ltn-it/.github",
+      "visibility": "public",
+      "archived": false,
+      "disabled": false
+    },
+    "repos/ltn-it/.github/branches/main": {
+      "protected": true,
+      "commit": {
+        "sha": "c353913fc261e193b60876219820e9714b0122b9"
+      }
+    },
+    "repos/ltn-it/.github/branches/develop": {
+      "protected": true,
+      "commit": {
+        "sha": "84aec48f715a93d2e1e4e819aa16f5a591d79e29"
+      }
+    },
+    "repos/ltn-it/.github/git/ref/heads/main": {
+      "ref": "refs/heads/main",
+      "object": {
+        "type": "commit",
+        "sha": "c353913fc261e193b60876219820e9714b0122b9"
+      }
+    },
+    "repos/ltn-it/.github/git/ref/heads/develop": {
+      "ref": "refs/heads/develop",
+      "object": {
+        "type": "commit",
+        "sha": "84aec48f715a93d2e1e4e819aa16f5a591d79e29"
+      }
+    },
+    "repos/ltn-it/.github/git/commits/c353913fc261e193b60876219820e9714b0122b9": {
+      "sha": "c353913fc261e193b60876219820e9714b0122b9",
+      "tree": {
+        "sha": "0e3abaf9c461bdbe01bd3be383058038d0f711b1"
+      },
+      "parents": [
+        {
+          "sha": "97fb1c61a1753eac3fc126e2ba7cac33ec463f3e"
+        },
+        {
+          "sha": "000ed477a7af21e0accec549531966f095523bc2"
+        }
+      ]
+    },
+    "repos/ltn-it/.github/git/commits/1d19405fefd66e5f1b007bddcd1920e3a1287866": {
+      "sha": "1d19405fefd66e5f1b007bddcd1920e3a1287866",
+      "tree": {
+        "sha": "0e3abaf9c461bdbe01bd3be383058038d0f711b1"
+      },
+      "parents": [
+        {
+          "sha": "000ed477a7af21e0accec549531966f095523bc2"
+        },
+        {
+          "sha": "c353913fc261e193b60876219820e9714b0122b9"
+        }
+      ]
+    },
+    "repos/ltn-it/.github/actions/runs/40885286707": {
+      "id": 40885286707,
+      "head_sha": "000ed477a7af21e0accec549531966f095523bc2",
+      "head_branch": "develop",
+      "event": "pull_request",
+      "workflow_id": 385148697,
+      "workflow_url": "https://api.github.com/repos/ltn-it/.github/actions/required_workflows/385148697",
+      "path": ".github/workflows/change-control-required.yml",
+      "status": "completed",
+      "conclusion": "success",
+      "run_attempt": 1,
+      "created_at": "2026-10-29T13:48:07Z",
+      "updated_at": "2026-10-29T13:59:58Z",
+      "repository": {
+        "id": 1112629689
+      }
+    },
+    "repos/ltn-it/.github/actions/runs/40885286707/attempts/1/jobs": {
+      "total_count": 4,
+      "jobs": [
+        {
+          "id": 123487224718,
+          "name": "Source common quality",
+          "run_id": 40885286707,
+          "run_attempt": 1,
+          "head_sha": "000ed477a7af21e0accec549531966f095523bc2",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-10-29T13:48:09Z",
+          "completed_at": "2026-10-29T13:49:02Z",
+          "check_run_url": "https://api.github.com/repos/ltn-it/.github/check-runs/123487224718",
+          "steps": [
+            {
+              "name": "Set up job",
+              "number": 1,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Resolve native defining source",
+              "number": 2,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Load immutable common source",
+              "number": 3,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Check out protected base for dependency admission",
+              "number": 4,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Check out candidate as isolated data",
+              "number": 5,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Run source-owned common quality in pinned Devtools",
+              "number": 6,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Classify explicit one-time recovery request",
+              "number": 7,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Post Check out candidate as isolated data",
+              "number": 12,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Post Check out protected base for dependency admission",
+              "number": 13,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Post Load immutable common source",
+              "number": 14,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Complete job",
+              "number": 15,
+              "status": "completed",
+              "conclusion": "success"
+            }
+          ]
+        },
+        {
+          "id": 123487730389,
+          "name": "Protected current revision",
+          "run_id": 40885286707,
+          "run_attempt": 1,
+          "head_sha": "000ed477a7af21e0accec549531966f095523bc2",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-10-29T13:49:04Z",
+          "completed_at": "2026-10-29T13:49:23Z",
+          "check_run_url": "https://api.github.com/repos/ltn-it/.github/check-runs/123487730389",
+          "steps": [
+            {
+              "name": "Set up job",
+              "number": 1,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Resolve native defining source",
+              "number": 2,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Load immutable common source",
+              "number": 3,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Classify protected current revision",
+              "number": 4,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Persist protected operation binding",
+              "number": 5,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Request current Copilot review",
+              "number": 6,
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "name": "Verify applicable native review or governed exemption",
+              "number": 7,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Materialize complete data-only review subject",
+              "number": 8,
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "name": "Resolve byte-identical protected Codex evidence",
+              "number": 9,
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "name": "Install complete-request budget gateway",
+              "number": 10,
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "name": "Reserve protected Codex request",
+              "number": 11,
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "name": "Preserve actual native recovery approval and original unknown allocation",
+              "number": 12,
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "name": "Protected exact-revision Codex review",
+              "number": 13,
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "name": "Collect and verify the protected model receipt",
+              "number": 14,
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "name": "Export protected native Codex evidence",
+              "number": 15,
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "name": "Persist protected Codex receipt",
+              "number": 16,
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "name": "Report protected gateway failure category",
+              "number": 17,
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "name": "Preserve authenticated gateway outcome after a failed action",
+              "number": 18,
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "name": "Post Load immutable common source",
+              "number": 36,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Complete job",
+              "number": 37,
+              "status": "completed",
+              "conclusion": "success"
+            }
+          ]
+        },
+        {
+          "id": 123487921318,
+          "name": "Approve exact main promotion",
+          "run_id": 40885286707,
+          "run_attempt": 1,
+          "head_sha": "000ed477a7af21e0accec549531966f095523bc2",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-10-29T13:59:22Z",
+          "completed_at": "2026-10-29T13:59:24Z",
+          "check_run_url": "https://api.github.com/repos/ltn-it/.github/check-runs/123487921318",
+          "steps": [
+            {
+              "name": "Set up job",
+              "number": 1,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Record native approval boundary",
+              "number": 2,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Complete job",
+              "number": 3,
+              "status": "completed",
+              "conclusion": "success"
+            }
+          ]
+        },
+        {
+          "id": 123493489393,
+          "name": "Current revision review",
+          "run_id": 40885286707,
+          "run_attempt": 1,
+          "head_sha": "000ed477a7af21e0accec549531966f095523bc2",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-10-29T13:59:26Z",
+          "completed_at": "2026-10-29T13:59:57Z",
+          "check_run_url": "https://api.github.com/repos/ltn-it/.github/check-runs/123493489393",
+          "steps": [
+            {
+              "name": "Set up job",
+              "number": 1,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Resolve native defining source",
+              "number": 2,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Load immutable common source",
+              "number": 3,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Enforce native review and quality on the still-current tuple",
+              "number": 4,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Persist exact native acceptance proof",
+              "number": 5,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Post Load immutable common source",
+              "number": 10,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Complete job",
+              "number": 11,
+              "status": "completed",
+              "conclusion": "success"
+            }
+          ]
+        }
+      ]
+    },
+    "repos/ltn-it/.github/actions/runs/40885286707/approvals": [
+      {
+        "state": "approved",
+        "user": {
+          "login": "litroc",
+          "id": 76040632,
+          "type": "User"
+        },
+        "environments": [
+          {
+            "id": 24378530648,
+            "name": "normal-release-promotion-approval",
+            "can_admins_bypass": false
+          }
+        ]
+      }
+    ],
+    "repos/ltn-it/.github/actions/runs/40885286707/artifacts": {
+      "total_count": 2,
+      "artifacts": [
+        {
+          "id": 12903126597,
+          "name": "control-proof-1",
+          "expired": false,
+          "digest": "sha256:df4b4fd1b73c333a5b835b340b7044505b2cd48e290ffa8db16aa899c2372d45",
+          "size_in_bytes": 1478,
+          "workflow_run": {
+            "id": 40885286707,
+            "repository_id": 1112629689,
+            "head_repository_id": 1112629689,
+            "head_branch": "develop",
+            "head_sha": "000ed477a7af21e0accec549531966f095523bc2"
+          }
+        },
+        {
+          "id": 12902815803,
+          "name": "control-operation-1",
+          "expired": false,
+          "digest": "sha256:aa2aa0a1536b28e11951443938b2a4898691526e1b23a59e51ac1155874c6458",
+          "size_in_bytes": 568,
+          "workflow_run": {
+            "id": 40885286707,
+            "repository_id": 1112629689,
+            "head_repository_id": 1112629689,
+            "head_branch": "develop",
+            "head_sha": "000ed477a7af21e0accec549531966f095523bc2"
+          }
+        }
+      ]
+    },
+    "repos/ltn-it/.github/actions/runs/40895680515": {
+      "id": 40895680515,
+      "head_sha": "c353913fc261e193b60876219820e9714b0122b9",
+      "head_branch": "main",
+      "event": "pull_request",
+      "workflow_id": 385148697,
+      "workflow_url": "https://api.github.com/repos/ltn-it/.github/actions/required_workflows/385148697",
+      "path": ".github/workflows/change-control-required.yml",
+      "status": "completed",
+      "conclusion": "failure",
+      "run_attempt": 1,
+      "created_at": "2026-10-29T14:51:33Z",
+      "updated_at": "2026-10-29T15:01:10Z",
+      "repository": {
+        "id": 1112629689
+      }
+    },
+    "repos/ltn-it/.github/actions/runs/40895680515/attempts/1/jobs": {
+      "total_count": 4,
+      "jobs": [
+        {
+          "id": 123523997408,
+          "name": "Source common quality",
+          "run_id": 40895680515,
+          "run_attempt": 1,
+          "head_sha": "c353913fc261e193b60876219820e9714b0122b9",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-10-29T14:51:35Z",
+          "completed_at": "2026-10-29T14:52:33Z",
+          "check_run_url": "https://api.github.com/repos/ltn-it/.github/check-runs/123523997408",
+          "steps": [
+            {
+              "name": "Set up job",
+              "number": 1,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Resolve native defining source",
+              "number": 2,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Load immutable common source",
+              "number": 3,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Check out protected base for dependency admission",
+              "number": 4,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Check out candidate as isolated data",
+              "number": 5,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Run source-owned common quality in pinned Devtools",
+              "number": 6,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Classify explicit one-time recovery request",
+              "number": 7,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Post Check out candidate as isolated data",
+              "number": 12,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Post Check out protected base for dependency admission",
+              "number": 13,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Post Load immutable common source",
+              "number": 14,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Complete job",
+              "number": 15,
+              "status": "completed",
+              "conclusion": "success"
+            }
+          ]
+        },
+        {
+          "id": 123524593901,
+          "name": "Protected current revision",
+          "run_id": 40895680515,
+          "run_attempt": 1,
+          "head_sha": "c353913fc261e193b60876219820e9714b0122b9",
+          "status": "completed",
+          "conclusion": "failure",
+          "started_at": "2026-10-29T14:52:36Z",
+          "completed_at": "2026-10-29T15:01:00Z",
+          "check_run_url": "https://api.github.com/repos/ltn-it/.github/check-runs/123524593901",
+          "steps": [
+            {
+              "name": "Set up job",
+              "number": 1,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Resolve native defining source",
+              "number": 2,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Load immutable common source",
+              "number": 3,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Classify protected current revision",
+              "number": 4,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Persist protected operation binding",
+              "number": 5,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Request current Copilot review",
+              "number": 6,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Verify applicable native review or governed exemption",
+              "number": 7,
+              "status": "completed",
+              "conclusion": "failure"
+            },
+            {
+              "name": "Materialize complete data-only review subject",
+              "number": 8,
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "name": "Resolve byte-identical protected Codex evidence",
+              "number": 9,
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "name": "Install complete-request budget gateway",
+              "number": 10,
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "name": "Reserve protected Codex request",
+              "number": 11,
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "name": "Preserve actual native recovery approval and original unknown allocation",
+              "number": 12,
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "name": "Protected exact-revision Codex review",
+              "number": 13,
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "name": "Collect and verify the protected model receipt",
+              "number": 14,
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "name": "Export protected native Codex evidence",
+              "number": 15,
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "name": "Persist protected Codex receipt",
+              "number": 16,
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "name": "Report protected gateway failure category",
+              "number": 17,
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "name": "Preserve authenticated gateway outcome after a failed action",
+              "number": 18,
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "name": "Post Load immutable common source",
+              "number": 36,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Complete job",
+              "number": 37,
+              "status": "completed",
+              "conclusion": "success"
+            }
+          ]
+        },
+        {
+          "id": 123529611190,
+          "name": "Current revision review",
+          "run_id": 40895680515,
+          "run_attempt": 1,
+          "head_sha": "c353913fc261e193b60876219820e9714b0122b9",
+          "status": "completed",
+          "conclusion": "failure",
+          "started_at": "2026-10-29T15:01:02Z",
+          "completed_at": "2026-10-29T15:01:10Z",
+          "check_run_url": "https://api.github.com/repos/ltn-it/.github/check-runs/123529611190",
+          "steps": [
+            {
+              "name": "Set up job",
+              "number": 1,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Resolve native defining source",
+              "number": 2,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Load immutable common source",
+              "number": 3,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Enforce native review and quality on the still-current tuple",
+              "number": 4,
+              "status": "completed",
+              "conclusion": "failure"
+            },
+            {
+              "name": "Persist exact native acceptance proof",
+              "number": 5,
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "name": "Post Load immutable common source",
+              "number": 10,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "name": "Complete job",
+              "number": 11,
+              "status": "completed",
+              "conclusion": "success"
+            }
+          ]
+        },
+        {
+          "id": 123529612270,
+          "name": "Approve exact main promotion",
+          "run_id": 40895680515,
+          "run_attempt": 1,
+          "head_sha": "c353913fc261e193b60876219820e9714b0122b9",
+          "status": "completed",
+          "conclusion": "skipped",
+          "started_at": "2026-10-29T15:01:00Z",
+          "completed_at": "2026-10-29T15:01:00Z",
+          "check_run_url": "https://api.github.com/repos/ltn-it/.github/check-runs/123529612270",
+          "steps": []
+        }
+      ]
+    },
+    "repos/ltn-it/.github/actions/runs/40895680515/artifacts": {
+      "total_count": 1,
+      "artifacts": [
+        {
+          "id": 12906667243,
+          "name": "control-operation-1",
+          "expired": false,
+          "digest": "sha256:d16d0b531cb9c847bb13166d4c39dc9c95de529bbe8d841ec9680e81166e2a0e",
+          "size_in_bytes": 630,
+          "workflow_run": {
+            "id": 40895680515,
+            "repository_id": 1112629689,
+            "head_repository_id": 1112629689,
+            "head_branch": "main",
+            "head_sha": "c353913fc261e193b60876219820e9714b0122b9"
+          }
+        }
+      ]
+    },
+    "repos/ltn-it/.github/pulls/985": {
+      "number": 985,
+      "state": "closed",
+      "merged": true,
+      "draft": false,
+      "merge_commit_sha": "c353913fc261e193b60876219820e9714b0122b9",
+      "created_at": "2026-10-29T13:48:02Z",
+      "merged_at": "2026-10-29T14:00:34Z",
+      "title": "chore(release): promote protected develop to main",
+      "body": "Prepared from protected branches. Current native review, product quality, security checks and applicable one-person approval remain required. This preparation grants no approval.",
+      "labels": [],
+      "user": {
+        "login": "lightning-it-release-automation[bot]",
+        "id": 307565056,
+        "type": "Bot"
+      },
+      "base": {
+        "ref": "main",
+        "sha": "97fb1c61a1753eac3fc126e2ba7cac33ec463f3e",
+        "repo": {
+          "id": 1112629689,
+          "full_name": "ltn-it/.github"
+        }
+      },
+      "head": {
+        "ref": "develop",
+        "sha": "000ed477a7af21e0accec549531966f095523bc2",
+        "repo": {
+          "id": 1112629689,
+          "full_name": "ltn-it/.github"
+        }
+      }
+    },
+    "repos/ltn-it/.github/pulls/986": {
+      "number": 986,
+      "state": "closed",
+      "merged": true,
+      "draft": false,
+      "merge_commit_sha": "1d19405fefd66e5f1b007bddcd1920e3a1287866",
+      "created_at": "2026-10-29T14:51:26Z",
+      "merged_at": "2026-10-29T15:00:40Z",
+      "title": "Merge pull request #985 from ltn-it/develop",
+      "body": "chore(release): promote protected develop to main\n\n## Summary\n\n-\n\n## Verification\n\n-\n\n## Security\n\n- [ ] No secrets, private infrastructure data, or customer data are added.\n- [ ] Workflow permission changes are least-privilege and justified.\n- [ ] Release or publishing changes run only from trusted branches/events.\n",
+      "labels": [],
+      "user": {
+        "login": "litroc",
+        "id": 76040632,
+        "type": "User"
+      },
+      "base": {
+        "ref": "develop",
+        "sha": "000ed477a7af21e0accec549531966f095523bc2",
+        "repo": {
+          "id": 1112629689,
+          "full_name": "ltn-it/.github"
+        }
+      },
+      "head": {
+        "ref": "main",
+        "sha": "c353913fc261e193b60876219820e9714b0122b9",
+        "repo": {
+          "id": 1112629689,
+          "full_name": "ltn-it/.github"
+        }
+      }
+    },
+    "repos/ltn-it/.github/actions/runs/41018682524": {
+      "id": 41018682524,
+      "head_sha": "a7f826492c5ae5757512e5ddfb4523b298068121",
+      "head_branch": "codex/sup-legacy-claim-deny",
+      "event": "pull_request",
+      "workflow_id": 385148697,
+      "workflow_url": "https://api.github.com/repos/ltn-it/.github/actions/required_workflows/385148697",
+      "path": ".github/workflows/change-control-required.yml",
+      "status": "completed",
+      "conclusion": "success",
+      "run_attempt": 3,
+      "created_at": "2026-10-30T07:12:42Z",
+      "updated_at": "2026-10-30T07:20:57Z",
+      "pull_requests": [],
+      "repository": {
+        "id": 1112629689
+      }
+    },
+    "repos/ltn-it/.github/actions/runs/41018682524/attempts/3/jobs": {
+      "total_count": 4,
+      "jobs": [
+        {
+          "id": 123941643281,
+          "name": "Protected current revision",
+          "run_id": 41018682524,
+          "run_attempt": 3,
+          "head_sha": "a7f826492c5ae5757512e5ddfb4523b298068121",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-10-30T07:15:27Z",
+          "completed_at": "2026-10-30T07:20:35Z",
+          "check_run_url": "https://api.github.com/repos/ltn-it/.github/check-runs/123941643281",
+          "steps": [
+            {
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 1,
+              "started_at": "2026-10-30T07:15:27Z",
+              "completed_at": "2026-10-30T07:15:29Z"
+            },
+            {
+              "name": "Resolve native defining source",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 2,
+              "started_at": "2026-10-30T07:15:29Z",
+              "completed_at": "2026-10-30T07:15:29Z"
+            },
+            {
+              "name": "Load immutable common source",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 3,
+              "started_at": "2026-10-30T07:15:29Z",
+              "completed_at": "2026-10-30T07:15:30Z"
+            },
+            {
+              "name": "Classify protected current revision",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 4,
+              "started_at": "2026-10-30T07:15:30Z",
+              "completed_at": "2026-10-30T07:15:34Z"
+            },
+            {
+              "name": "Persist protected operation binding",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 5,
+              "started_at": "2026-10-30T07:15:34Z",
+              "completed_at": "2026-10-30T07:15:35Z"
+            },
+            {
+              "name": "Request current Copilot review",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 6,
+              "started_at": "2026-10-30T07:15:35Z",
+              "completed_at": "2026-10-30T07:15:44Z"
+            },
+            {
+              "name": "Verify applicable native review or governed exemption",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 7,
+              "started_at": "2026-10-30T07:15:44Z",
+              "completed_at": "2026-10-30T07:20:33Z"
+            },
+            {
+              "name": "Materialize complete data-only review subject",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 8,
+              "started_at": "2026-10-30T07:20:33Z",
+              "completed_at": "2026-10-30T07:20:33Z"
+            },
+            {
+              "name": "Resolve byte-identical protected Codex evidence",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 9,
+              "started_at": "2026-10-30T07:20:33Z",
+              "completed_at": "2026-10-30T07:20:33Z"
+            },
+            {
+              "name": "Install complete-request budget gateway",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 10,
+              "started_at": "2026-10-30T07:20:33Z",
+              "completed_at": "2026-10-30T07:20:33Z"
+            },
+            {
+              "name": "Reserve protected Codex request",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 11,
+              "started_at": "2026-10-30T07:20:33Z",
+              "completed_at": "2026-10-30T07:20:33Z"
+            },
+            {
+              "name": "Preserve actual native recovery approval and original unknown allocation",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 12,
+              "started_at": "2026-10-30T07:20:33Z",
+              "completed_at": "2026-10-30T07:20:33Z"
+            },
+            {
+              "name": "Protected exact-revision Codex review",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 13,
+              "started_at": "2026-10-30T07:20:33Z",
+              "completed_at": "2026-10-30T07:20:33Z"
+            },
+            {
+              "name": "Collect and verify the protected model receipt",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 14,
+              "started_at": "2026-10-30T07:20:33Z",
+              "completed_at": "2026-10-30T07:20:33Z"
+            },
+            {
+              "name": "Export protected native Codex evidence",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 15,
+              "started_at": "2026-10-30T07:20:33Z",
+              "completed_at": "2026-10-30T07:20:33Z"
+            },
+            {
+              "name": "Persist protected Codex receipt",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 16,
+              "started_at": "2026-10-30T07:20:33Z",
+              "completed_at": "2026-10-30T07:20:33Z"
+            },
+            {
+              "name": "Report protected gateway failure category",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 17,
+              "started_at": "2026-10-30T07:20:33Z",
+              "completed_at": "2026-10-30T07:20:33Z"
+            },
+            {
+              "name": "Preserve authenticated gateway outcome after a failed action",
+              "status": "completed",
+              "conclusion": "skipped",
+              "number": 18,
+              "started_at": "2026-10-30T07:20:33Z",
+              "completed_at": "2026-10-30T07:20:33Z"
+            },
+            {
+              "name": "Post Load immutable common source",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 36,
+              "started_at": "2026-10-30T07:20:33Z",
+              "completed_at": "2026-10-30T07:20:33Z"
+            },
+            {
+              "name": "Complete job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 37,
+              "started_at": "2026-10-30T07:20:33Z",
+              "completed_at": "2026-10-30T07:20:33Z"
+            }
+          ]
+        },
+        {
+          "id": 123941646067,
+          "name": "Source common quality",
+          "run_id": 41018682524,
+          "run_attempt": 3,
+          "head_sha": "a7f826492c5ae5757512e5ddfb4523b298068121",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-10-30T07:12:44Z",
+          "completed_at": "2026-10-30T07:13:42Z",
+          "check_run_url": "https://api.github.com/repos/ltn-it/.github/check-runs/123941646067",
+          "steps": [
+            {
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 1,
+              "started_at": "2026-10-30T07:12:45Z",
+              "completed_at": "2026-10-30T07:12:46Z"
+            },
+            {
+              "name": "Resolve native defining source",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 2,
+              "started_at": "2026-10-30T07:12:46Z",
+              "completed_at": "2026-10-30T07:12:46Z"
+            },
+            {
+              "name": "Load immutable common source",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 3,
+              "started_at": "2026-10-30T07:12:46Z",
+              "completed_at": "2026-10-30T07:12:47Z"
+            },
+            {
+              "name": "Check out protected base for dependency admission",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 4,
+              "started_at": "2026-10-30T07:12:47Z",
+              "completed_at": "2026-10-30T07:12:48Z"
+            },
+            {
+              "name": "Check out candidate as isolated data",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 5,
+              "started_at": "2026-10-30T07:12:48Z",
+              "completed_at": "2026-10-30T07:12:49Z"
+            },
+            {
+              "name": "Run source-owned common quality in pinned Devtools",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 6,
+              "started_at": "2026-10-30T07:12:49Z",
+              "completed_at": "2026-10-30T07:13:38Z"
+            },
+            {
+              "name": "Classify explicit one-time recovery request",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 7,
+              "started_at": "2026-10-30T07:13:38Z",
+              "completed_at": "2026-10-30T07:13:40Z"
+            },
+            {
+              "name": "Post Check out candidate as isolated data",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 12,
+              "started_at": "2026-10-30T07:13:40Z",
+              "completed_at": "2026-10-30T07:13:40Z"
+            },
+            {
+              "name": "Post Check out protected base for dependency admission",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 13,
+              "started_at": "2026-10-30T07:13:40Z",
+              "completed_at": "2026-10-30T07:13:40Z"
+            },
+            {
+              "name": "Post Load immutable common source",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 14,
+              "started_at": "2026-10-30T07:13:40Z",
+              "completed_at": "2026-10-30T07:13:40Z"
+            },
+            {
+              "name": "Complete job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 15,
+              "started_at": "2026-10-30T07:13:40Z",
+              "completed_at": "2026-10-30T07:13:40Z"
+            }
+          ]
+        },
+        {
+          "id": 123943340604,
+          "name": "Current revision review",
+          "run_id": 41018682524,
+          "run_attempt": 3,
+          "head_sha": "a7f826492c5ae5757512e5ddfb4523b298068121",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-10-30T07:20:38Z",
+          "completed_at": "2026-10-30T07:20:56Z",
+          "check_run_url": "https://api.github.com/repos/ltn-it/.github/check-runs/123943340604",
+          "steps": [
+            {
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 1,
+              "started_at": "2026-10-30T07:20:39Z",
+              "completed_at": "2026-10-30T07:20:39Z"
+            },
+            {
+              "name": "Resolve native defining source",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 2,
+              "started_at": "2026-10-30T07:20:39Z",
+              "completed_at": "2026-10-30T07:20:39Z"
+            },
+            {
+              "name": "Load immutable common source",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 3,
+              "started_at": "2026-10-30T07:20:39Z",
+              "completed_at": "2026-10-30T07:20:41Z"
+            },
+            {
+              "name": "Enforce native review and quality on the still-current tuple",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 4,
+              "started_at": "2026-10-30T07:20:41Z",
+              "completed_at": "2026-10-30T07:20:53Z"
+            },
+            {
+              "name": "Persist exact native acceptance proof",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 5,
+              "started_at": "2026-10-30T07:20:53Z",
+              "completed_at": "2026-10-30T07:20:54Z"
+            },
+            {
+              "name": "Post Load immutable common source",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 10,
+              "started_at": "2026-10-30T07:20:54Z",
+              "completed_at": "2026-10-30T07:20:54Z"
+            },
+            {
+              "name": "Complete job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 11,
+              "started_at": "2026-10-30T07:20:54Z",
+              "completed_at": "2026-10-30T07:20:54Z"
+            }
+          ]
+        },
+        {
+          "id": 123943342133,
+          "name": "Approve exact main promotion",
+          "run_id": 41018682524,
+          "run_attempt": 3,
+          "head_sha": "a7f826492c5ae5757512e5ddfb4523b298068121",
+          "status": "completed",
+          "conclusion": "skipped",
+          "started_at": "2026-10-30T07:20:36Z",
+          "completed_at": "2026-10-30T07:20:36Z",
+          "check_run_url": "https://api.github.com/repos/ltn-it/.github/check-runs/123943342133",
+          "steps": []
+        }
+      ]
+    },
+    "repos/ltn-it/.github/actions/runs/41018682524/artifacts": {
+      "total_count": 2,
+      "artifacts": [
+        {
+          "id": 12961465309,
+          "name": "control-proof-3",
+          "expired": false,
+          "digest": "sha256:9410407e2de70fa46d1c0b23469140de224d719814811de2cb2c5bb27bfb727e",
+          "size_in_bytes": 2202,
+          "workflow_run": {
+            "id": 41018682524,
+            "repository_id": 1112629689,
+            "head_repository_id": 1112629689,
+            "head_branch": "codex/sup-legacy-claim-deny",
+            "head_sha": "a7f826492c5ae5757512e5ddfb4523b298068121"
+          }
+        },
+        {
+          "id": 12959814762,
+          "name": "control-operation-3",
+          "expired": false,
+          "digest": "sha256:38a02a3738571b66b44ef0eeecc066637cadbdb67a2ec033821a6522193893d7",
+          "size_in_bytes": 1974,
+          "workflow_run": {
+            "id": 41018682524,
+            "repository_id": 1112629689,
+            "head_repository_id": 1112629689,
+            "head_branch": "codex/sup-legacy-claim-deny",
+            "head_sha": "a7f826492c5ae5757512e5ddfb4523b298068121"
+          }
+        }
+      ]
+    },
+    "repos/ltn-it/.github/pulls/987": {
+      "number": 987,
+      "state": "closed",
+      "merged": true,
+      "draft": false,
+      "merge_commit_sha": "84aec48f715a93d2e1e4e819aa16f5a591d79e29",
+      "created_at": "2026-10-30T02:36:51Z",
+      "merged_at": "2026-10-30T07:30:29Z",
+      "title": "fix(control): close Supplementary funding and scheduling boundaries",
+      "body": "Supplementary can reach the same review candidate through historical Legacy runs, multiple PRs, native verifier refreshes and an explicitly approved Recovery. This change retains consumed allocations across PR/base/input changes, verifies a fresh canonical qualification from native repository evidence, and preserves the existing exact one-extra-attempt Recovery contract.\n\nThe scheduling boundary retains GitHub's native queue instead of replacing pending invocations with no jobs. Source-owned deferral reaches finalization before existing Copilot evidence can write acceptance. Recovery rechecks the latest native generation immediately before its receipt/return. Jobless canceled and otherwise unknown histories continue to deny funding. Other repositories retain their current cancellation behavior. The canonical queue validator admits one exact Source/Supplementary profile; every other actionlint check remains required.\n\nThe completed correction after review 5708527220 is the bounded work item **bounded abort receipt encoding + least-read Recovery preflight**. Only common-quality receives checks:read, so the actual private-repository Recovery preflight can read native check history. Complete generation inventory and every full native record reread remain mandatory. Receipt encoding then retains the current generation and one deterministic newest-generation witness. Version 2 receipts carry only number/base/head as their subject and bind the complete unchanged, separately stored operation with operation_sha256. Strict version 1 compatibility remains. This avoids copying large native metadata and PR bodies into the bounded receipt, without increasing limits, truncating operations, forgiving unknown history or granting another allocation.\n\nValidation on a7f826492c5ae5757512e5ddfb4523b298068121: all 837 unit tests pass in the digest-pinned Devtools image, as do repository quality, instruction/target validation, the exact queue validator, all workflow actionlint checks, ShellCheck, Git diff checks and deterministic patch/secret review. Real regression paths demonstrate the previous native-check 403 and oversized receipt failures, then exercise actual Recovery/reservation/emit/verify successfully, including near-limit Unicode operations, 100 large native follower records and negative tampering/drift cases. The executable profile bootstrap has no invented local Push-Ready attestation; protected native CI and current-head review remain mandatory.\n\nReviews 5707493167, 5708014246 and 5708527220 remain consumed. The documented structural simplification and independently checked 19,501-byte four-file correction permit exactly one specifically bound completion review of this head in this PR, after native code CI passes. A further finding, missing verdict or unknown request stops automatic allocation. No counter, prior finding or provider outcome is reset.\n\nThis PR does not activate a repository rule, select its own Source, or authorize a release. The actual Supplementary Required Workflow mutex, real v1-to-v2 protected-branch transition, Management producer/retirement integration and existing product-ingress promotion are separate operational acceptance steps.",
+      "labels": [],
+      "user": {
+        "login": "litroc",
+        "id": 76040632,
+        "type": "User"
+      },
+      "base": {
+        "ref": "develop",
+        "sha": "1d19405fefd66e5f1b007bddcd1920e3a1287866",
+        "repo": {
+          "id": 1112629689,
+          "full_name": "ltn-it/.github"
+        }
+      },
+      "head": {
+        "ref": "codex/sup-legacy-claim-deny",
+        "sha": "a7f826492c5ae5757512e5ddfb4523b298068121",
+        "repo": {
+          "id": 1112629689,
+          "full_name": "ltn-it/.github"
+        }
+      }
+    },
+    "repos/ltn-it/.github/actions/runs?head_sha=a7f826492c5ae5757512e5ddfb4523b298068121": {
+      "total_count": 7,
+      "workflow_runs": [
+        {
+          "id": 41019476539,
+          "head_sha": "a7f826492c5ae5757512e5ddfb4523b298068121",
+          "head_branch": "codex/sup-legacy-claim-deny",
+          "event": "pull_request_review",
+          "workflow_id": 385174462,
+          "workflow_url": "https://api.github.com/repos/ltn-it/.github/actions/workflows/385174462",
+          "path": ".github/workflows/review-events.yml",
+          "status": "completed",
+          "conclusion": "failure",
+          "run_attempt": 1,
+          "created_at": "2026-10-30T07:20:22Z",
+          "updated_at": "2026-10-30T07:30:30Z",
+          "pull_requests": [],
+          "repository": {
+            "id": 1112629689
+          }
+        },
+        {
+          "id": 41019018442,
+          "head_sha": "a7f826492c5ae5757512e5ddfb4523b298068121",
+          "head_branch": "codex/sup-legacy-claim-deny",
+          "event": "dynamic",
+          "workflow_id": 314416353,
+          "workflow_url": "https://api.github.com/repos/ltn-it/.github/actions/workflows/314416353",
+          "path": "dynamic/agents/copilot-pull-request-reviewer",
+          "status": "completed",
+          "conclusion": "success",
+          "run_attempt": 1,
+          "created_at": "2026-10-30T07:15:54Z",
+          "updated_at": "2026-10-30T07:20:19Z",
+          "pull_requests": [],
+          "repository": {
+            "id": 1112629689
+          }
+        },
+        {
+          "id": 41018942745,
+          "head_sha": "a7f826492c5ae5757512e5ddfb4523b298068121",
+          "head_branch": "codex/sup-legacy-claim-deny",
+          "event": "pull_request_target",
+          "workflow_id": 385149091,
+          "workflow_url": "https://api.github.com/repos/ltn-it/.github/actions/workflows/385149091",
+          "path": ".github/workflows/delivery-operations.yml",
+          "status": "completed",
+          "conclusion": "success",
+          "run_attempt": 1,
+          "created_at": "2026-10-30T07:15:11Z",
+          "updated_at": "2026-10-30T07:15:25Z",
+          "pull_requests": [],
+          "repository": {
+            "id": 1112629689
+          }
+        },
+        {
+          "id": 41018723684,
+          "head_sha": "a7f826492c5ae5757512e5ddfb4523b298068121",
+          "head_branch": "codex/sup-legacy-claim-deny",
+          "event": "pull_request_target",
+          "workflow_id": 385149091,
+          "workflow_url": "https://api.github.com/repos/ltn-it/.github/actions/workflows/385149091",
+          "path": ".github/workflows/delivery-operations.yml",
+          "status": "completed",
+          "conclusion": "success",
+          "run_attempt": 1,
+          "created_at": "2026-10-30T07:13:06Z",
+          "updated_at": "2026-10-30T07:14:10Z",
+          "pull_requests": [],
+          "repository": {
+            "id": 1112629689
+          }
+        },
+        {
+          "id": 41018682504,
+          "head_sha": "a7f826492c5ae5757512e5ddfb4523b298068121",
+          "head_branch": "codex/sup-legacy-claim-deny",
+          "event": "pull_request",
+          "workflow_id": 307348678,
+          "workflow_url": "https://api.github.com/repos/ltn-it/.github/actions/workflows/307348678",
+          "path": ".github/workflows/repository-quality.yml",
+          "status": "completed",
+          "conclusion": "success",
+          "run_attempt": 1,
+          "created_at": "2026-10-30T07:12:42Z",
+          "updated_at": "2026-10-30T07:14:18Z",
+          "pull_requests": [],
+          "repository": {
+            "id": 1112629689
+          }
+        },
+        {
+          "id": 41018682524,
+          "head_sha": "a7f826492c5ae5757512e5ddfb4523b298068121",
+          "head_branch": "codex/sup-legacy-claim-deny",
+          "event": "pull_request",
+          "workflow_id": 385148697,
+          "workflow_url": "https://api.github.com/repos/ltn-it/.github/actions/required_workflows/385148697",
+          "path": ".github/workflows/change-control-required.yml",
+          "status": "completed",
+          "conclusion": "success",
+          "run_attempt": 3,
+          "created_at": "2026-10-30T07:12:42Z",
+          "updated_at": "2026-10-30T07:20:57Z",
+          "pull_requests": [],
+          "repository": {
+            "id": 1112629689
+          }
+        },
+        {
+          "id": 41018677696,
+          "head_sha": "a7f826492c5ae5757512e5ddfb4523b298068121",
+          "head_branch": "refs/pull/987/head",
+          "event": "dynamic",
+          "workflow_id": 307349848,
+          "workflow_url": "https://api.github.com/repos/ltn-it/.github/actions/workflows/307349848",
+          "path": "dynamic/github-code-scanning/codeql",
+          "status": "completed",
+          "conclusion": "success",
+          "run_attempt": 1,
+          "created_at": "2026-10-30T07:12:39Z",
+          "updated_at": "2026-10-30T07:13:41Z",
+          "pull_requests": [],
+          "repository": {
+            "id": 1112629689
+          }
+        }
+      ]
+    },
+    "repos/ltn-it/.github/actions/runs?head_sha=c353913fc261e193b60876219820e9714b0122b9": {
+      "total_count": 6,
+      "workflow_runs": [
+        {
+          "id": 40895922340,
+          "head_sha": "c353913fc261e193b60876219820e9714b0122b9",
+          "head_branch": "main",
+          "event": "pull_request_review",
+          "workflow_id": 385174462,
+          "workflow_url": "https://api.github.com/repos/ltn-it/.github/actions/workflows/385174462",
+          "path": ".github/workflows/review-events.yml",
+          "status": "completed",
+          "conclusion": "success",
+          "run_attempt": 2,
+          "created_at": "2026-10-29T14:53:00Z",
+          "updated_at": "2026-10-29T14:53:45Z",
+          "pull_requests": [],
+          "repository": {
+            "id": 1112629689
+          }
+        },
+        {
+          "id": 40895680683,
+          "head_sha": "c353913fc261e193b60876219820e9714b0122b9",
+          "head_branch": "main",
+          "event": "pull_request",
+          "workflow_id": 307348678,
+          "workflow_url": "https://api.github.com/repos/ltn-it/.github/actions/workflows/307348678",
+          "path": ".github/workflows/repository-quality.yml",
+          "status": "completed",
+          "conclusion": "success",
+          "run_attempt": 1,
+          "created_at": "2026-10-29T14:51:33Z",
+          "updated_at": "2026-10-29T14:53:30Z",
+          "pull_requests": [],
+          "repository": {
+            "id": 1112629689
+          }
+        },
+        {
+          "id": 40895680515,
+          "head_sha": "c353913fc261e193b60876219820e9714b0122b9",
+          "head_branch": "main",
+          "event": "pull_request",
+          "workflow_id": 385148697,
+          "workflow_url": "https://api.github.com/repos/ltn-it/.github/actions/required_workflows/385148697",
+          "path": ".github/workflows/change-control-required.yml",
+          "status": "completed",
+          "conclusion": "failure",
+          "run_attempt": 1,
+          "created_at": "2026-10-29T14:51:33Z",
+          "updated_at": "2026-10-29T15:01:10Z",
+          "pull_requests": [],
+          "repository": {
+            "id": 1112629689
+          }
+        },
+        {
+          "id": 40895666923,
+          "head_sha": "c353913fc261e193b60876219820e9714b0122b9",
+          "head_branch": "refs/pull/986/head",
+          "event": "dynamic",
+          "workflow_id": 307349848,
+          "workflow_url": "https://api.github.com/repos/ltn-it/.github/actions/workflows/307349848",
+          "path": "dynamic/github-code-scanning/codeql",
+          "status": "completed",
+          "conclusion": "success",
+          "run_attempt": 1,
+          "created_at": "2026-10-29T14:51:28Z",
+          "updated_at": "2026-10-29T14:52:22Z",
+          "pull_requests": [],
+          "repository": {
+            "id": 1112629689
+          }
+        },
+        {
+          "id": 40887254570,
+          "head_sha": "c353913fc261e193b60876219820e9714b0122b9",
+          "head_branch": "main",
+          "event": "dynamic",
+          "workflow_id": 307349848,
+          "workflow_url": "https://api.github.com/repos/ltn-it/.github/actions/workflows/307349848",
+          "path": "dynamic/github-code-scanning/codeql",
+          "status": "completed",
+          "conclusion": "success",
+          "run_attempt": 1,
+          "created_at": "2026-10-29T14:00:38Z",
+          "updated_at": "2026-10-29T14:01:51Z",
+          "pull_requests": [],
+          "repository": {
+            "id": 1112629689
+          }
+        },
+        {
+          "id": 40887250044,
+          "head_sha": "c353913fc261e193b60876219820e9714b0122b9",
+          "head_branch": "main",
+          "event": "push",
+          "workflow_id": 307348678,
+          "workflow_url": "https://api.github.com/repos/ltn-it/.github/actions/workflows/307348678",
+          "path": ".github/workflows/repository-quality.yml",
+          "status": "completed",
+          "conclusion": "success",
+          "run_attempt": 1,
+          "created_at": "2026-10-29T14:00:37Z",
+          "updated_at": "2026-10-29T14:02:08Z",
+          "pull_requests": [],
+          "repository": {
+            "id": 1112629689
+          }
+        }
+      ]
+    },
+    "repos/ltn-it/.github/actions/runs?head_sha=000ed477a7af21e0accec549531966f095523bc2": {
+      "total_count": 6,
+      "workflow_runs": [
+        {
+          "id": 40896054722,
+          "head_sha": "000ed477a7af21e0accec549531966f095523bc2",
+          "head_branch": "develop",
+          "event": "workflow_run",
+          "workflow_id": 385149091,
+          "workflow_url": "https://api.github.com/repos/ltn-it/.github/actions/workflows/385149091",
+          "path": ".github/workflows/delivery-operations.yml",
+          "status": "completed",
+          "conclusion": "action_required",
+          "run_attempt": 1,
+          "created_at": "2026-10-29T14:53:49Z",
+          "updated_at": "2026-10-29T14:53:49Z",
+          "pull_requests": [],
+          "repository": {
+            "id": 1112629689
+          }
+        },
+        {
+          "id": 40885286707,
+          "head_sha": "000ed477a7af21e0accec549531966f095523bc2",
+          "head_branch": "develop",
+          "event": "pull_request",
+          "workflow_id": 385148697,
+          "workflow_url": "https://api.github.com/repos/ltn-it/.github/actions/required_workflows/385148697",
+          "path": ".github/workflows/change-control-required.yml",
+          "status": "completed",
+          "conclusion": "success",
+          "run_attempt": 1,
+          "created_at": "2026-10-29T13:48:07Z",
+          "updated_at": "2026-10-29T13:59:58Z",
+          "pull_requests": [],
+          "repository": {
+            "id": 1112629689
+          }
+        },
+        {
+          "id": 40885286874,
+          "head_sha": "000ed477a7af21e0accec549531966f095523bc2",
+          "head_branch": "develop",
+          "event": "pull_request",
+          "workflow_id": 307348678,
+          "workflow_url": "https://api.github.com/repos/ltn-it/.github/actions/workflows/307348678",
+          "path": ".github/workflows/repository-quality.yml",
+          "status": "completed",
+          "conclusion": "success",
+          "run_attempt": 1,
+          "created_at": "2026-10-29T13:48:07Z",
+          "updated_at": "2026-10-29T13:49:55Z",
+          "pull_requests": [],
+          "repository": {
+            "id": 1112629689
+          }
+        },
+        {
+          "id": 40885280945,
+          "head_sha": "000ed477a7af21e0accec549531966f095523bc2",
+          "head_branch": "refs/pull/985/head",
+          "event": "dynamic",
+          "workflow_id": 307349848,
+          "workflow_url": "https://api.github.com/repos/ltn-it/.github/actions/workflows/307349848",
+          "path": "dynamic/github-code-scanning/codeql",
+          "status": "completed",
+          "conclusion": "success",
+          "run_attempt": 1,
+          "created_at": "2026-10-29T13:48:04Z",
+          "updated_at": "2026-10-29T13:48:55Z",
+          "pull_requests": [],
+          "repository": {
+            "id": 1112629689
+          }
+        },
+        {
+          "id": 40884701918,
+          "head_sha": "000ed477a7af21e0accec549531966f095523bc2",
+          "head_branch": "develop",
+          "event": "dynamic",
+          "workflow_id": 307349848,
+          "workflow_url": "https://api.github.com/repos/ltn-it/.github/actions/workflows/307349848",
+          "path": "dynamic/github-code-scanning/codeql",
+          "status": "completed",
+          "conclusion": "success",
+          "run_attempt": 1,
+          "created_at": "2026-10-29T13:44:24Z",
+          "updated_at": "2026-10-29T13:45:38Z",
+          "pull_requests": [],
+          "repository": {
+            "id": 1112629689
+          }
+        },
+        {
+          "id": 40884700067,
+          "head_sha": "000ed477a7af21e0accec549531966f095523bc2",
+          "head_branch": "develop",
+          "event": "push",
+          "workflow_id": 307348678,
+          "workflow_url": "https://api.github.com/repos/ltn-it/.github/actions/workflows/307348678",
+          "path": ".github/workflows/repository-quality.yml",
+          "status": "completed",
+          "conclusion": "success",
+          "run_attempt": 1,
+          "created_at": "2026-10-29T13:44:24Z",
+          "updated_at": "2026-10-29T13:46:31Z",
+          "pull_requests": [],
+          "repository": {
+            "id": 1112629689
+          }
+        }
+      ]
+    }
+  },
+  "job_logs": {
+    "123524593901": {
+      "projection": "{\n  \"workflow_sha\": \"015233f4dfe0f95a6df0ea8a9e4ef8150dadc19f\",\n  \"workflow_repository\": \"ltn-it/.github\",\n  \"workflow_file_path\": \".github/workflows/change-control-required.yml\",\n  \"check_run_id\": 123524593901\n}\n2026-10-29T15:00:57.6072205Z Protected control blocked: ControlError: pull-not-reviewable\n",
+      "original_log_sha256": "9cddd19930a0f1e9b87459cad70ee164bb7f6ee8f69377b828f92baf3712071f"
+    },
+    "123529611190": {
+      "projection": "{\n  \"workflow_sha\": \"015233f4dfe0f95a6df0ea8a9e4ef8150dadc19f\",\n  \"workflow_repository\": \"ltn-it/.github\",\n  \"workflow_file_path\": \".github/workflows/change-control-required.yml\",\n  \"check_run_id\": 123529611190\n}\n2026-10-29T15:01:08.0493844Z Protected control blocked: ControlError: pull-not-reviewable\n",
+      "original_log_sha256": "70e6889e7a554ebced528826b8ff9cc084b4623d6f3696977061bd817bf1c7fc"
+    }
+  },
+  "decoded_artifacts": {
+    "control-proof-1": {
+      "authorization": {
+        "approval": {
+          "comment": "Submitted by the agent on explicit owner confirmation in the active chat for PR #985, head 000ed477a7af21e0accec549531966f095523bc2, run 40885286707 attempt 1. Scope: promote the README branch-retirement documentation to main. Native actor/result remain authoritative.",
+          "environments": [
+            {
+              "can_admins_bypass": false,
+              "created_at": "2026-10-15T10:51:53Z",
+              "html_url": "https://github.com/ltn-it/.github/deployments/activity_log?environments_filter=normal-release-promotion-approval",
+              "id": 24378530648,
+              "name": "normal-release-promotion-approval",
+              "node_id": "EN_kwDOQlFhuc8AAAAFrRLbWA",
+              "updated_at": "2026-10-15T10:51:53Z",
+              "url": "https://api.github.com/repos/ltn-it/.github/environments/normal-release-promotion-approval"
+            }
+          ],
+          "state": "approved",
+          "user": {
+            "avatar_url": "https://avatars.githubusercontent.com/u/76040632?v=4",
+            "events_url": "https://api.github.com/users/litroc/events{/privacy}",
+            "followers_url": "https://api.github.com/users/litroc/followers",
+            "following_url": "https://api.github.com/users/litroc/following{/other_user}",
+            "gists_url": "https://api.github.com/users/litroc/gists{/gist_id}",
+            "gravatar_id": "",
+            "html_url": "https://github.com/litroc",
+            "id": 76040632,
+            "login": "litroc",
+            "node_id": "MDQ6VXNlcjc2MDQwNjMy",
+            "organizations_url": "https://api.github.com/users/litroc/orgs",
+            "received_events_url": "https://api.github.com/users/litroc/received_events",
+            "repos_url": "https://api.github.com/users/litroc/repos",
+            "site_admin": false,
+            "starred_url": "https://api.github.com/users/litroc/starred{/owner}{/repo}",
+            "subscriptions_url": "https://api.github.com/users/litroc/subscriptions",
+            "type": "User",
+            "url": "https://api.github.com/users/litroc",
+            "user_view_type": "public"
+          }
+        },
+        "run": 40885286707
+      },
+      "binding": {
+        "author": [
+          "lightning-it-release-automation[bot]",
+          307565056,
+          "Bot"
+        ],
+        "base": "97fb1c61a1753eac3fc126e2ba7cac33ec463f3e",
+        "base_ref": "main",
+        "body": "Prepared from protected branches. Current native review, product quality, security checks and applicable one-person approval remain required. This preparation grants no approval.",
+        "draft": false,
+        "head": "000ed477a7af21e0accec549531966f095523bc2",
+        "head_ref": "develop",
+        "head_repository": "ltn-it/.github",
+        "labels": [],
+        "number": 985,
+        "title": "chore(release): promote protected develop to main"
+      },
+      "evidence": {
+        "base": "97fb1c61a1753eac3fc126e2ba7cac33ec463f3e",
+        "diff_sha256": "bc21808da2a6d24886ab2e70e4cc059260a5113a9750558ecc539580b5b21bfb",
+        "head": "000ed477a7af21e0accec549531966f095523bc2",
+        "ingress": [
+          {
+            "control": {
+              "artifact": "control-proof-4",
+              "attempt": 4,
+              "head": "037b5eb644ed909281c1ce6f319e8b4fb59fe264",
+              "job": 123484719088,
+              "proof_sha256": "e17e7c5fc72f4f06e618e7692ee09b358b6d221eae7a7f685305c58b9d743137",
+              "route": "copilot",
+              "run": 40883756534,
+              "source_sha": "015233f4dfe0f95a6df0ea8a9e4ef8150dadc19f"
+            },
+            "merge": "000ed477a7af21e0accec549531966f095523bc2",
+            "pull": 984
+          }
+        ],
+        "integration_tree": "0e3abaf9c461bdbe01bd3be383058038d0f711b1"
+      },
+      "native_conversation_guard": [
+        19045511
+      ],
+      "route": "promotion",
+      "source_sha": "015233f4dfe0f95a6df0ea8a9e4ef8150dadc19f",
+      "version": 1
+    },
+    "control-operation-1": {
+      "binding": {
+        "author": [
+          "litroc",
+          76040632,
+          "User"
+        ],
+        "base": "000ed477a7af21e0accec549531966f095523bc2",
+        "base_ref": "develop",
+        "body": "chore(release): promote protected develop to main\n\n## Summary\n\n-\n\n## Verification\n\n-\n\n## Security\n\n- [ ] No secrets, private infrastructure data, or customer data are added.\n- [ ] Workflow permission changes are least-privilege and justified.\n- [ ] Release or publishing changes run only from trusted branches/events.\n",
+        "draft": false,
+        "head": "c353913fc261e193b60876219820e9714b0122b9",
+        "head_ref": "main",
+        "head_repository": "ltn-it/.github",
+        "labels": [],
+        "number": 986,
+        "title": "Merge pull request #985 from ltn-it/develop"
+      },
+      "source_sha": "015233f4dfe0f95a6df0ea8a9e4ef8150dadc19f",
+      "version": 1
+    },
+    "control-proof-3": {
+      "authorization": null,
+      "binding": {
+        "author": [
+          "litroc",
+          76040632,
+          "User"
+        ],
+        "base": "1d19405fefd66e5f1b007bddcd1920e3a1287866",
+        "base_ref": "develop",
+        "body": "Supplementary can reach the same review candidate through historical Legacy runs, multiple PRs, native verifier refreshes and an explicitly approved Recovery. This change retains consumed allocations across PR/base/input changes, verifies a fresh canonical qualification from native repository evidence, and preserves the existing exact one-extra-attempt Recovery contract.\n\nThe scheduling boundary retains GitHub's native queue instead of replacing pending invocations with no jobs. Source-owned deferral reaches finalization before existing Copilot evidence can write acceptance. Recovery rechecks the latest native generation immediately before its receipt/return. Jobless canceled and otherwise unknown histories continue to deny funding. Other repositories retain their current cancellation behavior. The canonical queue validator admits one exact Source/Supplementary profile; every other actionlint check remains required.\n\nThe completed correction after review 5708527220 is the bounded work item **bounded abort receipt encoding + least-read Recovery preflight**. Only common-quality receives checks:read, so the actual private-repository Recovery preflight can read native check history. Complete generation inventory and every full native record reread remain mandatory. Receipt encoding then retains the current generation and one deterministic newest-generation witness. Version 2 receipts carry only number/base/head as their subject and bind the complete unchanged, separately stored operation with operation_sha256. Strict version 1 compatibility remains. This avoids copying large native metadata and PR bodies into the bounded receipt, without increasing limits, truncating operations, forgiving unknown history or granting another allocation.\n\nValidation on a7f826492c5ae5757512e5ddfb4523b298068121: all 837 unit tests pass in the digest-pinned Devtools image, as do repository quality, instruction/target validation, the exact queue validator, all workflow actionlint checks, ShellCheck, Git diff checks and deterministic patch/secret review. Real regression paths demonstrate the previous native-check 403 and oversized receipt failures, then exercise actual Recovery/reservation/emit/verify successfully, including near-limit Unicode operations, 100 large native follower records and negative tampering/drift cases. The executable profile bootstrap has no invented local Push-Ready attestation; protected native CI and current-head review remain mandatory.\n\nReviews 5707493167, 5708014246 and 5708527220 remain consumed. The documented structural simplification and independently checked 19,501-byte four-file correction permit exactly one specifically bound completion review of this head in this PR, after native code CI passes. A further finding, missing verdict or unknown request stops automatic allocation. No counter, prior finding or provider outcome is reset.\n\nThis PR does not activate a repository rule, select its own Source, or authorize a release. The actual Supplementary Required Workflow mutex, real v1-to-v2 protected-branch transition, Management producer/retirement integration and existing product-ingress promotion are separate operational acceptance steps.",
+        "draft": false,
+        "head": "a7f826492c5ae5757512e5ddfb4523b298068121",
+        "head_ref": "codex/sup-legacy-claim-deny",
+        "head_repository": "ltn-it/.github",
+        "labels": [],
+        "number": 987,
+        "title": "fix(control): close Supplementary funding and scheduling boundaries"
+      },
+      "evidence": {
+        "finding_comment_ids": [],
+        "frame": {
+          "finding_comment_ids": null,
+          "historical_findings_count": 0,
+          "review_body_sha256": "b2b20ba9706a102404f1af457bf72b428dda476f62492e44f66bfdbb4964786b",
+          "review_database_id": 5709227718,
+          "review_id": "PRR_kwDOQlFhuc8AAAABVEvmxg"
+        },
+        "head": "a7f826492c5ae5757512e5ddfb4523b298068121",
+        "id": 5709227718,
+        "service_run": 41019018442,
+        "state": "COMMENTED"
+      },
+      "native_conversation_guard": [
+        19045511
+      ],
+      "route": "copilot",
+      "source_sha": "015233f4dfe0f95a6df0ea8a9e4ef8150dadc19f",
+      "version": 1
+    },
+    "control-operation-3": {
+      "binding": {
+        "author": [
+          "litroc",
+          76040632,
+          "User"
+        ],
+        "base": "1d19405fefd66e5f1b007bddcd1920e3a1287866",
+        "base_ref": "develop",
+        "body": "Supplementary can reach the same review candidate through historical Legacy runs, multiple PRs, native verifier refreshes and an explicitly approved Recovery. This change retains consumed allocations across PR/base/input changes, verifies a fresh canonical qualification from native repository evidence, and preserves the existing exact one-extra-attempt Recovery contract.\n\nThe scheduling boundary retains GitHub's native queue instead of replacing pending invocations with no jobs. Source-owned deferral reaches finalization before existing Copilot evidence can write acceptance. Recovery rechecks the latest native generation immediately before its receipt/return. Jobless canceled and otherwise unknown histories continue to deny funding. Other repositories retain their current cancellation behavior. The canonical queue validator admits one exact Source/Supplementary profile; every other actionlint check remains required.\n\nThe completed correction after review 5708527220 is the bounded work item **bounded abort receipt encoding + least-read Recovery preflight**. Only common-quality receives checks:read, so the actual private-repository Recovery preflight can read native check history. Complete generation inventory and every full native record reread remain mandatory. Receipt encoding then retains the current generation and one deterministic newest-generation witness. Version 2 receipts carry only number/base/head as their subject and bind the complete unchanged, separately stored operation with operation_sha256. Strict version 1 compatibility remains. This avoids copying large native metadata and PR bodies into the bounded receipt, without increasing limits, truncating operations, forgiving unknown history or granting another allocation.\n\nValidation on a7f826492c5ae5757512e5ddfb4523b298068121: all 837 unit tests pass in the digest-pinned Devtools image, as do repository quality, instruction/target validation, the exact queue validator, all workflow actionlint checks, ShellCheck, Git diff checks and deterministic patch/secret review. Real regression paths demonstrate the previous native-check 403 and oversized receipt failures, then exercise actual Recovery/reservation/emit/verify successfully, including near-limit Unicode operations, 100 large native follower records and negative tampering/drift cases. The executable profile bootstrap has no invented local Push-Ready attestation; protected native CI and current-head review remain mandatory.\n\nReviews 5707493167, 5708014246 and 5708527220 remain consumed. The documented structural simplification and independently checked 19,501-byte four-file correction permit exactly one specifically bound completion review of this head in this PR, after native code CI passes. A further finding, missing verdict or unknown request stops automatic allocation. No counter, prior finding or provider outcome is reset.\n\nThis PR does not activate a repository rule, select its own Source, or authorize a release. The actual Supplementary Required Workflow mutex, real v1-to-v2 protected-branch transition, Management producer/retirement integration and existing product-ingress promotion are separate operational acceptance steps.",
+        "draft": false,
+        "head": "a7f826492c5ae5757512e5ddfb4523b298068121",
+        "head_ref": "codex/sup-legacy-claim-deny",
+        "head_repository": "ltn-it/.github",
+        "labels": [],
+        "number": 987,
+        "title": "fix(control): close Supplementary funding and scheduling boundaries"
+      },
+      "source_sha": "015233f4dfe0f95a6df0ea8a9e4ef8150dadc19f",
+      "version": 1
+    },
+    "main-control-operation-1": {
+      "binding": {
+        "author": [
+          "lightning-it-release-automation[bot]",
+          307565056,
+          "Bot"
+        ],
+        "base": "97fb1c61a1753eac3fc126e2ba7cac33ec463f3e",
+        "base_ref": "main",
+        "body": "Prepared from protected branches. Current native review, product quality, security checks and applicable one-person approval remain required. This preparation grants no approval.",
+        "draft": false,
+        "head": "000ed477a7af21e0accec549531966f095523bc2",
+        "head_ref": "develop",
+        "head_repository": "ltn-it/.github",
+        "labels": [],
+        "number": 985,
+        "title": "chore(release): promote protected develop to main"
+      },
+      "source_sha": "015233f4dfe0f95a6df0ea8a9e4ef8150dadc19f",
+      "version": 1
+    }
+  }
+}
