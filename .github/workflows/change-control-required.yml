@@ -13,9 +13,10 @@ permissions:
   checks: read
   pull-requests: read
 concurrency:
-  group: protected-control-${{ github.repository_id }}-${{ github.event.pull_request.number }}
+  group: >-
+    ${{ github.repository_id == '1103407173' && format('sup-funded-review-{0}-{1}', github.repository_id, github.event.pull_request.head.sha) || format('protected-control-{0}-{1}', github.repository_id, github.event.pull_request.number) }}
   # A replacement PR run also cancels an obsolete environment approval wait.
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.repository_id != '1103407173' }}
 jobs:
   common-quality:
     name: Source common quality
