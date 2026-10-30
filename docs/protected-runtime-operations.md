@@ -265,6 +265,23 @@ request may still replay its original response bytes without new funding or
 another recovery approval. The native recovery artifact records the old unknown
 allocation and actual new approval; full durable release archival stays separate.
 
+Supplementary's v2 contract retains consumption across PR, base, source and input
+changes. A Recovery locator alone grants no exception. Its existing one-time
+service-failure Recovery must authenticate the exact prior failed Common
+reservation and genuine native approval; the full candidate history may exclude
+only that one original slot, whose cost and unknown outcome stay recorded. Any
+Legacy, unrelated, additional or unauthenticated claim still blocks funding.
+If a newer native invocation exists, the active run
+yields before either funding step, records both as skipped and fails without an
+acceptance proof. The newer run must still authenticate every original funding
+boundary before reserving once. A pending workflow ID never proves its defining
+source or grants permission to ignore unknown or consumed history.
+If a follower arrives after the preflight, the guarded funding sink can emit a
+separate Source-authenticated no-effect receipt before any request. Its original
+operation, defining Source, native run/attempt/job, skipped model steps, successful
+receipt upload and explicit failed termination must all agree. Missing evidence
+remains unknown and blocks; this receipt grants no review or retry authority.
+
 For newly produced failures, the root-owned gateway exports a source/subject-bound
 outcome even when the action fails. Explicit transient HTTP429/5xx failures have
 a sanitized category; deterministic request errors remain ineligible. Any saved
