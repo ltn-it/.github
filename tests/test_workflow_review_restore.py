@@ -1,5 +1,6 @@
 """Copied historical bytes are not a native artifact or current acceptance."""
 import copy
+import hashlib
 import io
 import json
 import stat
@@ -85,6 +86,17 @@ class ReviewCopyTests(unittest.TestCase):
             "prompt_sha256": restore.sha256(self.files[".github/codex/prompts/review-exact-head.md"]),
             "schema_sha256": restore.sha256(self.files[".github/codex/schemas/exact-head-review.schema.json"]),
         }
+        agents = "Protected repository instructions\n"
+        marker = "<!-- AGENTS_SHA256: " + restore.sha256(agents.encode()) + " -->\nReview the entire change.\n"
+        instruction_files = []
+        for path, content in ((".github/copilot-instructions.md", marker), ("AGENTS.md", agents)):
+            raw = content.encode()
+            instruction_files.append({"path": path, "content": content, "sha256": restore.sha256(raw),
+                                      "blob_sha": hashlib.sha1(b"blob " + str(len(raw)).encode() + b"\0" + raw).hexdigest()})
+        self.metadata["trusted_workflow_sha"] = self.metadata["base_sha"]
+        self.metadata["review_instructions"] = {"version": 1, "source_sha": self.metadata["base_sha"],
+                                                "files": instruction_files}
+        self.metadata["instructions_sha256"] = restore.sha256(canonical(self.metadata["review_instructions"]))
         self.metadata["input_sha256"] = restore.sha256(canonical(self.metadata))
         self.result = {k: self.metadata[k] for k in restore.gateway.BINDINGS}
         self.result.update(verdict="PASS", findings=[], summary="No findings.")
@@ -141,7 +153,9 @@ class ReviewCopyTests(unittest.TestCase):
         self.refresh_log()
 
     def refresh_log(self):
-        lines = ["Protected review-metadata.json:", canonical(self.metadata).decode(),
+        lines = [restore.INSTRUCTION_MARKER, canonical(self.metadata["review_instructions"]).decode(),
+                 "Protected review-metadata.json:",
+                 canonical({k: v for k, v in self.metadata.items() if k != "review_instructions"}).decode(),
                  "##[group]" + restore.EXPORT_COMMAND, "python3 -B scripts/workflow_control.py verify-codex",
                  "  NATIVE_JOB: {", *canonical_context(), "}", "##[endgroup]",
                  "Protected actual model response and complete native request receipt verified."]
@@ -216,6 +230,14 @@ class ReviewCopyTests(unittest.TestCase):
             with self.subTest(error=error):
                 self.assert_rejected(error)
 
+    def test_native_shell_echo_color_does_not_normalize_upload_evidence(self):
+        command = "python3 -B scripts/workflow_control.py verify-codex"
+        self.log = self.log.replace(command, "\x1b[36;1m" + command + "\x1b[0m")
+        self.assertFalse(self.authenticate()["current_gate_pass"])
+        digest = "SHA256 digest of uploaded artifact is " + self.plan["artifacts"]["receipt"]["sha256"]
+        self.log = self.log.replace(digest, "\x1b[36;1m" + digest + "\x1b[0m")
+        self.assert_rejected("restore-native-upload-binding")
+
     def test_conflicting_duplicate_or_out_of_order_upload_claims_are_rejected(self):
         original = self.log
         digest_line = "SHA256 digest of uploaded artifact is " + self.plan["artifacts"]["receipt"]["sha256"]
@@ -279,6 +301,13 @@ class ReviewCopyTests(unittest.TestCase):
         self.metadata["diff_sha256"] = "f" * 64
         self.refresh_log()
         self.assert_rejected("restore-original-input-digest")
+
+    def test_full_protected_instruction_bundle_cannot_be_dropped_or_changed(self):
+        original = self.log
+        self.log = self.log.replace(restore.INSTRUCTION_MARKER, "Missing authoritative bundle")
+        self.assert_rejected("restore-native-instructions-ambiguous")
+        self.log = original.replace("Protected repository instructions", "Modified repository instructions")
+        self.assert_rejected("single-instruction-drift")
 
     def test_native_metadata_record_and_wire_are_all_bound(self):
         self.record["metadata_sha256"] = "f" * 64
