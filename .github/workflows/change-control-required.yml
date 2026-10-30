@@ -135,13 +135,14 @@ jobs:
           NATIVE_JOB: ${{ toJSON(job) }}
         run: python3 -B scripts/workflow_control.py funding-generation
       - name: Request current Copilot review
+        id: request
         if: steps.classify.outputs.request_needed == 'true' && steps.generation.outputs.deferred != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           NATIVE_JOB: ${{ toJSON(job) }}
         run: python3 -B scripts/workflow_control.py request-copilot
       - name: Verify applicable native review or governed exemption
-        if: steps.classify.outputs.route != 'codex' && steps.generation.outputs.deferred != 'true'
+        if: steps.classify.outputs.route != 'codex' && steps.generation.outputs.deferred != 'true' && steps.request.outputs.deferred != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           NATIVE_JOB: ${{ toJSON(job) }}
@@ -181,7 +182,7 @@ jobs:
           REVIEW_RECOVERY_PLAN_SHA256: ${{ needs.common-quality.outputs.recovery_sha256 }}
         run: python3 -B scripts/workflow_control.py reserve-codex
       - name: Preserve actual native recovery approval and original unknown allocation
-        if: steps.reserve.outcome == 'success' && needs.common-quality.outputs.recovery == 'true'
+        if: steps.reserve.outcome == 'success' && needs.common-quality.outputs.recovery == 'true' && steps.reserve.outputs.deferred != 'true'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: control-recovery-${{ github.run_attempt }}
@@ -189,7 +190,7 @@ jobs:
           if-no-files-found: error
           retention-days: 90
       - name: Protected exact-revision Codex review
-        if: steps.classify.outputs.route == 'codex' && steps.generation.outputs.deferred != 'true'
+        if: steps.classify.outputs.route == 'codex' && steps.generation.outputs.deferred != 'true' && steps.reserve.outputs.deferred != 'true'
         uses: openai/codex-action@bdf19a4a223ec2549a3e2274a0cf61556bc07675 # v1
         with:
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
@@ -209,14 +210,14 @@ jobs:
           allow-bots: 'true'
           allow-bot-users: lightning-it-release-automation
       - name: Collect and verify the protected model receipt
-        if: steps.classify.outputs.route == 'codex' && steps.generation.outputs.deferred != 'true'
+        if: steps.classify.outputs.route == 'codex' && steps.generation.outputs.deferred != 'true' && steps.reserve.outputs.deferred != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           NATIVE_JOB: ${{ toJSON(job) }}
         run: |
           python3 -B -E -s "/run/exact-review/code/exact_revision_gateway.py" consume --run-id "$GITHUB_RUN_ID"
       - name: Export protected native Codex evidence
-        if: steps.classify.outputs.route == 'codex' && steps.generation.outputs.deferred != 'true'
+        if: steps.classify.outputs.route == 'codex' && steps.generation.outputs.deferred != 'true' && steps.reserve.outputs.deferred != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           NATIVE_JOB: ${{ toJSON(job) }}
@@ -224,7 +225,7 @@ jobs:
           python3 -B -E -s "/run/exact-review/code/exact_revision_gateway.py" export-native --run-id "$GITHUB_RUN_ID"
           python3 -B scripts/workflow_control.py verify-codex
       - name: Persist protected Codex receipt
-        if: steps.classify.outputs.route == 'codex' && steps.generation.outputs.deferred != 'true'
+        if: steps.classify.outputs.route == 'codex' && steps.generation.outputs.deferred != 'true' && steps.reserve.outputs.deferred != 'true'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: codex-receipt-${{ github.run_attempt }}
@@ -246,8 +247,16 @@ jobs:
           path: control-review-outcome.json
           if-no-files-found: error
           retention-days: 90
+      - name: Preserve Supplementary pre-funding deferral
+        if: steps.request.outputs.deferred == 'true' || steps.reserve.outputs.deferred == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: control-funding-deferred-${{ github.run_attempt }}
+          path: control-funding-deferred.json
+          if-no-files-found: error
+          retention-days: 90
       - name: Leave deferred invocation unsuccessful without review acceptance
-        if: steps.generation.outputs.deferred == 'true'
+        if: steps.generation.outputs.deferred == 'true' || steps.request.outputs.deferred == 'true' || steps.reserve.outputs.deferred == 'true'
         run: |
           echo 'A newer native invocation owns this revision; no funding or acceptance was produced.' >&2
           exit 1

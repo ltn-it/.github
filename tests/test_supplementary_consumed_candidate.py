@@ -198,20 +198,19 @@ class SupplementaryConsumedCandidateTests(unittest.TestCase):
                 self.assertGreater(index, generation)
                 self.assertIn("steps.generation.outputs.deferred != 'true'", step['if'])
         deferred = next(step for step in steps if step['name'].startswith('Leave deferred invocation'))
-        self.assertEqual("steps.generation.outputs.deferred == 'true'", deferred['if'])
+        self.assertIn("steps.generation.outputs.deferred == 'true'", deferred['if'])
+        self.assertIn("steps.request.outputs.deferred == 'true'", deferred['if'])
+        self.assertIn("steps.reserve.outputs.deferred == 'true'", deferred['if'])
         self.assertIn('exit 1', deferred['run'])
         self.assertNotIn('upload-artifact', deferred.get('uses', ''))
 
-    def test_common_consumption_blocks_recovery_before_any_new_authorization(self):
+    def test_recovery_locator_without_authenticated_slot_cannot_bypass_common_consumption(self):
         api, pull, active, _ = self.overlapping()
         consumed = self.common()
         api = self.api(runs=[active, consumed])
-        api.call.return_value = active
-        with (patch.dict(os.environ, {'REVIEW_RECOVERY_PLAN_SHA256': 'e' * 64}),
-              patch('workflow_recovery.authorize') as authorize,
-              self.assertRaisesRegex(control.ControlError, 'consumed-native')):
-            control.reserve_request(api, REPO, pull, 'f' * 40, 20, 1)
-        authorize.assert_not_called()
+        with self.assertRaisesRegex(control.ControlError, 'authenticated-exact-slot'):
+            control.supplementary_consumed_candidate(api, REPO, HEAD, 20, pull=pull,
+                                                     source='f' * 40, recovery={})
 
     def test_missing_or_partial_original_funding_job_is_unknown_not_unspent(self):
         job = {'id': 101, 'run_id': 12, 'run_attempt': 1, 'head_sha': HEAD,

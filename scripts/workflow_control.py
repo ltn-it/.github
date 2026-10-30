@@ -52,6 +52,14 @@ class ControlError(RuntimeError):
     """Missing, stale, unsuccessful or ambiguous native evidence."""
 
 
+class SupplementaryDeferred(ControlError):
+    """A source-owned, read-only generation guard stopped before its sink."""
+
+    def __init__(self, generation):
+        super().__init__("supplementary-newer-generation-before-request")
+        self.generation = generation
+
+
 def require(condition, message):
     if not condition:
         raise ControlError(message)
@@ -1103,13 +1111,21 @@ def supplementary_durable_legacy(api, repo, head):
                 "supplementary-durable-legacy-generation-drift")
 
 
-def supplementary_unfunded_common(api, repo, owner, head, *, before_attempt=None):
+def supplementary_no_effect(api, repo, owner, attempt, job, source):
+    """Authenticate an actual no-effect producer, never infer it from failure."""
+    require(source is not None, "supplementary-no-effect-source-required")
+    from workflow_supplementary_deferral import verify
+    return verify(api, repo, owner, attempt, job, sha(source))
+
+
+def supplementary_unfunded_common(api, repo, owner, head, *, before_attempt=None, source=None, recovery=None):
     require(owner.get("head_sha") == head and type(owner.get("run_attempt")) is int
             and 1 <= owner["run_attempt"] <= 32
             and (owner.get("status") == "completed" if before_attempt is None else
                  owner.get("status") == "in_progress" and before_attempt == owner["run_attempt"]),
             "supplementary-native-history-unknown")
     original = False
+    approved_original = False
     stop = owner["run_attempt"] + 1 if before_attempt is None else before_attempt
     for attempt in range(1, stop):
         jobs = supplementary_inventory(api.pages(
@@ -1123,6 +1139,19 @@ def supplementary_unfunded_common(api, repo, owner, head, *, before_attempt=None
         if protected:
             steps = protected[0].get("steps")
             require(type(steps) is list, "supplementary-native-funding-steps-unknown")
+            if recovery is not None and (owner["id"], attempt) == (
+                    recovery["request"]["failed_run"], recovery["request"]["failed_attempt"]):
+                require(protected[0]["id"] == recovery["failed_job"]
+                        and protected[0].get("conclusion") == "failure"
+                        and all(len([step for step in steps if step.get("name") == name
+                                     and step.get("conclusion") == conclusion]) == 1 for name, conclusion in {
+                            "Reserve protected Codex request": "success", "Request current Copilot review": "skipped",
+                            "Protected exact-revision Codex review": "failure",
+                            "Collect and verify the protected model receipt": "skipped",
+                            "Export protected native Codex evidence": "skipped"}.items()),
+                        "supplementary-recovery-exact-original-reservation-required")
+                approved_original = original = True
+                continue
             if protected[0].get("conclusion") == "skipped":
                 require(all(step.get("conclusion") == "skipped" for step in steps),
                         "supplementary-skipped-job-step-drift")
@@ -1131,12 +1160,16 @@ def supplementary_unfunded_common(api, repo, owner, head, *, before_attempt=None
             funding = [step for step in steps if step.get("name") in FUNDING_STEPS]
             require(len(funding) == 2 and {step.get("name") for step in funding} == FUNDING_STEPS,
                     "supplementary-native-complete-funding-boundaries-required")
-            require(all(step.get("conclusion") == "skipped" or step.get("status") == "queued"
-                        for step in funding), "supplementary-candidate-consumed-native-request")
+            if not all(step.get("conclusion") == "skipped" or step.get("status") == "queued" for step in funding):
+                proofs = [step for step in steps if step.get("name") == "Preserve Supplementary pre-funding deferral"
+                          and step.get("conclusion") == "success"]
+                require(len(proofs) == 1, "supplementary-candidate-consumed-native-request")
+                supplementary_no_effect(api, repo, owner, attempt, protected[0], source)
             original = True
+    return approved_original
 
 
-def supplementary_defer_generation(api, repo, pull, current):
+def supplementary_defer_generation(api, repo, pull, current, *, rows=None):
     """Yield before either funding boundary when a newer invocation exists.
 
     This grants no budget and makes no claim about a follower's defining
@@ -1150,7 +1183,7 @@ def supplementary_defer_generation(api, repo, pull, current):
     require(native_required(current, repo) and current.get("status") == "in_progress"
             and current.get("head_sha") == head, "supplementary-generation-origin-required")
     rows = supplementary_inventory(api.pages(
-        f"repos/{repo}/actions/runs?head_sha={head}", "workflow_runs"), head)
+        f"repos/{repo}/actions/runs?head_sha={head}", "workflow_runs") if rows is None else rows, head)
     for row in rows:
         if row.get("path", "").split("@", 1)[0] in {
                 WORKFLOW, f"{SOURCE}/{WORKFLOW}", f"lightning-it/.github/{WORKFLOW}"}:
@@ -1167,16 +1200,10 @@ def supplementary_defer_generation(api, repo, pull, current):
                 "supplementary-generation-follower-drift")
     require(api.call(f"repos/{repo}/actions/runs/{current['id']}") == current,
             "supplementary-active-generation-drift")
-    return bool(later)
+    return {"current": current, "later": later} if later else None
 
 
-def supplementary_consumed_candidate(api, repo, head, current_run):
-    """A Sup legacy claim belongs to the candidate, not its PR/base/input hash.
-
-    This read-only deny does not settle historical cost or provider outcome.
-    In particular a neutral reservation is consumed even if no result arrived.
-    Other independently admitted repositories keep their existing contract.
-    """
+def supplementary_legacy_consumed(api, repo, head):
     if repo != "ltn-it/ansible-collection-supplementary":
         return
     sha(head)
@@ -1206,17 +1233,51 @@ def supplementary_consumed_candidate(api, repo, head, current_run):
                 "supplementary-legacy-claim-origin-unknown")
         raise ControlError("supplementary-candidate-consumed-legacy-outcome-not-retried")
     supplementary_durable_legacy(api, repo, head)
+
+
+def supplementary_consumed_candidate(api, repo, head, current_run, *, current=None, pull=None, source=None, recovery=None):
+    """A Sup legacy claim belongs to the candidate, not its PR/base/input hash.
+
+    This read-only deny does not settle historical cost or provider outcome.
+    In particular a neutral reservation is consumed even if no result arrived.
+    Other independently admitted repositories keep their existing contract.
+    """
+    if repo != "ltn-it/ansible-collection-supplementary":
+        return
+    sha(head)
+    if recovery is not None:
+        require(recovery.get("source_sha") == source and recovery.get("current_run") == current_run
+                and recovery.get("binding") == binding(pull) and recovery.get("additional_attempts") == 1
+                and type(recovery.get("additional_attempts")) is int
+                and recovery.get("original_provider_outcome") == "unknown"
+                and recovery.get("release_authorized") is False
+                and type(recovery.get("failed_job")) is int and recovery["failed_job"] > 0
+                and type(recovery.get("request")) is dict
+                and type(recovery["request"].get("failed_run")) is int
+                and type(recovery["request"].get("failed_attempt")) is int
+                and 0 < recovery["request"]["failed_run"] < current_run
+                and recovery["request"]["failed_attempt"] > 0
+                and type((recovery.get("approval") or {}).get("user", {}).get("id")) is int,
+                "supplementary-recovery-authenticated-exact-slot-required")
+    supplementary_legacy_consumed(api, repo, head)
     # Native Common run.head_sha is the candidate. A changed PR/base/source or
     # recovery locator must not discard a previously reached funding boundary.
     runs = supplementary_inventory(api.pages(
         f"repos/{repo}/actions/runs?head_sha={head}", "workflow_runs"), head)
+    if current is not None:
+        later = supplementary_defer_generation(api, repo, pull, current, rows=runs)
+        if later:
+            raise SupplementaryDeferred(later)
+    approved_originals = 0
     for owner in runs:
         path = owner.get("path", "").split("@", 1)[0]
         if path in {WORKFLOW, f"{SOURCE}/{WORKFLOW}", f"lightning-it/.github/{WORKFLOW}"}:
             require(native_required(owner, repo), "supplementary-common-source-unassignable")
         if not native_required(owner, repo) or owner["id"] == current_run:
             continue
-        supplementary_unfunded_common(api, repo, owner, head)
+        approved_originals += bool(supplementary_unfunded_common(api, repo, owner, head, source=source, recovery=recovery))
+    if recovery is not None:
+        require(approved_originals == 1, "supplementary-recovery-single-preserved-original-required")
 
 
 def supplementary_protected_ref(api, repo, branch):
@@ -1322,23 +1383,30 @@ def reserve_request(api, repo, pull, source_sha, run_id, attempt):
     require(run.get("id") == run_id and native_required(run, repo)
             and run["head_sha"] == pull["head"]["sha"], "request-origin")
     require(run["run_attempt"] == attempt, "request-attempt-drift")
-    supplementary_consumed_candidate(api, repo, pull["head"]["sha"], run_id)
-    supplementary_qualification_genesis(api, repo, pull, source_sha)
-    supplementary_live_funding_bases(api, repo, pull)
-    if repo == "ltn-it/ansible-collection-supplementary":
-        if attempt > 1:
-            supplementary_unfunded_common(api, repo, run, pull["head"]["sha"], before_attempt=attempt)
+    if repo == "ltn-it/ansible-collection-supplementary" and attempt > 1:
+        supplementary_unfunded_common(api, repo, run, pull["head"]["sha"], before_attempt=attempt, source=source_sha)
     recovery = os.environ.get("REVIEW_RECOVERY_PLAN_SHA256", "")
+    receipt = None
     if recovery:
+        supplementary_legacy_consumed(api, repo, pull["head"]["sha"])
         require(classify(pull, repo) == "codex", "recovery-codex-only")
         import workflow_recovery
         receipt = workflow_recovery.authorize(api, repo, pull, source_sha, run, recovery)
+    supplementary_consumed_candidate(api, repo, pull["head"]["sha"], run_id, current=run, pull=pull,
+                                     source=source_sha, recovery=receipt)
+    supplementary_qualification_genesis(api, repo, pull, source_sha)
+    supplementary_live_funding_bases(api, repo, pull)
+    if recovery:
         with Path("control-recovery.json").open("xb") as stream:
             stream.write(canonical(receipt))
         return run_id
     if repo != "ltn-it/ansible-collection-supplementary":
         slot_consumed_before(api, repo, run, attempt)
     runs = api.pages(f"repos/{repo}/actions/runs?head_sha={pull['head']['sha']}", "workflow_runs")
+    if repo == "ltn-it/ansible-collection-supplementary":
+        later = supplementary_defer_generation(api, repo, pull, run, rows=runs)
+        if later:
+            raise SupplementaryDeferred(later)
     owners = [r for r in runs if native_required(r, repo)
               and any(pr.get("number") == pull["number"]
                       and pr.get("base", {}).get("sha") == pull["base"]["sha"]
@@ -1346,7 +1414,7 @@ def reserve_request(api, repo, pull, source_sha, run_id, attempt):
                       for pr in r.get("pull_requests", []))]
     require(any(owner["id"] == run_id for owner in owners), "request-native-association-missing")
     require(run_id == max(owner["id"] for owner in owners), "funding-current-native-generation-required")
-    for owner in owners:
+    for owner in owners if repo != "ltn-it/ansible-collection-supplementary" else []:
         if owner["id"] == run_id:
             continue
         for version in range(1, owner["run_attempt"] + 1):
@@ -1667,6 +1735,26 @@ def output(name, value):
         file.write(f"{name}={value}\n")
 
 
+def reserve_or_defer(api, repo, pull, source, native, operation, step):
+    try:
+        reserve_request(api, repo, pull, source, native["id"], native["run_attempt"])
+    except SupplementaryDeferred as deferred:
+        from workflow_supplementary_deferral import emit
+        emit(repo, pull, source, operation, native, step, deferred)
+        return False
+    except ControlError as error:
+        # Recovery's own exact history check can encounter the same late
+        # follower before the shared candidate audit. It has made no request.
+        if repo != "ltn-it/ansible-collection-supplementary" or str(error) != "recovery-stale-native-generation":
+            raise
+        later = supplementary_defer_generation(api, repo, pull, native)
+        require(later, "supplementary-recovery-follower-no-longer-assignable")
+        from workflow_supplementary_deferral import emit
+        emit(repo, pull, source, operation, native, step, SupplementaryDeferred(later))
+        return False
+    return True
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("operation", choices=("classify", "review", "finalize", "funding-generation", "request-copilot", "prepare-codex", "reserve-codex", "verify-codex"))
@@ -1749,7 +1837,8 @@ def main():
             return
         import workflow_funding
         require(workflow_funding.finalized(api, repo, pull, native, event), "head-not-finalized-for-funded-review")
-        reserve_request(api, repo, pull, source_sha, int(os.environ["GITHUB_RUN_ID"]), int(os.environ["GITHUB_RUN_ATTEMPT"]))
+        if not reserve_or_defer(api, repo, pull, source_sha, native, operation, "Request current Copilot review"):
+            return
         live_pull(api, repo, number, expected)
         api.call(f"repos/{repo}/pulls/{number}/requested_reviewers", method="POST", data={"reviewers": [COPILOT]})
         return
@@ -1769,7 +1858,8 @@ def main():
         require(route == "codex", "codex-identity-required")
         import workflow_funding
         require(workflow_funding.finalized(api, repo, pull, native, event), "head-not-finalized-for-funded-review")
-        reserve_request(api, repo, pull, source_sha, int(os.environ["GITHUB_RUN_ID"]), int(os.environ["GITHUB_RUN_ATTEMPT"]))
+        if not reserve_or_defer(api, repo, pull, source_sha, native, operation, "Reserve protected Codex request"):
+            return
         live_pull(api, repo, number, expected)
         return
     if args.operation == "verify-codex":
