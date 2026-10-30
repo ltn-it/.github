@@ -6,6 +6,7 @@ import sys
 import unittest
 from pathlib import Path
 from unittest.mock import Mock
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 import workflow_control as control
@@ -56,7 +57,10 @@ class SupplementaryQualificationGenesisTests(unittest.TestCase):
                    'path': '.github/workflows/release-prepare.yml', 'event': 'push', 'head_branch': 'main',
                    'head_sha': 'f43f74c6904397af7ab48bacf13e6f8519d354d5', 'run_attempt': 1,
                    'status': 'completed', 'conclusion': 'failure', 'updated_at': '2026-07-28T07:01:39Z'}
-        original = {'version': 1, 'repository': REPO, 'mode': 'reference', 'quality': ['fixture']}
+        original = {'version': 2, 'repository': REPO, 'mode': 'reference', 'quality': [
+            {'workflow': '.github/workflows/collection-ci.yml', 'job': 'Collection / Fast'},
+            {'workflow': '.github/workflows/collection-ci.yml', 'job': 'Collection / Build and Install'}],
+            'accepted_sources': [], 'distribution_sources': [], 'artifact_publication': True}
         expected = original | {'supplementary_funding_contract': {
             'version': 2, 'candidate_scope': 'repository-head', 'legacy_claims': 'consumed',
             'unknown_outcomes': 'consumed_uncertain'}}
@@ -98,7 +102,51 @@ class SupplementaryQualificationGenesisTests(unittest.TestCase):
                 control.supplementary_qualification_genesis(api, REPO, pull, SOURCE)
             api.call.assert_not_called()
             api.pages.assert_not_called()
-            api.file.assert_not_called()
+
+    def reservation(self):
+        api, pull, records, _, _ = self.fixture()
+        pull.update(number=99)
+        for role in ('base', 'head'):
+            pull[role]['repo'] = {'id': 1103407173, 'full_name': REPO}
+        native = {'id': 60, 'head_sha': HEAD, 'run_attempt': 1, 'status': 'in_progress', 'workflow_id': 77,
+                  'workflow_url': f'https://api.github.com/repos/{REPO}/actions/required_workflows/77',
+                  'path': control.WORKFLOW, 'pull_requests': [copy.deepcopy(pull)]}
+        records[f'repos/{REPO}/actions/runs/60'] = native
+        pages = api.pages.side_effect
+        api.pages.side_effect = lambda path, key=None: ([] if key == 'check_runs' or '/workflows/332570404/' in path
+                                                       else [copy.deepcopy(native)] if key == 'workflow_runs' else pages(path))
+        return api, pull, records
+
+    def test_actual_reservation_detects_initial_genesis_content_even_without_qualification_prefix(self):
+        api, pull, _ = self.reservation()
+        pull['head']['ref'] = 'repair/funding-v2'
+        # Keep the actual native association on the same PR/base/head; its
+        # branch spelling is not authority to bypass the consumed boundary.
+        with patch.dict('os.environ', {'REVIEW_RECOVERY_PLAN_SHA256': ''}), self.assertRaisesRegex(
+                control.ControlError, 'single-canonical-genesis'):
+            control.reserve_request(api, REPO, pull, SOURCE, 60, 1)
+        self.assertTrue(all(not call.kwargs for call in api.call.call_args_list))
+
+    def test_first_contract_addition_cannot_use_a_human_review_route(self):
+        api, pull, _ = self.reservation()
+        pull['user'] = ACTOR
+        with patch.dict('os.environ', {'REVIEW_RECOVERY_PLAN_SHA256': ''}), self.assertRaisesRegex(
+                control.ControlError, 'fresh-app-qualification'):
+            control.reserve_request(api, REPO, pull, SOURCE, 60, 1)
+
+    def test_ordinary_app_change_and_already_bound_governance_keep_their_reservation(self):
+        for bound in (False, True):
+            api, pull, _ = self.reservation()
+            pull['head']['ref'] = 'repair/product-change'
+            policy = {'version': 2, 'repository': REPO}
+            if bound:
+                policy['supplementary_funding_contract'] = {
+                    'version': 2, 'candidate_scope': 'repository-head', 'legacy_claims': 'consumed',
+                    'unknown_outcomes': 'consumed_uncertain'}
+            api.file.return_value = json.dumps(policy).encode()
+            api.file.side_effect = None
+            with patch.dict('os.environ', {'REVIEW_RECOVERY_PLAN_SHA256': ''}):
+                self.assertEqual(60, control.reserve_request(api, REPO, pull, SOURCE, 60, 1))
 
     def test_commit_dates_are_never_used_instead_of_native_merge(self):
         api, pull, records, _, _ = self.fixture()

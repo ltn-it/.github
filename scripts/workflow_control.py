@@ -1298,7 +1298,13 @@ def supplementary_qualification_genesis(api, repo, pull, source_sha):
     Management's private artifact is deliberately not a budget authority here.
     The retired producer's candidate remains unknown, never its producer base.
     """
-    if repo != "ltn-it/ansible-collection-supplementary" or not pull.get("head", {}).get("ref", "").startswith("qualification/"):
+    if repo != "ltn-it/ansible-collection-supplementary":
+        return
+    original = json.loads(api.file(repo, ".lit/workflow-control.json", sha(pull["base"]["sha"])))
+    proposed = json.loads(api.file(repo, ".lit/workflow-control.json", sha(pull["head"]["sha"])))
+    require(type(original) is dict and type(proposed) is dict, "supplementary-genesis-policy-object-required")
+    initial_contract = "supplementary_funding_contract" not in original and "supplementary_funding_contract" in proposed
+    if not initial_contract and not pull.get("head", {}).get("ref", "").startswith("qualification/"):
         return
     require(pull["head"]["ref"] == SUPPLEMENTARY_GENESIS_BRANCH,
             "supplementary-single-canonical-genesis-branch-required")
@@ -1334,7 +1340,8 @@ def supplementary_qualification_genesis(api, repo, pull, source_sha):
         ended = max(ended, instant(native.get("updated_at")))
     require(instant(merge["merged_at"]) > ended + timedelta(seconds=1),
             "supplementary-parent-must-follow-retired-unknown")
-    original = json.loads(api.file(repo, ".lit/workflow-control.json", parent))
+    require(json.loads(api.file(repo, ".lit/workflow-control.json", parent)) == original,
+            "supplementary-genesis-parent-policy-drift")
     require("supplementary_funding_contract" not in original, "supplementary-genesis-noop-or-budget-reuse")
     original["supplementary_funding_contract"] = {
         "version": 2, "candidate_scope": "repository-head", "legacy_claims": "consumed",
