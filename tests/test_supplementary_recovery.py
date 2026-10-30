@@ -74,6 +74,26 @@ class SupplementaryRecoveryTests(unittest.TestCase):
             finally:
                 os.chdir(previous)
 
+    def test_actual_common_quality_token_can_read_legacy_check_runs_during_preflight(self):
+        import yaml
+        workflow = yaml.safe_load((Path(__file__).resolve().parents[1] /
+                                   '.github/workflows/change-control-required.yml').read_text())
+        permissions = workflow['jobs']['common-quality']['permissions']
+        original_pages = self.api.pages.side_effect
+        read_check_runs = []
+        def authorized_pages(path, key=None):
+            if '/check-runs' in path:
+                read_check_runs.append(path)
+                if permissions.get('checks') not in {'read', 'write'}:
+                    raise control.ControlError('403 private check runs: effective job token lacks checks:read')
+            return original_pages(path, key)
+        self.api.pages.side_effect = authorized_pages
+        value = self.plan()
+        self.assertTrue(read_check_runs)
+        self.assertEqual(10, value['request']['failed_run'])
+        self.assertEqual('read', permissions['checks'])
+        self.api.request.assert_not_called()
+
     def test_real_plan_and_native_authorize_preserve_exactly_one_extra_attempt(self):
         plan = self.plan()
         result, receipt = self.reserve(control.digest(plan))

@@ -83,7 +83,9 @@ class SupplementaryFundingDeferralTests(unittest.TestCase):
                     self.assertEqual(False, saved['provider_request'])
                     self.assertEqual(False, saved['reservation_created'])
                     self.assertEqual('deferred=true\n', output.read_text())
-                    self.assertEqual(pending, saved['generation']['later'][0])
+                    self.assertEqual({key: pending[key] for key in ('id', 'run_attempt', 'head_sha', 'status',
+                                                                  'workflow_id', 'workflow_url', 'path')},
+                                     saved['generation']['later'][0])
                 finally:
                     os.chdir(previous)
             self.assertTrue(all(not call.kwargs for call in api.call.call_args_list))
@@ -120,6 +122,112 @@ class SupplementaryFundingDeferralTests(unittest.TestCase):
         api.native_job_log.return_value = 'unknown or expired source'
         with self.records(operation, proof), self.assertRaisesRegex(control.ControlError, 'actual-defining-source'):
             deferral.verify(api, REPO, native, 1, job, SOURCE)
+
+    def test_real_deferral_with_one_hundred_megabyte_metadata_followers_is_bounded(self):
+        self.large_deferral(100)
+
+    def test_one_hundred_one_later_witnesses_remain_bounded_without_truncating_history(self):
+        self.large_deferral(101)
+
+    def test_unselected_malformed_or_foreign_follower_cannot_hide_behind_max_witness(self):
+        for change in ({'run_attempt': None}, {'run_attempt': True}, {'workflow_url': 'https://untrusted.invalid'},
+                       {'path': control.WORKFLOW + '@' + 'x' * 600}):
+            with self.subTest(change=change), self.assertRaises(control.ControlError):
+                self.large_deferral(101, corrupt=change)
+
+    def test_even_unselected_full_native_metadata_drift_still_denies_before_projection(self):
+        with self.assertRaisesRegex(control.ControlError, 'follower-drift'):
+            self.large_deferral(101, drift=True)
+
+    def large_deferral(self, count, corrupt=None, drift=False):
+        api, pull, native, _, operation, context, _, job = self.fixture()
+        message = 'large irrelevant native commit message' + 'x' * (1024 * 1024)
+        native['head_commit'] = {'message': message}
+        followers = [native | {'id': identifier, 'status': 'pending'} for identifier in range(21, 21 + count)]
+        if corrupt:
+            followers[1] = followers[1] | corrupt
+        rows = [native, *followers]
+        by_id = {row['id']: row for row in rows}
+        api.call.side_effect = lambda path: (by_id[22] | {'head_commit': {'message': 'changed after inventory'}}
+                                           if drift and path.endswith('/22') else by_id[int(path.rsplit('/', 1)[1])])
+        api.pages.side_effect = lambda path, key: [] if key == 'check_runs' or '/workflows/332570404/' in path else rows
+        previous = Path.cwd()
+        with tempfile.TemporaryDirectory() as temporary:
+            try:
+                os.chdir(temporary)
+                with patch.dict(os.environ, {'NATIVE_JOB': json.dumps(context),
+                                             'GITHUB_OUTPUT': str(Path(temporary) / 'output')}):
+                    self.assertFalse(control.reserve_or_defer(api, REPO, pull, SOURCE, native, operation,
+                                                             'Reserve protected Codex request'))
+                raw = Path('control-funding-deferred.json').read_bytes()
+                self.assertLess(len(raw), 8192)
+                saved = json.loads(raw)
+                self.assertFalse(saved['provider_request'])
+                self.assertFalse(saved['reservation_created'])
+                self.assertNotIn('head_commit', saved['generation']['current'])
+                self.assertEqual(20 + count, saved['generation']['later'][0]['id'])
+                self.assertEqual(1, len(saved['generation']['later']))
+                # The compact proof remains usable by the real native-history
+                # verifier, without reclassifying it as a successful review.
+                owner = native | {'status': 'completed', 'conclusion': 'failure'}
+                final = job | {'id': 502, 'name': 'Current revision review', 'steps': []}
+                def record(_api, repo, run, name, filename):
+                    return saved if filename == 'control-funding-deferred.json' else operation
+                with (patch.object(control, 'artifact_record', side_effect=record),
+                      patch.object(api, 'pages', return_value=[job, final])):
+                    control.supplementary_unfunded_common(api, REPO, owner, native['head_sha'], source=SOURCE)
+            finally:
+                os.chdir(previous)
+        # Every full native follower was authenticated BEFORE projection.
+        self.assertTrue({f'repos/{REPO}/actions/runs/{identifier}' for identifier in range(21, 21 + count)}
+                        <= {call.args[0] for call in api.call.call_args_list})
+        self.assertTrue(all(not call.kwargs for call in api.call.call_args_list))
+
+    def test_near_limit_unicode_operation_does_not_duplicate_binding_in_receipt(self):
+        api, pull, native, pending, operation, context, _, job = self.fixture()
+        low, high = 0, 65536
+        while low < high:
+            middle = (low + high + 1) // 2
+            candidate = operation | {'binding': control.binding(pull | {'body': '\u0800' * middle})}
+            if len(control.canonical(candidate)) <= control.MAX_OPERATION_BYTES:
+                low = middle
+            else:
+                high = middle - 1
+        pull['body'] = '\u0800' * low
+        operation['binding'] = control.binding(pull)
+        self.assertLessEqual(len(control.canonical(operation)), control.MAX_OPERATION_BYTES)
+        self.assertGreater(len(control.canonical(operation)), control.MAX_OPERATION_BYTES - 6)
+        original_operation = control.canonical(operation)
+        previous = Path.cwd()
+        with tempfile.TemporaryDirectory() as temporary:
+            try:
+                os.chdir(temporary)
+                with patch.dict(os.environ, {'NATIVE_JOB': json.dumps(context),
+                                             'GITHUB_OUTPUT': str(Path(temporary) / 'output')}):
+                    deferral.emit(REPO, pull, SOURCE, operation, native, 'Reserve protected Codex request',
+                                  control.SupplementaryDeferred({'current': native, 'later': [pending]}))
+                raw = Path('control-funding-deferred.json').read_bytes()
+                self.assertLess(len(raw), 8192)
+                saved = json.loads(raw)
+                self.assertEqual(2, saved['version'])
+                self.assertNotIn('binding', saved)
+                self.assertEqual({'number': pull['number'], 'base': pull['base']['sha'],
+                                  'head': pull['head']['sha']}, saved['subject'])
+                self.assertEqual(control.digest(operation), saved['operation_sha256'])
+                self.assertEqual(original_operation, control.canonical(operation))
+                with self.records(operation, saved):
+                    self.assertEqual(saved, deferral.verify(api, REPO,
+                        native | {'status': 'completed', 'conclusion': 'failure'}, 1, job, SOURCE))
+                for changed in (saved | {'subject': saved['subject'] | {'body': ''}},
+                                saved | {'subject': saved['subject'] | {'head': 'e' * 40}},
+                                saved | {'operation_sha256': 'e' * 64}):
+                    with (self.records(operation, changed), self.assertRaises(control.ControlError)):
+                        deferral.verify(api, REPO, native | {'status': 'completed'}, 1, job, SOURCE)
+                tampered_operation = operation | {'binding': operation['binding'] | {'body': 'tampered'}}
+                with (self.records(tampered_operation, saved), self.assertRaises(control.ControlError)):
+                    deferral.verify(api, REPO, native | {'status': 'completed'}, 1, job, SOURCE)
+            finally:
+                os.chdir(previous)
 
     def test_complete_history_accepts_only_proven_no_effect_original(self):
         api, pull, native, _, operation, _, proof, job = self.fixture()
