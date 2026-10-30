@@ -128,33 +128,39 @@ jobs:
           path: control-operation.json
           if-no-files-found: error
           retention-days: 90
+      - name: Yield superseded Supplementary invocation before funding
+        id: generation
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NATIVE_JOB: ${{ toJSON(job) }}
+        run: python3 -B scripts/workflow_control.py funding-generation
       - name: Request current Copilot review
-        if: steps.classify.outputs.request_needed == 'true'
+        if: steps.classify.outputs.request_needed == 'true' && steps.generation.outputs.deferred != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           NATIVE_JOB: ${{ toJSON(job) }}
         run: python3 -B scripts/workflow_control.py request-copilot
       - name: Verify applicable native review or governed exemption
-        if: steps.classify.outputs.route != 'codex'
+        if: steps.classify.outputs.route != 'codex' && steps.generation.outputs.deferred != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           NATIVE_JOB: ${{ toJSON(job) }}
         run: python3 -B scripts/workflow_control.py review
       - name: Materialize complete data-only review subject
-        if: steps.classify.outputs.route == 'codex'
+        if: steps.classify.outputs.route == 'codex' && steps.generation.outputs.deferred != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           NATIVE_JOB: ${{ toJSON(job) }}
         run: python3 -B scripts/workflow_subject.py
       - name: Resolve byte-identical protected Codex evidence
-        if: steps.classify.outputs.route == 'codex'
+        if: steps.classify.outputs.route == 'codex' && steps.generation.outputs.deferred != 'true'
         id: codex
         env:
           GH_TOKEN: ${{ github.token }}
           NATIVE_JOB: ${{ toJSON(job) }}
         run: python3 -B scripts/workflow_control.py prepare-codex
       - name: Install complete-request budget gateway
-        if: steps.classify.outputs.route == 'codex'
+        if: steps.classify.outputs.route == 'codex' && steps.generation.outputs.deferred != 'true'
         id: gateway
         run: |
           sudo -n python3 -E -s scripts/exact_revision_gateway.py install --run-id "$GITHUB_RUN_ID"
@@ -168,7 +174,7 @@ jobs:
           PY
       - name: Reserve protected Codex request
         id: reserve
-        if: steps.classify.outputs.route == 'codex' && steps.codex.outputs.replay != 'true'
+        if: steps.classify.outputs.route == 'codex' && steps.codex.outputs.replay != 'true' && steps.generation.outputs.deferred != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           NATIVE_JOB: ${{ toJSON(job) }}
@@ -183,7 +189,7 @@ jobs:
           if-no-files-found: error
           retention-days: 90
       - name: Protected exact-revision Codex review
-        if: steps.classify.outputs.route == 'codex'
+        if: steps.classify.outputs.route == 'codex' && steps.generation.outputs.deferred != 'true'
         uses: openai/codex-action@bdf19a4a223ec2549a3e2274a0cf61556bc07675 # v1
         with:
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
@@ -203,14 +209,14 @@ jobs:
           allow-bots: 'true'
           allow-bot-users: lightning-it-release-automation
       - name: Collect and verify the protected model receipt
-        if: steps.classify.outputs.route == 'codex'
+        if: steps.classify.outputs.route == 'codex' && steps.generation.outputs.deferred != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           NATIVE_JOB: ${{ toJSON(job) }}
         run: |
           python3 -B -E -s "/run/exact-review/code/exact_revision_gateway.py" consume --run-id "$GITHUB_RUN_ID"
       - name: Export protected native Codex evidence
-        if: steps.classify.outputs.route == 'codex'
+        if: steps.classify.outputs.route == 'codex' && steps.generation.outputs.deferred != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           NATIVE_JOB: ${{ toJSON(job) }}
@@ -218,7 +224,7 @@ jobs:
           python3 -B -E -s "/run/exact-review/code/exact_revision_gateway.py" export-native --run-id "$GITHUB_RUN_ID"
           python3 -B scripts/workflow_control.py verify-codex
       - name: Persist protected Codex receipt
-        if: steps.classify.outputs.route == 'codex'
+        if: steps.classify.outputs.route == 'codex' && steps.generation.outputs.deferred != 'true'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: codex-receipt-${{ github.run_attempt }}
@@ -240,6 +246,11 @@ jobs:
           path: control-review-outcome.json
           if-no-files-found: error
           retention-days: 90
+      - name: Leave deferred invocation unsuccessful without review acceptance
+        if: steps.generation.outputs.deferred == 'true'
+        run: |
+          echo 'A newer native invocation owns this revision; no funding or acceptance was produced.' >&2
+          exit 1
   normal-approval:
     name: Approve exact main promotion
     needs: [review, common-quality]

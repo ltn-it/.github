@@ -1136,6 +1136,40 @@ def supplementary_unfunded_common(api, repo, owner, head, *, before_attempt=None
             original = True
 
 
+def supplementary_defer_generation(api, repo, pull, current):
+    """Yield before either funding boundary when a newer invocation exists.
+
+    This grants no budget and makes no claim about a follower's defining
+    source, mutex or provider outcome. Native workflow IDs are not source SHAs.
+    Both funding steps must be SKIPPED and the deferred run must fail closed.
+    The newer run then evaluates the complete unchanged consumption history.
+    """
+    if repo != "ltn-it/ansible-collection-supplementary":
+        return False
+    head = sha(pull["head"]["sha"])
+    require(native_required(current, repo) and current.get("status") == "in_progress"
+            and current.get("head_sha") == head, "supplementary-generation-origin-required")
+    rows = supplementary_inventory(api.pages(
+        f"repos/{repo}/actions/runs?head_sha={head}", "workflow_runs"), head)
+    for row in rows:
+        if row.get("path", "").split("@", 1)[0] in {
+                WORKFLOW, f"{SOURCE}/{WORKFLOW}", f"lightning-it/.github/{WORKFLOW}"}:
+            require(native_required(row, repo), "supplementary-common-source-unassignable")
+    owners = [row for row in rows if native_required(row, repo)]
+    require(any(row == current for row in owners)
+            and any(pr.get("number") == pull["number"]
+                    and pr.get("base", {}).get("sha") == pull["base"]["sha"]
+                    and pr.get("head", {}).get("sha") == head
+                    for pr in current.get("pull_requests", [])), "supplementary-generation-association-required")
+    later = [row for row in owners if row["id"] > current["id"]]
+    for row in later:
+        require(api.call(f"repos/{repo}/actions/runs/{row['id']}") == row,
+                "supplementary-generation-follower-drift")
+    require(api.call(f"repos/{repo}/actions/runs/{current['id']}") == current,
+            "supplementary-active-generation-drift")
+    return bool(later)
+
+
 def supplementary_consumed_candidate(api, repo, head, current_run):
     """A Sup legacy claim belongs to the candidate, not its PR/base/input hash.
 
@@ -1635,7 +1669,7 @@ def output(name, value):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("operation", choices=("classify", "review", "finalize", "request-copilot", "prepare-codex", "reserve-codex", "verify-codex"))
+    parser.add_argument("operation", choices=("classify", "review", "finalize", "funding-generation", "request-copilot", "prepare-codex", "reserve-codex", "verify-codex"))
     args = parser.parse_args()
     api = API()
     repo = os.environ["GITHUB_REPOSITORY"]
@@ -1703,6 +1737,10 @@ def main():
         output("route", route)
         output("base", pull["base"]["sha"])
         output("head", pull["head"]["sha"])
+        return
+    if args.operation == "funding-generation":
+        deferred = route in {"copilot", "codex"} and supplementary_defer_generation(api, repo, pull, native)
+        output("deferred", "true" if deferred else "false")
         return
     if args.operation == "request-copilot":
         require(route == "copilot" and identity(pull["user"]) in FUNDED_COPILOT_AUTHORS, "funded-author-not-allowed")

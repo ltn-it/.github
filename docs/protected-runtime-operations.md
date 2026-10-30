@@ -265,6 +265,16 @@ request may still replay its original response bytes without new funding or
 another recovery approval. The native recovery artifact records the old unknown
 allocation and actual new approval; full durable release archival stays separate.
 
+Supplementary's separately commissioned v2 contract is stricter: a consumed or
+unknown candidate allocation remains consumed across PR, base, source, input and
+Recovery changes. A Recovery locator cannot authorize a second allocation for
+that same head. Other admitted repositories retain the one-time service-failure
+Recovery described above. If a newer native invocation exists, the active run
+yields before either funding step, records both as skipped and fails without an
+acceptance proof. The newer run must still authenticate every original funding
+boundary before reserving once. A pending workflow ID never proves its defining
+source or grants permission to ignore unknown or consumed history.
+
 For newly produced failures, the root-owned gateway exports a source/subject-bound
 outcome even when the action fails. Explicit transient HTTP429/5xx failures have
 a sanitized category; deterministic request errors remain ineligible. Any saved

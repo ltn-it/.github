@@ -129,6 +129,90 @@ class SupplementaryConsumedCandidateTests(unittest.TestCase):
                 'workflow_url': f'https://api.github.com/repos/{REPO}/actions/required_workflows/77',
                 'path': control.WORKFLOW, 'pull_requests': []}
 
+    def overlapping(self, **changes):
+        pull = {'number': 7, 'base': {'sha': OLD_BASE}, 'head': {'sha': HEAD}}
+        active = self.common() | {'id': 20, 'status': 'in_progress', 'pull_requests': [pull]}
+        pending = active | {'id': 21, 'status': 'pending', 'conclusion': None} | changes
+        api = self.api(runs=[active, pending], jobs=[])
+        api.call.side_effect = lambda path: active if path.endswith('/20') else pending
+        return api, pull, active, pending
+
+    def test_overlap_yields_unfunded_then_newest_generation_reserves_once(self):
+        api, pull, active, pending = self.overlapping()
+        self.assertTrue(control.supplementary_defer_generation(api, REPO, pull, active))
+        self.assertTrue(all(not call.kwargs for call in api.call.call_args_list))
+        old = active | {'status': 'completed', 'conclusion': 'failure'}
+        current = pending | {'status': 'in_progress'}
+        protected = {'id': 101, 'run_id': 20, 'run_attempt': 1, 'head_sha': HEAD,
+                     'status': 'completed', 'conclusion': 'failure', 'name': 'Protected current revision',
+                     'steps': [{'name': name, 'status': 'completed', 'conclusion': 'skipped'}
+                               for name in control.FUNDING_STEPS]}
+        final = protected | {'id': 102, 'name': 'Current revision review', 'steps': []}
+        api = self.api(runs=[old, current], jobs=[protected, final])
+        api.call.return_value = current
+        self.assertFalse(control.supplementary_defer_generation(api, REPO, pull, current))
+        with (patch.dict(os.environ, {'REVIEW_RECOVERY_PLAN_SHA256': ''}),
+              patch.object(control, 'supplementary_qualification_genesis'),
+              patch.object(control, 'supplementary_live_funding_bases')):
+            self.assertEqual(21, control.reserve_request(api, REPO, pull, 'f' * 40, 21, 1))
+        consumed = protected | {'steps': [
+            {'name': name, 'status': 'completed', 'conclusion': 'success'}
+            for name in control.FUNDING_STEPS]}
+        api = self.api(runs=[old], jobs=[consumed, final])
+        with self.assertRaisesRegex(control.ControlError, 'consumed-native'):
+            control.supplementary_consumed_candidate(api, REPO, HEAD, 22)
+
+    def test_yield_does_not_assert_follower_source_mutex_or_provider_state(self):
+        for changes in ({'status': 'queued'}, {'status': 'waiting'}, {'status': 'in_progress'},
+                        {'run_attempt': 2}, {'status': 'completed', 'conclusion': 'failure'}):
+            api, pull, active, _ = self.overlapping(**changes)
+            with self.subTest(changes=changes):
+                self.assertTrue(control.supplementary_defer_generation(api, REPO, pull, active))
+        api, pull, active, _ = self.overlapping(id=19)
+        self.assertFalse(control.supplementary_defer_generation(api, REPO, pull, active))
+        self.assertFalse(control.supplementary_defer_generation(Mock(), 'ltn-it/modulix-validation', {}, {}))
+
+    def test_yield_rejects_native_drift_and_unassignable_common_generation(self):
+        api, pull, active, pending = self.overlapping()
+        api.call.side_effect = lambda path: active if path.endswith('/20') else pending | {'status': 'in_progress'}
+        with self.assertRaisesRegex(control.ControlError, 'follower-drift'):
+            control.supplementary_defer_generation(api, REPO, pull, active)
+        api, pull, active, _ = self.overlapping(workflow_url='https://example.invalid/unknown')
+        with self.assertRaisesRegex(control.ControlError, 'source-unassignable'):
+            control.supplementary_defer_generation(api, REPO, pull, active)
+
+    def test_workflow_skips_both_funding_boundaries_and_model_then_fails_deferred_run(self):
+        import yaml
+        workflow = yaml.safe_load((Path(__file__).resolve().parents[1]
+                                   / '.github/workflows/change-control-required.yml').read_text())
+        steps = workflow['jobs']['review']['steps']
+        generation = next(index for index, step in enumerate(steps) if step.get('id') == 'generation')
+        guarded = control.FUNDING_STEPS | {
+            'Protected exact-revision Codex review', 'Install complete-request budget gateway',
+            'Export protected native Codex evidence', 'Persist protected Codex receipt',
+            'Verify applicable native review or governed exemption'}
+        selected = {step['name']: (index, step) for index, step in enumerate(steps) if step['name'] in guarded}
+        self.assertEqual(guarded, set(selected))
+        for name, (index, step) in selected.items():
+            with self.subTest(step=name):
+                self.assertGreater(index, generation)
+                self.assertIn("steps.generation.outputs.deferred != 'true'", step['if'])
+        deferred = next(step for step in steps if step['name'].startswith('Leave deferred invocation'))
+        self.assertEqual("steps.generation.outputs.deferred == 'true'", deferred['if'])
+        self.assertIn('exit 1', deferred['run'])
+        self.assertNotIn('upload-artifact', deferred.get('uses', ''))
+
+    def test_common_consumption_blocks_recovery_before_any_new_authorization(self):
+        api, pull, active, _ = self.overlapping()
+        consumed = self.common()
+        api = self.api(runs=[active, consumed])
+        api.call.return_value = active
+        with (patch.dict(os.environ, {'REVIEW_RECOVERY_PLAN_SHA256': 'e' * 64}),
+              patch('workflow_recovery.authorize') as authorize,
+              self.assertRaisesRegex(control.ControlError, 'consumed-native')):
+            control.reserve_request(api, REPO, pull, 'f' * 40, 20, 1)
+        authorize.assert_not_called()
+
     def test_missing_or_partial_original_funding_job_is_unknown_not_unspent(self):
         job = {'id': 101, 'run_id': 12, 'run_attempt': 1, 'head_sha': HEAD,
                'status': 'completed', 'name': 'Protected current revision',
