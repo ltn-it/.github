@@ -1631,8 +1631,9 @@ def promotion_ingress(api, repo, pull, config):
             require(ingress["merged_at"] and ingress["merge_commit_sha"] == commit, "ingress-association-drift")
             # Verify one native proof under fresh process/cgroup admission,
             # discard its full decoded content and retain only its digest/ref.
+            from workflow_root_ancestry import control_for_ingress
             proof.append({"pull": ingress["number"], "merge": commit,
-                          "control": check_native_control(api, repo, ingress, config)})
+                          "control": control_for_ingress(api, repo, pull, ingress, config)})
         tree = sha(git(objects, "merge-tree", "--write-tree", base, head))
         payload = git(objects, "diff", "--binary", "--full-index", "--no-ext-diff", "--no-textconv",
                       f"{base}^{{tree}}", tree, binary=True)
