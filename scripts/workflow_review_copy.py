@@ -8,11 +8,14 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import http.client
 import json
 import os
 import re
+import stat
 import sys
 import tempfile
+from datetime import datetime, timezone
 from pathlib import Path
 
 import workflow_review_restore as archive
@@ -33,7 +36,8 @@ MARKER = "<!-- native-review-copy/v1 -->\n"
 TARGET = {"number": 276, "base": "036df8aee1f9511154e62cc8c88294433da1ad70",
           "head": "471334b443d5aa258b9ee70fe217044160fbcb43",
           "run": 40992197896, "attempt": 1, "job": 123857300939}
-PROGRAMS = ("workflow_review_restore.py", "workflow_review_copy.py", "workflow_review_copy_producer.py")
+PROGRAMS = ("workflow_review_restore.py", "workflow_review_copy.py", "workflow_review_copy_producer.py",
+            "workflow_review_copy_grant.cjs")
 FILES = {"copy-manifest.json": archive.MAX_OPERATION_BYTES, "operation.zip": archive.MAX_COPY_BYTES,
          "receipt.zip": archive.MAX_COPY_BYTES}
 IDENTITY_ONLY = {"central_source_sha", "source_assets", "input_sha256"}
@@ -112,6 +116,10 @@ def validate_native_proof(repo, pull, record, run, gate):
                               "attempt": run["run_attempt"], "job": gate["id"]}
             and evidence.get("provider_requests_performed") == 0
             and evidence.get("normal_current_approval_required") is True
+            and (evidence.get("custody") or {}).get("credential_revocation")
+            == {"delete_status": 204, "subsequent_read_status": 401}
+            and ((evidence.get("custody") or {}).get("credential_grant") or {}).get("permissions")
+            == {"contents": "read", "metadata": "read"}
             and (record.get("authorization") or {}).get("run") == run["id"]
             and all(type(value) is str and re.fullmatch(r"[0-9a-f]{64}", value)
                     for value in (historical.get("metadata_sha256"), historical.get("response_sha256"),
@@ -135,6 +143,7 @@ class PrivateReader:
                 and os.environ.get("REVIEW_COPY_INSTALLATION_ID") == str(INSTALLATION_ID),
                 "copy-private-app-installation")
         self.token = token
+        self.grant = None
 
     def call(self, path):
         allowed = (
@@ -144,6 +153,8 @@ class PrivateReader:
             or re.fullmatch(rf"repos/{re.escape(CUSTODY)}/compare/[0-9a-f]{{40}}\.\.\.[0-9a-f]{{40}}", path)
         )
         require(bool(allowed), "copy-private-endpoint-scope")
+        if self.grant is None:
+            self.grant = read_grant(self.token)
         # A fresh config prevents ambient CLI credentials/config from replacing
         # this installation token. No token appears in argv or returned errors.
         with tempfile.TemporaryDirectory(prefix="copy-gh-config-") as config:
@@ -167,7 +178,68 @@ class PrivateReader:
                 and installed["repositories"][0].get("private") is True, "copy-private-token-repository-scope")
 
     def close(self):
+        """Revoke before historical interpretation; never infer it from a log."""
+        token = self.token
         self.token = None
+        require(type(token) is str and bool(token), "copy-private-token-already-closed")
+        require(token_status(token, "DELETE", "/installation/token") == 204,
+                "copy-private-revoke-not-confirmed")
+        require(token_status(token, "GET", "/installation/repositories") == 401,
+                "copy-private-revoke-independent-readback")
+        return {"delete_status": 204, "subsequent_read_status": 401}
+
+
+def token_status(token, method, path):
+    """No redirects, retries, shell argv or response-body logging."""
+    require((method, path) in {("DELETE", "/installation/token"), ("GET", "/installation/repositories")},
+            "copy-private-lifecycle-endpoint")
+    connection = http.client.HTTPSConnection("api.github.com", timeout=30)
+    try:
+        connection.request(method, path, headers={"Authorization": "Bearer " + token,
+                           "Accept": "application/vnd.github+json", "User-Agent": "lit-native-review-copy",
+                           "X-GitHub-Api-Version": "2022-11-28"})
+        response = connection.getresponse()
+        require(len(response.read(2049)) <= 2048, "copy-private-lifecycle-body-size")
+        return response.status
+    finally:
+        connection.close()
+
+
+def grant_path():
+    run, attempt = os.environ["GITHUB_RUN_ID"], os.environ["GITHUB_RUN_ATTEMPT"]
+    root = Path(os.environ["RUNNER_TEMP"])
+    require(root.is_absolute() and all(re.fullmatch(r"[1-9][0-9]*", v) for v in (run, attempt)), "copy-grant-path")
+    return root / f"review-copy-grant-{run}-{attempt}.json"
+
+
+def read_grant(token):
+    path = grant_path()
+    with os.fdopen(os.open(path, os.O_RDONLY | os.O_NOFOLLOW), "rb") as stream:
+        info = os.fstat(stream.fileno())
+        try:
+            require(stat.S_ISREG(info.st_mode) and stat.S_IMODE(info.st_mode) == 0o600
+                    and info.st_uid == os.getuid() and 0 < info.st_size <= 4096, "copy-grant-file")
+            raw = stream.read(4097)
+        finally:
+            path.unlink()
+    value = archive.decode(raw, 4096)
+    job = json.loads(os.environ["NATIVE_JOB"])
+    expected = {"source": source_identity(job), "run": int(os.environ["GITHUB_RUN_ID"]),
+                "attempt": int(os.environ["GITHUB_RUN_ATTEMPT"]), "job": job["check_run_id"]}
+    require(type(value) is dict and set(value) == {"schema", "execution", "app_id", "installation_id", "permissions", "repository_selection", "repositories",
+            "obtained_at", "expires_at", "token_sha256"} and value["schema"] == "private-review-copy-grant/v1"
+            and value["execution"] == expected and value["app_id"] == APP_ID
+            and value["installation_id"] == INSTALLATION_ID and value["permissions"] == {"contents": "read", "metadata": "read"}
+            and value["repository_selection"] == "selected" and value["repositories"] == [{"id": CUSTODY_ID,
+                "full_name": CUSTODY, "name": "shared-assets-lit", "private": True}]
+            and value["token_sha256"] == archive.sha256(token.encode()), "copy-grant-native-binding")
+    obtained, expires = [datetime.fromisoformat(value[k].replace("Z", "+00:00")) for k in ("obtained_at", "expires_at")]
+    now = datetime.now(timezone.utc)
+    require(obtained.tzinfo == expires.tzinfo == timezone.utc and 0 < (expires - obtained).total_seconds() <= 3660
+            and -60 <= (now - obtained).total_seconds() <= 3660 and 0 < (expires - now).total_seconds() <= 3660,
+            "copy-grant-expiry")
+    return {"permissions": value["permissions"], "obtained_at": value["obtained_at"], "expires_at": value["expires_at"],
+            "native_receipt_sha256": archive.sha256(raw)}
 
 
 def custody_ref(reader):
@@ -324,55 +396,61 @@ def native_context(api, repo, pull, source):
 def evidence(api, repo, pull, source, locator, *, reader=None, private_token=None):
     ambient = os.environ.pop("REVIEW_COPY_TOKEN", "")
     token = ambient if private_token is None else private_token
+    require(not os.environ.get("NODE_OPTIONS"), "copy-observer-must-not-reach-consumer")
     require(target(pull, repo), "copy-target-required")
     context = native_context(api, repo, pull, source)
     require(locate(api, repo, pull, source) == locator, "copy-current-locator-drift")
-    # Do not let this credential reach the old interpreter, Git materializer or
-    # any later step. The action's post handler separately revokes the token.
+    # Revoke the credential and confirm denial before starting any historical
+    # interpreter. The pinned action's post handler is a failure cleanup fallback.
     private = reader or PrivateReader(token)
     try:
         manifest, payloads = package(api, private, pull, locator)
-        with tempfile.TemporaryDirectory(prefix="native-review-copy-") as temp:
-            root = Path(temp)
-            for name in ("operation.zip", "receipt.zip"):
-                file = root / name; file.write_bytes(payloads[name]); file.chmod(0o600)
-            report = archive.authenticate(api, manifest["plan"]["original"], root)
-            require(report == manifest["report"], "copy-reauthenticated-original-drift")
-            old = historical_subject(api, repo, pull, root / "historical-subject",
-                                     public_token=os.environ.get("GH_TOKEN", ""),
-                                     expected_metadata_sha256=report["metadata_sha256"])
-            current = materialize(api, repo, pull, source, root / "current-subject")
-            require(digest(old) == report["metadata_sha256"] and old.get("central_source_sha") == archive.ORIGINAL_SOURCE
-                    and current.get("central_source_sha") == source and source != archive.ORIGINAL_SOURCE,
-                    "copy-dual-source-identities")
-            require({k: v for k, v in old.items() if k not in IDENTITY_ONLY}
-                    == {k: v for k, v in current.items() if k not in IDENTITY_ONLY}
-                    and (root / "historical-subject/change.patch").read_bytes()
-                    == (root / "current-subject/change.patch").read_bytes(), "copy-semantic-subject-drift")
-            semantic = digest({k: v for k, v in old.items() if k not in IDENTITY_ONLY})
-        require(locate(api, repo, pull, source) == locator and native_context(api, repo, pull, source) == context,
+    finally:
+        revocation = private.close()
+    with tempfile.TemporaryDirectory(prefix="native-review-copy-") as temp:
+        root = Path(temp)
+        for name in ("operation.zip", "receipt.zip"):
+            file = root / name; file.write_bytes(payloads[name]); file.chmod(0o600)
+        report = archive.authenticate(api, manifest["plan"]["original"], root)
+        require(report == manifest["report"], "copy-reauthenticated-original-drift")
+        old = historical_subject(api, repo, pull, root / "historical-subject",
+                                 public_token=os.environ.get("GH_TOKEN", ""),
+                                 expected_metadata_sha256=report["metadata_sha256"])
+        current = materialize(api, repo, pull, source, root / "current-subject")
+        require(digest(old) == report["metadata_sha256"] and old.get("central_source_sha") == archive.ORIGINAL_SOURCE
+                and current.get("central_source_sha") == source and source != archive.ORIGINAL_SOURCE,
+                "copy-dual-source-identities")
+        require({k: v for k, v in old.items() if k not in IDENTITY_ONLY}
+                == {k: v for k, v in current.items() if k not in IDENTITY_ONLY}
+                and (root / "historical-subject/change.patch").read_bytes()
+                == (root / "current-subject/change.patch").read_bytes(), "copy-semantic-subject-drift")
+        semantic = digest({k: v for k, v in old.items() if k not in IDENTITY_ONLY})
+    require(locate(api, repo, pull, source) == locator and native_context(api, repo, pull, source) == context,
                 "copy-current-generation-drift")
-        live_pull(api, repo, pull["number"], binding(pull))
-        return {"kind": "scoped-historical-review-copy/v1", "locator": locator,
+    live_pull(api, repo, pull["number"], binding(pull))
+    return {"kind": "scoped-historical-review-copy/v1", "locator": locator,
                 "historical_review": {"source": archive.ORIGINAL_SOURCE, "metadata_sha256": report["metadata_sha256"],
                                       "response_sha256": report["response_sha256"], "native_producer": {
                                           key: manifest["plan"]["original"][key] for key in ("run", "attempt", "job")}},
                 "current_verification": {"execution": context, "metadata_sha256": digest(current),
                                          "semantic_subject_sha256": semantic},
                 "custody": {"repository_id": CUSTODY_ID, "commit": locator["commit"],
-                            "plan_sha256": locator["plan_sha256"], "producer_source": manifest["plan"]["producer_source"]},
+                            "plan_sha256": locator["plan_sha256"], "producer_source": manifest["plan"]["producer_source"],
+                            "credential_grant": private.grant,
+                            "credential_revocation": revocation},
                 "provider_requests_performed": 0, "normal_current_approval_required": True}
-    finally:
-        private.close()
 
 
 if __name__ == "__main__":
     # Pre-mint validation only. The pinned action supplies app-slug and
     # installation-id (it has no app-id output); Reader checks those afterwards.
     try:
-        require(sys.argv[1:] == ["validate-token-input"] and os.environ.get("REVIEW_COPY_CLIENT_ID") == CLIENT_ID,
-                "copy-private-client-input")
+        if sys.argv[1:] == ["cleanup-grant"]:
+            grant_path().unlink(missing_ok=True)
+        else:
+            require(sys.argv[1:] == ["validate-token-input"] and os.environ.get("REVIEW_COPY_CLIENT_ID") == CLIENT_ID
+                    and not grant_path().exists(), "copy-private-client-input")
     except Exception:
         print("Private review-copy token contract input rejected.", file=sys.stderr)
         raise SystemExit(1) from None
-    print("Private review-copy client input verified; no token issued.")
+    print("Private review-copy grant metadata operation completed; no token issued.")

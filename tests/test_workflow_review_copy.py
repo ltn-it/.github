@@ -32,6 +32,7 @@ class Custody:
     def __init__(self):
         self.tip = BASE
         self.closed = False
+        self.grant = {"permissions": {"contents": "read", "metadata": "read"}, "fixture": "synthetic grant only"}
         self.calls = []
         self.private = True
         self.broad_token = False
@@ -95,6 +96,7 @@ class Custody:
 
     def close(self):
         self.closed = True
+        return {"delete_status": 204, "subsequent_read_status": 401}
 
 
 class ProtocolAPI(archive_fixtures.NativeAPI):
@@ -202,6 +204,7 @@ class CopyProtocolTests(unittest.TestCase):
 
     def evidence(self):
         def old(_api, _repo, _pull, destination, *, public_token, expected_metadata_sha256):
+            self.assertTrue(self.api.custody.closed, "custody credential must be revoked before historical interpretation")
             self.assertEqual("public-native-token", public_token)
             self.assertEqual(digest(self.fixture.metadata), expected_metadata_sha256)
             self.assertNotIn("REVIEW_COPY_TOKEN", os.environ)
@@ -354,7 +357,8 @@ class CopyProtocolTests(unittest.TestCase):
     def test_private_reader_sends_only_a_fixed_get_and_keeps_secret_out_of_argv(self):
         values = {"REVIEW_COPY_CLIENT_ID": consumer.CLIENT_ID, "REVIEW_COPY_APP_SLUG": "lightning-it-release-automation",
                   "REVIEW_COPY_INSTALLATION_ID": str(consumer.INSTALLATION_ID)}
-        with patch.dict(os.environ, values), patch.object(consumer, "capture", return_value=b'{}') as native:
+        with patch.dict(os.environ, values), patch.object(consumer, "read_grant", return_value={"fixture": "validated separately"}), \
+             patch.object(consumer, "capture", return_value=b'{}') as native:
             reader = consumer.PrivateReader("private-fixture-token"); reader.call(f"repos/{consumer.CUSTODY}")
         args, kwargs = native.call_args
         self.assertNotIn("private-fixture-token", str(args))
@@ -367,7 +371,7 @@ class CopyProtocolTests(unittest.TestCase):
             # Use an independent destination; historical files are synthetic,
             # and capture is replaced before any child or Git process starts.
             destination = self.fixture.directory / "old-context"
-            with patch.dict(os.environ, {"REVIEW_COPY_TOKEN": "private-secret", "OPENAI_API_KEY": "model-secret"}), \
+            with patch.dict(os.environ, {"REVIEW_COPY_TOKEN": "private-secret", "OPENAI_API_KEY": "model-secret", "NODE_OPTIONS": "observer-must-not-inherit"}), \
                  patch.object(consumer, "capture", return_value=canonical(self.fixture.metadata)) as child:
                 result = consumer.historical_subject(self.api, self.fixture.repo, self.fixture.pull,
                                                      destination, public_token="public-native-token",
@@ -377,6 +381,7 @@ class CopyProtocolTests(unittest.TestCase):
             self.assertNotIn("NATIVE_JOB", environment)
             self.assertNotIn("REVIEW_COPY_TOKEN", environment)
             self.assertNotIn("OPENAI_API_KEY", environment)
+            self.assertNotIn("NODE_OPTIONS", environment)
             self.assertEqual(consumer.archive.ORIGINAL_SOURCE, result["central_source_sha"])
 
     def test_current_native_source_job_attempt_and_association_are_checked(self):
@@ -481,6 +486,80 @@ class CopyProtocolTests(unittest.TestCase):
                 consumer.validate_native_proof(self.fixture.repo, self.fixture.pull, changed, run, gate)
         with self.assertRaisesRegex(ControlError, "ingress-target"):
             consumer.validate_native_proof("ltn-it/other", self.fixture.pull, record, run, gate)
+
+    def test_private_credential_is_revoked_and_denied_before_old_execution(self):
+        values = {"REVIEW_COPY_CLIENT_ID": consumer.CLIENT_ID, "REVIEW_COPY_APP_SLUG": "lightning-it-release-automation",
+                  "REVIEW_COPY_INSTALLATION_ID": str(consumer.INSTALLATION_ID)}
+        with patch.dict(os.environ, values), patch.object(consumer, "token_status", side_effect=[204, 401]) as native:
+            reader = consumer.PrivateReader("private-fixture-token")
+            self.assertEqual({"delete_status": 204, "subsequent_read_status": 401}, reader.close())
+            self.assertIsNone(reader.token)
+            self.assertEqual([("DELETE", "/installation/token"), ("GET", "/installation/repositories")],
+                             [(call.args[1], call.args[2]) for call in native.call_args_list])
+        for outcome in ([403], [204, 200], [204, 404]):
+            with self.subTest(outcome=outcome), patch.dict(os.environ, values), \
+                 patch.object(consumer, "token_status", side_effect=outcome) as native:
+                reader = consumer.PrivateReader("private-fixture-token")
+                with self.assertRaisesRegex(ControlError, "private-revoke"):
+                    reader.close()
+                self.assertIsNone(reader.token)
+                self.assertEqual(len(outcome), native.call_count)
+
+    def test_failed_or_unknown_revoke_never_executes_original_code_and_is_not_retried(self):
+        self.produced()
+        with patch.object(self.api.custody, "close", side_effect=ControlError("copy-private-revoke-not-confirmed")) as close, \
+             patch.object(consumer, "historical_subject") as old, \
+             self.assertRaisesRegex(ControlError, "revoke-not-confirmed"):
+            self.evidence()
+        close.assert_called_once(); old.assert_not_called()
+
+    def test_token_lifecycle_transport_never_redirects_retries_or_logs_a_secret(self):
+        response = unittest.mock.Mock(status=204); response.read.return_value = b""
+        connection = unittest.mock.Mock(); connection.getresponse.return_value = response
+        with patch.object(consumer.http.client, "HTTPSConnection", return_value=connection) as connect:
+            self.assertEqual(204, consumer.token_status("private-fixture-token", "DELETE", "/installation/token"))
+        connect.assert_called_once_with("api.github.com", timeout=30)
+        connection.close.assert_called_once()
+        self.assertEqual(("DELETE", "/installation/token"), connection.request.call_args.args)
+        self.assertEqual("Bearer private-fixture-token", connection.request.call_args.kwargs["headers"]["Authorization"])
+        with patch.object(consumer.http.client, "HTTPSConnection") as connect, \
+             self.assertRaisesRegex(ControlError, "lifecycle-endpoint"):
+            consumer.token_status("private-fixture-token", "POST", "/app/installations/1/access_tokens")
+        connect.assert_not_called()
+
+    def test_private_temp_files_are_removed_after_success_and_semantic_failure(self):
+        self.produced(); original = self.materialized; locations = []
+        def remembered(source, destination):
+            locations.append(destination.parent)
+            return original(source, destination)
+        with patch.object(self, "materialized", side_effect=remembered): self.evidence()
+        self.assertTrue(locations)
+        self.assertTrue(all(not path.exists() for path in locations))
+
+        locations.clear()
+        def changed(source, destination):
+            result = remembered(source, destination)
+            if source == NEW_SOURCE: result["instructions_sha256"] = "changed"
+            return result
+        with patch.object(self, "materialized", side_effect=changed), \
+             self.assertRaisesRegex(ControlError, "semantic-subject-drift"):
+            self.evidence()
+        self.assertTrue(all(not path.exists() for path in locations))
+
+    def test_missing_native_grant_revokes_before_private_reads_and_old_interpretation(self):
+        self.produced()
+        values = {"REVIEW_COPY_CLIENT_ID": consumer.CLIENT_ID, "REVIEW_COPY_APP_SLUG": "lightning-it-release-automation",
+                  "REVIEW_COPY_INSTALLATION_ID": str(consumer.INSTALLATION_ID), "RUNNER_TEMP": str(self.fixture.directory)}
+        locator = consumer.locate(self.api, self.fixture.repo, self.fixture.pull, NEW_SOURCE)
+        with patch.dict(os.environ, values), patch.object(consumer, "token_status", side_effect=[204, 401]) as revoke, \
+             patch.object(consumer, "capture") as private_read, patch.object(consumer, "historical_subject") as old:
+            reader = consumer.PrivateReader("private-fixture-token")
+            with self.assertRaises(FileNotFoundError):
+                consumer.evidence(self.api, self.fixture.repo, self.fixture.pull, NEW_SOURCE, locator, reader=reader)
+        self.assertEqual(2, revoke.call_count)
+        self.assertIsNone(reader.token)
+        private_read.assert_not_called(); old.assert_not_called()
+
 
 
 if __name__ == "__main__":
