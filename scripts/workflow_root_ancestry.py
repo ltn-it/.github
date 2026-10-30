@@ -23,6 +23,43 @@ MAIN_PROOF = 12903126597
 MAIN_PROOF_DIGEST = 'aa123ea71359ab434c0401f43a38a1c719fc813ebfb22021c9eb1d9d5992cbf8'
 
 
+class BoundGenerations:
+    """Keep every inventory read binding-aware, including the final selector.
+
+    An unidentified newer run is never treated as a foreign PR or no effect.
+    Known foreign subjects still go through the ordinary ingress selector.
+    """
+    def __init__(self, delegate, subjects):
+        self.delegate = delegate
+        self.subjects = {f'repos/{ROOT}/actions/runs?head_sha={pull["head"]["sha"]}': (pull, run)
+                         for pull, run in subjects}
+
+    def __getattr__(self, name):
+        return getattr(self.delegate, name)
+
+    def pages(self, path, key=None):
+        from workflow_control import native_required, require
+        rows = self.delegate.pages(path, key)
+        if path not in self.subjects or key != 'workflow_runs':
+            return rows
+        pull, observed = self.subjects[path]
+        for run in rows:
+            if not native_required(run, ROOT):
+                continue
+            require(type(run.get('id')) is int and type(run.get('run_attempt')) is int
+                    and run['id'] > 0 and run['run_attempt'] > 0
+                    and run.get('head_sha') == pull['head']['sha'], 'root-ancestry-native-inventory-shape')
+            if (run['id'], run['run_attempt']) <= (observed['id'], observed['run_attempt']):
+                continue
+            associations = run.get('pull_requests')
+            require(type(associations) is list and len(associations) == 1
+                    and type(associations[0].get('number')) is int and associations[0]['number'] > 0
+                    and associations[0]['number'] != pull['number']
+                    and associations[0].get('head', {}).get('sha') == run['head_sha'],
+                    'root-ancestry-newer-or-unknown-bound-generation')
+        return rows
+
+
 def control_for_ingress(api, repo, promotion, ingress, config):
     from workflow_control import check_native_control
     result = baseline(api, repo, promotion, ingress, config)
@@ -39,7 +76,8 @@ def baseline(api, repo, promotion, ingress, config):
         return None
     from workflow_control import (
         RELEASE, artifact_record, digest, historical_binding_matches, identity,
-        native_approval, native_jobs, native_required, operation_record, require,
+        ingress_candidates, native_approval, native_jobs, native_required, operation_record, require,
+        revalidate_native_generation,
     )
     from workflow_ingress import instant
 
@@ -48,8 +86,8 @@ def baseline(api, repo, promotion, ingress, config):
             and SOURCE in config['accepted_sources'], 'root-ancestry-fixed-baseline-required')
     repository = api.call(f'repos/{ROOT}')
     require(repository.get('id') == IDENTIFIER and repository.get('full_name') == ROOT
-            and repository.get('visibility') == 'public' and not repository.get('archived')
-            and not repository.get('disabled'), 'root-ancestry-repository-identity')
+            and repository.get('visibility') == 'public' and repository.get('archived') is False
+            and repository.get('disabled') is False, 'root-ancestry-repository-identity')
 
     def refs():
         result = {}
@@ -100,6 +138,18 @@ def baseline(api, repo, promotion, ingress, config):
                 and run.get('conclusion') == conclusion, 'root-ancestry-original-native-generation-required')
     require(instant(original['updated_at']) < instant(accepted['merged_at']),
             'root-ancestry-main-review-before-merge-required')
+    subjects = [(accepted, original), (historical, failed)]
+    fenced = BoundGenerations(api, subjects)
+    generations = []
+    fields = ('id', 'run_attempt', 'status', 'conclusion', 'head_sha', 'workflow_id', 'workflow_url', 'path')
+    for subject, observed in subjects:
+        bindings = {}
+        rows = fenced.pages(f'repos/{ROOT}/actions/runs?head_sha={subject["head"]["sha"]}', 'workflow_runs')
+        candidates = ingress_candidates(fenced, ROOT, subject, config['accepted_sources'], rows, bindings)
+        selected = max(candidates, key=lambda row: (row['id'], row['run_attempt'])) if candidates else None
+        require(selected is not None and all(selected.get(key) == observed.get(key) for key in fields),
+                'root-ancestry-original-generation-no-longer-current')
+        generations.append((subject, observed, bindings))
     jobs = native_jobs(api, ROOT, original)
     expected = {'Source common quality': 123487224718, 'Protected current revision': 123487730389,
                 'Approve exact main promotion': 123487921318, 'Current revision review': 123493489393}
@@ -172,6 +222,8 @@ def baseline(api, repo, promotion, ingress, config):
             and api.pages(f'repos/{ROOT}/actions/runs/{MAIN_RUN}/artifacts', 'artifacts') == artifacts
             and api.pages(f'repos/{ROOT}/actions/runs/{FAILED_RUN}/artifacts', 'artifacts') == failed_artifacts
             and native_approval(api, ROOT, MAIN_RUN) == approval, 'root-ancestry-native-generation-drift')
+    for subject, observed, bindings in generations:
+        revalidate_native_generation(fenced, ROOT, subject, config['accepted_sources'], observed, bindings)
     # The mutable protected tips are the final I/O, after all historical reads.
     require(refs() == observed_refs, 'root-ancestry-current-promotion-drift')
     return {'kind': 'protected-main-ancestry-baseline/v1', 'route': 'ancestry', 'source_sha': SOURCE,

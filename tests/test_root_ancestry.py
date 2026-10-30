@@ -42,13 +42,14 @@ class NativeCapture:
         return self.value['job_logs'][str(job)]['projection']
 
     def artifact(self, api, repo, run, name, filename):
-        if api is not self or repo != ancestry.ROOT or run['id'] not in {
+        if getattr(api, 'delegate', api) is not self or repo != ancestry.ROOT or run['id'] not in {
                 ancestry.MAIN_RUN, ancestry.FAILED_RUN, 41018682524}:
             raise AssertionError('Unknown captured artifact origin.')
         expected = 'control-operation.json' if name.startswith('control-operation') else 'control-proof.json'
         if filename != expected:
             raise AssertionError('Foreign artifact file.')
-        return copy.deepcopy(self.value['decoded_artifacts'][name])
+        key = 'main-control-operation-1' if run['id'] == ancestry.MAIN_RUN and name == 'control-operation-1' else name
+        return copy.deepcopy(self.value['decoded_artifacts'][key])
 
 
 class RootAncestryTests(unittest.TestCase):
@@ -168,12 +169,65 @@ class RootAncestryTests(unittest.TestCase):
             value = original(path, key)
             if path == f'{PREFIX}/actions/runs/{ancestry.MAIN_RUN}/artifacts':
                 count += 1
-                if count > 1:
+                if count > 2:
                     next(row for row in value if row['id'] == ancestry.MAIN_PROOF)['expired'] = True
             return value
         api.pages = changed
         with self.assertRaisesRegex(control.ControlError, 'native-generation-drift'):
             self.verify(api)
+
+    def newer(self, api, number, *, associated=True):
+        subject = api.records[f'{PREFIX}/pulls/{number}']
+        run = copy.deepcopy(api.records[f'{PREFIX}/actions/runs/{ancestry.MAIN_RUN if number == 985 else ancestry.FAILED_RUN}'])
+        run.update(id=99999999999, status='in_progress', conclusion=None, pull_requests=[])
+        if associated:
+            run['pull_requests'] = [{'number': number, 'base': copy.deepcopy(subject['base']),
+                                    'head': copy.deepcopy(subject['head'])}]
+        path = f"{PREFIX}/actions/runs?head_sha={subject['head']['sha']}"
+        api.records[path]['workflow_runs'].insert(0, run)
+        api.records[path]['total_count'] += 1
+
+    def test_new_bound_or_unknown_run_ids_cannot_hide_behind_unchanged_pinned_runs(self):
+        for number in (985, 986):
+            for associated in (True, False):
+                api = NativeCapture()
+                self.newer(api, number, associated=associated)
+                with self.subTest(number=number, associated=associated), self.assertRaises(control.ControlError):
+                    self.verify(api)
+
+    def test_a_new_bound_run_during_final_generation_reads_still_blocks(self):
+        for associated in (True, False):
+            api = NativeCapture()
+            original = api.pages
+            count = 0
+            def changed(path, key=None):
+                nonlocal count
+                if path == f'{PREFIX}/actions/runs?head_sha={ancestry.MAIN}':
+                    count += 1
+                    if count == 3:
+                        self.newer(api, 986, associated=associated)
+                return original(path, key)
+            api.pages = changed
+            with self.subTest(associated=associated), self.assertRaises(control.ControlError):
+                self.verify(api)
+
+    def test_a_known_foreign_subject_does_not_replace_this_fixed_historical_generation(self):
+        api = NativeCapture()
+        self.newer(api, 986)
+        rows = api.records[f'{PREFIX}/actions/runs?head_sha={ancestry.MAIN}']['workflow_runs']
+        rows[0]['pull_requests'][0]['number'] = 9999
+        self.assertEqual('protected-main-ancestry-baseline/v1', self.verify(api)['kind'])
+
+    def test_missing_null_and_nonboolean_lifecycle_flags_are_not_active_repository_proof(self):
+        for key in ('archived', 'disabled'):
+            for value in ('missing', None, 0, ''):
+                api = NativeCapture()
+                if value == 'missing':
+                    del api.records[PREFIX][key]
+                else:
+                    api.records[PREFIX][key] = value
+                with self.subTest(key=key, value=value), self.assertRaises(control.ControlError):
+                    self.verify(api)
 
 
 if __name__ == '__main__':

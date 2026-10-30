@@ -25,7 +25,8 @@
     "repos/ltn-it/.github/actions/runs/41018682524/artifacts?per_page=100": "a11762e97655191931fb63fd9a7565a68b8bf4334b483824436b6d8a3c95dcec",
     "repos/ltn-it/.github/pulls/987": "410985a927741f106ff5d8774009a2f30435c9217ac2e6dc300d6a8084d3d9ac",
     "repos/ltn-it/.github/actions/runs?head_sha=a7f826492c5ae5757512e5ddfb4523b298068121&per_page=100": "13e726489a9aeae449abd1940ad4a357a5161e84be6feb1839424e2cb089c5bb",
-    "repos/ltn-it/.github/actions/runs?head_sha=c353913fc261e193b60876219820e9714b0122b9&per_page=100": "b0b7875bf80088310d875ab9014a8b0c4e8afe4a9935619804189a153f4dcdff"
+    "repos/ltn-it/.github/actions/runs?head_sha=c353913fc261e193b60876219820e9714b0122b9&per_page=100": "b0b7875bf80088310d875ab9014a8b0c4e8afe4a9935619804189a153f4dcdff",
+    "repos/ltn-it/.github/actions/runs?head_sha=000ed477a7af21e0accec549531966f095523bc2&per_page=100": "555c6fe873abb2000023a17fa41034a1dad87a731317eb1dfeb4f0e3544927b0"
   },
   "records": {
     "repos/ltn-it/.github": {
@@ -1544,6 +1545,119 @@
           }
         }
       ]
+    },
+    "repos/ltn-it/.github/actions/runs?head_sha=000ed477a7af21e0accec549531966f095523bc2": {
+      "total_count": 6,
+      "workflow_runs": [
+        {
+          "id": 40896054722,
+          "head_sha": "000ed477a7af21e0accec549531966f095523bc2",
+          "head_branch": "develop",
+          "event": "workflow_run",
+          "workflow_id": 385149091,
+          "workflow_url": "https://api.github.com/repos/ltn-it/.github/actions/workflows/385149091",
+          "path": ".github/workflows/delivery-operations.yml",
+          "status": "completed",
+          "conclusion": "action_required",
+          "run_attempt": 1,
+          "created_at": "2026-10-29T14:53:49Z",
+          "updated_at": "2026-10-29T14:53:49Z",
+          "pull_requests": [],
+          "repository": {
+            "id": 1112629689
+          }
+        },
+        {
+          "id": 40885286707,
+          "head_sha": "000ed477a7af21e0accec549531966f095523bc2",
+          "head_branch": "develop",
+          "event": "pull_request",
+          "workflow_id": 385148697,
+          "workflow_url": "https://api.github.com/repos/ltn-it/.github/actions/required_workflows/385148697",
+          "path": ".github/workflows/change-control-required.yml",
+          "status": "completed",
+          "conclusion": "success",
+          "run_attempt": 1,
+          "created_at": "2026-10-29T13:48:07Z",
+          "updated_at": "2026-10-29T13:59:58Z",
+          "pull_requests": [],
+          "repository": {
+            "id": 1112629689
+          }
+        },
+        {
+          "id": 40885286874,
+          "head_sha": "000ed477a7af21e0accec549531966f095523bc2",
+          "head_branch": "develop",
+          "event": "pull_request",
+          "workflow_id": 307348678,
+          "workflow_url": "https://api.github.com/repos/ltn-it/.github/actions/workflows/307348678",
+          "path": ".github/workflows/repository-quality.yml",
+          "status": "completed",
+          "conclusion": "success",
+          "run_attempt": 1,
+          "created_at": "2026-10-29T13:48:07Z",
+          "updated_at": "2026-10-29T13:49:55Z",
+          "pull_requests": [],
+          "repository": {
+            "id": 1112629689
+          }
+        },
+        {
+          "id": 40885280945,
+          "head_sha": "000ed477a7af21e0accec549531966f095523bc2",
+          "head_branch": "refs/pull/985/head",
+          "event": "dynamic",
+          "workflow_id": 307349848,
+          "workflow_url": "https://api.github.com/repos/ltn-it/.github/actions/workflows/307349848",
+          "path": "dynamic/github-code-scanning/codeql",
+          "status": "completed",
+          "conclusion": "success",
+          "run_attempt": 1,
+          "created_at": "2026-10-29T13:48:04Z",
+          "updated_at": "2026-10-29T13:48:55Z",
+          "pull_requests": [],
+          "repository": {
+            "id": 1112629689
+          }
+        },
+        {
+          "id": 40884701918,
+          "head_sha": "000ed477a7af21e0accec549531966f095523bc2",
+          "head_branch": "develop",
+          "event": "dynamic",
+          "workflow_id": 307349848,
+          "workflow_url": "https://api.github.com/repos/ltn-it/.github/actions/workflows/307349848",
+          "path": "dynamic/github-code-scanning/codeql",
+          "status": "completed",
+          "conclusion": "success",
+          "run_attempt": 1,
+          "created_at": "2026-10-29T13:44:24Z",
+          "updated_at": "2026-10-29T13:45:38Z",
+          "pull_requests": [],
+          "repository": {
+            "id": 1112629689
+          }
+        },
+        {
+          "id": 40884700067,
+          "head_sha": "000ed477a7af21e0accec549531966f095523bc2",
+          "head_branch": "develop",
+          "event": "push",
+          "workflow_id": 307348678,
+          "workflow_url": "https://api.github.com/repos/ltn-it/.github/actions/workflows/307348678",
+          "path": ".github/workflows/repository-quality.yml",
+          "status": "completed",
+          "conclusion": "success",
+          "run_attempt": 1,
+          "created_at": "2026-10-29T13:44:24Z",
+          "updated_at": "2026-10-29T13:46:31Z",
+          "pull_requests": [],
+          "repository": {
+            "id": 1112629689
+          }
+        }
+      ]
     }
   },
   "job_logs": {
@@ -1722,6 +1836,27 @@
         "labels": [],
         "number": 987,
         "title": "fix(control): close Supplementary funding and scheduling boundaries"
+      },
+      "source_sha": "015233f4dfe0f95a6df0ea8a9e4ef8150dadc19f",
+      "version": 1
+    },
+    "main-control-operation-1": {
+      "binding": {
+        "author": [
+          "lightning-it-release-automation[bot]",
+          307565056,
+          "Bot"
+        ],
+        "base": "97fb1c61a1753eac3fc126e2ba7cac33ec463f3e",
+        "base_ref": "main",
+        "body": "Prepared from protected branches. Current native review, product quality, security checks and applicable one-person approval remain required. This preparation grants no approval.",
+        "draft": false,
+        "head": "000ed477a7af21e0accec549531966f095523bc2",
+        "head_ref": "develop",
+        "head_repository": "ltn-it/.github",
+        "labels": [],
+        "number": 985,
+        "title": "chore(release): promote protected develop to main"
       },
       "source_sha": "015233f4dfe0f95a6df0ea8a9e4ef8150dadc19f",
       "version": 1
