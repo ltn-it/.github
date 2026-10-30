@@ -1,143 +1,194 @@
-# Archived native review copies
+# Cloud native review copy recovery
 
-## Implemented boundary
+## Scope and implementation status
 
-`scripts/workflow_review_restore.py` authenticates a locally preserved copy of
-one historical Cloud review. It performs GitHub reads and local decoding only.
-It does not upload artifacts, allocate review funding, call a model, rerun a
-workflow, change a verifier selector, authorize a release, or publish a check.
-There are deliberately no hooks in `workflow_control.py` or `workflow_codex.py`.
+This repair supports one fixed incident: public repository
+`ltn-it/ansible-collection-cloud` (ID `1318852819`), release PR `276`, base
+`036df8aee1f9511154e62cc8c88294433da1ad70`, head
+`471334b443d5aa258b9ee70fe217044160fbcb43`, and original native review
+`40992197896/1`, job `123857300939`, Source015
+`015233f4dfe0f95a6df0ea8a9e4ef8150dadc19f`.
 
-The supported original producer is the protected common workflow at
-`015233f4dfe0f95a6df0ea8a9e4ef8150dadc19f` (Source015), for the existing Cloud
-repository identity only. Other sources and repositories are rejected. This is
-an archive-verification boundary, not admission of another repository or source.
+The source modules implement three separate boundaries:
 
-The operator supplies an untrusted `native-review-copy/v1` manifest and exactly
-two local files named `operation.zip` and `receipt.zip`. The command emits a new
-`authenticated-native-review-copy/v1` report to stdout. Its `original` section
-retains the old run, attempt, job, source, artifact IDs, sizes and ZIP digests.
-Its `copy` section describes local files and the verifier's own SHA-256. It
-explicitly reports `native_artifact: false` and `current_gate_pass: false`.
-It neither recreates nor impersonates an original GitHub artifact.
+- `workflow_review_restore.py`: authenticate the original native review and
+  the two byte-preserved ZIP copies using original GitHub records and logs.
+- `workflow_review_copy_producer.py`: prepare a read-only, inspectable custody
+  plan; publish exactly that saved plan with one atomic Git ref comparison,
+  then write an independently identified locator.
+- `workflow_review_copy.py`: restrict the locator and private read credential,
+  reauthenticate the original review, and compare independently reconstructed
+  historical and current subjects without relabeling the historical request.
 
-Run through the existing pinned Devtools boundary when qualifying the verifier.
-The CLI requires an already authorized, read-only GitHub connection for live
-reads; this change adds no credential forwarding or new runtime environment.
-Private original copies and their reports must remain in the private consumer's
-authorized storage. Do not commit them to this public source repository.
+At the current Draft stage, common-control and YAML hooks are qualified in an
+isolated integration patch against frozen prerequisite
+`fee7fd5b62258c18e6469319840b5b9ab7dc1d98`. They must follow the actual protected
+Develop integration of the concurrent source repair before being included in
+the same complete review package. There are no live common-control hooks in
+this Draft yet. `workflow_codex.py` and its native artifact reader are unchanged.
+No source PR, local test, locator or custody plan selects a verifier or grants a
+release approval. Operational effects remain held by the central owner.
 
-## Untrusted manifest
+## Original evidence and identity
 
-The manifest has exactly these fields:
+The untrusted original manifest has exactly `schema`, `repository`,
+`repository_id`, `pull_request`, `run`, `attempt`, `job`, `source_sha`, and
+`artifacts`. Schema is `native-review-copy/v1`; source must be Source015. Each
+of the exactly two artifact descriptors has `id`, `name`, `bytes`, and
+`sha256`. Local files are `operation.zip` and `receipt.zip`; their old native
+artifact identities remain historical, never names or IDs of new artifacts.
 
-| Field | Meaning |
-| --- | --- |
-| `schema` | `native-review-copy/v1` |
-| `repository` | Existing canonical Cloud repository name |
-| `repository_id` | Existing immutable Cloud repository ID |
-| `pull_request` | Original and still-current release PR number |
-| `run`, `attempt`, `job` | Original successful review producer |
-| `source_sha` | Source015, without relabeling it as a newer source |
-| `artifacts.operation` | Original operation artifact descriptor |
-| `artifacts.receipt` | Original Codex receipt artifact descriptor |
+The archive verifier reads GitHub's original job log itself. It authenticates
+the numeric repository, open same-repository Release App PR, native Required
+Workflow association, exact original successful job and all required export
+and upload steps. The defining workflow and pinned upload-action sections must
+match their immutable Source015 contracts. Upload size, ZIP SHA-256, ID, name,
+finalization and same-repository run URL must form one unambiguous ordered
+record. Missing, duplicate, contradictory or foreign records fail closed.
 
-Each artifact descriptor contains exactly `id`, `name`, `bytes`, and `sha256`.
-Names must be `control-operation-N` and `codex-receipt-N` for the original
-attempt N. Locators and declared digests confer no authority by themselves.
+The complete original Python source asset inventory, prompt, schema,
+authoritative protected instruction bundle and metadata must match immutable
+Source015 assets and the original native export. Safe ZIP decoding admits only
+the exact members, bounded expansion and regular files; it never extracts an
+archive. Native record, complete original metadata, request fingerprint, raw
+provider wire, completed response, model/response identity and original PASS
+must agree. A copied PASS field alone has no authority. The verifier rereads the
+original run/job and current PR before returning provenance.
 
-## Verification and rejection
+Its output is a new `authenticated-native-review-copy/v1` report. It explicitly
+states `native_artifact: false`, `current_gate_pass: false` and zero performed
+provider requests. It does not restore original GitHub artifacts.
 
-The verifier obtains the original job log directly from GitHub. A supplied log
-file cannot replace that read. It authenticates the numeric repository, exact
-open same-repository Release App PR, native Required Workflow run, its exact
-base/head/PR association and the unique successful original review job. All
-required operation, materialization, collection, export and upload steps must
-have actually succeeded in that original attempt.
+## Private custody and producer
 
-The defining Source015 workflow is checked against its fixed byte digest.
-The native export context must name Source015 and the same native job. The
-original source's complete Python asset inventory, prompt and schema are read
-at immutable revisions and compared with the original metadata. The complete
-metadata digest, including `input_sha256`, remains unchanged.
+Cloud is public. The original raw provider response includes instruction and
+provider context; the ZIPs and full reports must stay private. They must never
+be committed to public Source or uploaded to public Cloud Actions artifacts.
 
-For each original artifact, the exact pinned upload-action section must contain
-one consistent, ordered size, ZIP SHA-256, artifact ID, name, finalization and
-same-repository run URL. Missing, duplicate, contradictory, foreign-action or
-ambiguous log records fail closed. The local ZIP bytes must match that native
-size and digest before decoding. Member names are fixed; links, directories,
-extra or duplicate members, encryption, unsupported compression and oversized
-expanded files are denied. No archive is extracted to the filesystem.
+The proposed existing custody target is private `ltn-it/shared-assets-lit`
+(ID `1120841013`), protected ref `refs/heads/lit-review-operations`, rule
+`24526630`. The rule must remain active, prohibit deletion and non-fast-forward
+updates, have no bypass actors and select exactly that ref. This reuses data
+storage only; it does not reactivate any retired controller.
 
-The original operation must bind the exact current PR metadata. The native
-record, raw provider wire, full metadata, request fingerprint, completed model
-response, response ID/model and original PASS result must agree. SSE bytes are
-retained, not reconstructed. A PASS string in a report is insufficient. The
-run, original job and current PR are read again before returning copy
-provenance. No missing or failed native evidence is treated as success.
+`prepare` performs reads only. It binds the actual eligible User (`litroc` or
+`litdeg`), current protected Source Main, all three program hashes, creation
+time, exact PR binding, original native descriptors/report digest and current
+custody base commit. The existing root manifest is authenticated and preserved.
+The emitted saved plan has a canonical SHA-256 and explicitly grants no
+execution authorization. The coordinator must accept the concrete namespace,
+private content profile and saved plan before publication.
 
-Tests use synthetic source-owned fixtures and an API fake. They establish the
-local verifier's rejection behavior, not a restored native workflow or a
-published release. Tests also assert that no model request is performed.
+`publish` requires that exact saved plan and digest, rereads its live inputs,
+and rejects an existing locator, existing namespace or stale custody head. It
+uses GraphQL `createCommitOnBranch(expectedHeadOid)` once, adding only:
 
-## Producer and consumer still required for release recovery
+`review-copies/cloud-276/<plan-sha256>/{copy-manifest.json,operation.zip,receipt.zip}`
 
-The implemented verifier alone cannot unblock a Source015 release. Source015
-loads only Source015 code. Its readers require original native artifacts; it
-has no hook for a new copy. A changed source also changes `central_source_sha`
-and the complete `source_assets` inventory, hence `input_sha256` and the actual
-complete request. Installing this helper under a newer source does not make
-that request byte-identical to the historical model request.
+Every existing blob, root manifest and operation is preserved. No force update,
+new ref, permission change, new App, service or workflow is created. Unknown
+mutation outcomes and partial GraphQL errors are terminal, never retried.
+Readback must show the actual eligible author, GitHub `web-flow` committer,
+verified signature, expected single parent, exactly three added paths, and exact
+committed bytes. Only then may the actual operator post the canonical locator
+comment. A failed locator write does not undo or disguise a successful custody
+commit; inspect native state before considering any further action.
 
-The following separate contract must be implemented and reviewed before an
-operational window is requested:
+The public locator contains only numeric Cloud identity, PR/base/head and
+opaque immutable copy-commit, manifest and plan digests. Exactly one unedited
+eligible User comment with marker `native-review-copy/v1` is accepted. It is
+data, not human approval, review funding or source selection. The consumer
+requires the signed copy commit to remain retained by the protected data ref,
+checks its exact additive delta, and authenticates all private Git blobs before
+reauthenticating the original native review itself.
 
-1. **Copy producer and custody.** Preserve the two original ZIPs unchanged.
-   Run the new verifier against live original native records. Any subsequent
-   upload must use a new, explicitly named copy artifact, with its own actual
-   producer run/attempt/job/source and copy-artifact ID. Bind its manifest and
-   copied ZIP digests to that producer. Preserve the original identity as
-   historical provenance; never upload under an original artifact name or ID.
-   Keep transport within the private consumer and existing credential scope.
-2. **Source-owned copy locator.** A reviewed consumer entry point must admit
-   the copy's new immutable locator before reading it. Operator-supplied JSON,
-   PR text, labels, or a locally verified report cannot select the defining
-   source or grant a fallback. Reauthenticate the original native log and ZIPs
-   in the consumer; the producer's report is data, not an acceptance signal.
-3. **Explicit dual-source decision.** A separately reviewed Cloud-only policy
-   must distinguish the historical review source from the current executing
-   verifier. It must reconstruct the unchanged complete historical subject
-   using authenticated original Source015 assets, and validate the original
-   model result against those bytes. It must separately validate the current
-   subject, current policy, product checks, native identity, and applicable
-   conversation guard. Any permitted semantic compatibility between those two
-   contexts needs an explicit protected, reviewed contract. Do not simply
-   replace `source_sha`, omit `source_assets`, recompute the old input digest,
-   or feed an old response to a different complete request. That compatibility
-   and the consumer entry point are not implemented by this helper.
-4. **Current normal approval.** Execute the real current native Main gate with
-   the prescribed purpose marker for that exact run/attempt. A historical
-   approval or an authenticated copied review does not approve a release.
-   No funding slot, unknown outcome, or prior failed attempt is reset.
-5. **Independent source admission.** Deliver the source repair normally to
-   protected Source Main. Qualify the actual producer and new consumer with
-   positive and negative native evidence before preparing a concrete,
-   hash-bound Cloud-only selector plan. The Management owner controls that
-   separate operational window and genuine native approval. Leave the other
-   existing Source015 selectors unchanged. A source PR is not a rollout.
-6. **Readback and completion.** Only after the admitted new consumer obtains
-   fresh successful native evidence may the unchanged release PR follow the
-   normal merge, immutable GitHub/Galaxy publication and Develop back-sync.
-   Read back the exact commits, tags, package digests and native results.
-   Central transition no-op evidence is not Hetzner Heavy acceptance.
+## Bounded private read credential
 
-Reject changed heads/bases or instructions, mismatched full metadata, expired
-or unavailable original logs, ambiguous sources, invalid wire, failed original
-exports, missing copies, unknown new custody, unadmitted compatibility and
-concurrent generation changes. Rollback means retaining the previously
-selected immutable source and the original blocked state; it does not mean
-overriding a failed check or requesting another review.
+The integration patch uses the existing Release App (ID `4355159`, client
+`Iv23liSIvZRkHWKxczlb`, installation `148019054`, slug
+`lightning-it-release-automation`). No installation permission change is part
+of this repair. The pinned token action is
+`actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1`.
+It requests only `contents: read` for literal `shared-assets-lit`, owner
+`ltn-it`, with normal post-job revocation. The pinned action has app-slug and
+installation-id outputs, not an app-id output.
 
-Until this second contract is accepted, the truthful outcome is an
-authenticated archived copy and a still-blocked release. No current artifact
-restoration, current gate PASS or production acceptance is asserted.
+Pre-mint validation binds the configured client. Post-mint validation binds the
+slug, installation, private repository ID and exact one-repository token
+subset. The private reader whitelists only the required GET endpoints. Its
+token exists solely in an explicit child environment with fresh CLI config,
+never argv, output, artifact, model environment or a generic API child. Common
+control removes it from the ambient environment before any public API work.
+The finalizer obtains its own short-lived read token only after a successful
+current review job. No token is minted for a missing/invalid locator or a
+failed current review. These hooks have not been activated by this Draft.
+
+## Explicit historical/current compatibility
+
+New source code changes `central_source_sha`, the complete `source_assets`
+inventory and therefore `input_sha256`. An old review is not a byte-identical
+review of the new complete request. No old metadata field or digest is rewritten.
+
+The consumer fetches and authenticates original Source015 scripts against the
+original logged asset hashes before executing only its historical data
+materializer in a separate process. That process receives no private custody
+token, model key or fabricated `NATIVE_JOB`. Its full metadata digest must equal
+the original native review digest. The current materializer independently
+constructs the current context using the actual executing source.
+
+For this one fixed incident, the proposed source-owned compatibility contract
+allows differences only in `central_source_sha`, `source_assets` and
+`input_sha256`. Every other metadata field, including all instructions, prompt,
+schema, integration tree and unknown future fields, must match exactly. Raw
+patch bytes must also match. The original provider result is validated only
+against the original complete request. Output separately identifies
+`historical_review` and `current_verification`, each with its own full digest,
+and records the current semantic-subject digest and actual native execution.
+This is an explicitly scoped compatibility policy, not generic cross-source
+Codex replay. It needs independent protected source admission.
+
+## Current native control and normal approval
+
+The isolated hooks route only this exact normal release to `review-copy`.
+Missing, edited, ambiguous or invalid locators and copies fail closed; this
+incident never falls back to a new Codex allocation. Other repositories and PRs
+retain their existing routes. Copy verification invokes no gateway, model,
+funding reservation, budget reset or additional provider request.
+
+The current native review job must actually succeed. The finalizer repeats
+copy verification and current source/run/attempt/job, locator and PR binding
+checks. It also retains source common quality, product quality, conversation
+checks and the existing genuine current normal Main approval. The unchanged
+`workflow_collection_release.native_approval` requires the exact current
+operation, normal job, eligible native User decision and prescribed first-line
+purpose marker for that run/attempt. Historical approval, copied review, a
+skipped job or budget approval cannot substitute for it. Historical acceptance
+readers admit this route only for the fixed incident and its distinct-source
+proof with current authorization.
+
+## Qualification and operational completion
+
+Deterministic tests run in the repository's digest-pinned Devtools environment.
+Synthetic fixtures cover the actual producer/consumer protocol and rejection
+boundaries. An isolated hook test exercises common-control entry points and
+YAML conditions. Separately, a network-disabled qualification executed the real
+old/current materializers over cached native Source015 assets and real Cloud
+Git objects. It reproduced the complete original metadata digest and the same
+3011 patch bytes with distinct current identity. These establish local data and
+protocol behavior only, not successful current native release acceptance.
+
+Before any release effect, complete the concurrent prerequisite integration,
+review the whole source package normally, promote it to protected Source Main,
+and qualify the actual producer and new consumer with positive and negative
+native evidence. Management must then prepare and approve a concrete
+hash-bound Cloud-only selector plan. Leave other Source015 selectors unchanged.
+A new defining source needs a fresh native execution; rerunning the old source
+cannot load this repair. Preserve all historical failed/unknown allocations.
+
+Only fresh successful admitted native control permits the unchanged release PR
+to follow its normal merge, immutable GitHub/Galaxy publication and Develop
+back-sync. Read back exact commits, tags, package digests and installability.
+Transition no-op evidence does not establish real Hetzner Heavy acceptance.
+Until those steps are observed, the truthful result is a verified private copy
+and a blocked release. Rollback retains the previously selected source and the
+blocked state; it never overrides a failed gate or requests another review.
