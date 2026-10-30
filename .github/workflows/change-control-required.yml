@@ -144,11 +144,34 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           NATIVE_JOB: ${{ toJSON(job) }}
         run: python3 -B scripts/workflow_control.py request-copilot
+      - name: Validate private review-copy App input
+        if: steps.classify.outputs.route == 'review-copy'
+        env:
+          REVIEW_COPY_CLIENT_ID: ${{ vars.RELEASE_AUTOMATION_APP_CLIENT_ID }}
+        run: python3 -B scripts/workflow_review_copy.py validate-token-input
+      - name: Read private review-copy custody with existing App
+        if: steps.classify.outputs.route == 'review-copy'
+        id: copy_token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
+        env:
+          NATIVE_JOB: ${{ toJSON(job) }}
+          NODE_OPTIONS: --require=${{ github.workspace }}/scripts/workflow_review_copy_grant.cjs
+        with:
+          client-id: ${{ vars.RELEASE_AUTOMATION_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_AUTOMATION_APP_PRIVATE_KEY }}
+          owner: ltn-it
+          repositories: shared-assets-lit
+          permission-contents: read
+          skip-token-revoke: false
       - name: Verify applicable native review or governed exemption
         if: steps.classify.outputs.route != 'codex' && steps.generation.outputs.deferred != 'true' && steps.request.outputs.deferred != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           NATIVE_JOB: ${{ toJSON(job) }}
+          REVIEW_COPY_TOKEN: ${{ steps.copy_token.outputs.token }}
+          REVIEW_COPY_CLIENT_ID: ${{ vars.RELEASE_AUTOMATION_APP_CLIENT_ID }}
+          REVIEW_COPY_APP_SLUG: ${{ steps.copy_token.outputs.app-slug }}
+          REVIEW_COPY_INSTALLATION_ID: ${{ steps.copy_token.outputs.installation-id }}
         run: python3 -B scripts/workflow_control.py review
       - name: Materialize complete data-only review subject
         if: steps.classify.outputs.route == 'codex' && steps.generation.outputs.deferred != 'true'
@@ -250,6 +273,9 @@ jobs:
           path: control-review-outcome.json
           if-no-files-found: error
           retention-days: 90
+      - name: Remove private grant metadata after every copy attempt
+        if: always() && steps.classify.outputs.route == 'review-copy'
+        run: python3 -B scripts/workflow_review_copy.py cleanup-grant
       - name: Preserve Supplementary pre-funding deferral
         if: steps.request.outputs.deferred == 'true' || steps.reserve.outputs.deferred == 'true'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
@@ -302,6 +328,25 @@ jobs:
           repository: ltn-it/.github
           ref: ${{ steps.source.outputs.sha }}
           persist-credentials: false
+      - name: Validate current private review-copy App input
+        if: needs.review.result == 'success' && needs.review.outputs.route == 'review-copy'
+        env:
+          REVIEW_COPY_CLIENT_ID: ${{ vars.RELEASE_AUTOMATION_APP_CLIENT_ID }}
+        run: python3 -B scripts/workflow_review_copy.py validate-token-input
+      - name: Recheck private review-copy custody with existing App
+        if: needs.review.result == 'success' && needs.review.outputs.route == 'review-copy'
+        id: copy_token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
+        env:
+          NATIVE_JOB: ${{ toJSON(job) }}
+          NODE_OPTIONS: --require=${{ github.workspace }}/scripts/workflow_review_copy_grant.cjs
+        with:
+          client-id: ${{ vars.RELEASE_AUTOMATION_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_AUTOMATION_APP_PRIVATE_KEY }}
+          owner: ltn-it
+          repositories: shared-assets-lit
+          permission-contents: read
+          skip-token-revoke: false
       - name: Enforce native review and quality on the still-current tuple
         env:
           GH_TOKEN: ${{ github.token }}
@@ -310,6 +355,10 @@ jobs:
           REVIEW_DEFERRED: ${{ needs.review.outputs.deferred }}
           APPROVAL_RESULT: ${{ needs.normal-approval.result }}
           COMMON_QUALITY_RESULT: ${{ needs.common-quality.result }}
+          REVIEW_COPY_TOKEN: ${{ steps.copy_token.outputs.token }}
+          REVIEW_COPY_CLIENT_ID: ${{ vars.RELEASE_AUTOMATION_APP_CLIENT_ID }}
+          REVIEW_COPY_APP_SLUG: ${{ steps.copy_token.outputs.app-slug }}
+          REVIEW_COPY_INSTALLATION_ID: ${{ steps.copy_token.outputs.installation-id }}
         run: python3 -B scripts/workflow_control.py finalize
       - name: Persist exact native acceptance proof
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
@@ -318,3 +367,6 @@ jobs:
           path: control-proof.json
           if-no-files-found: error
           retention-days: 90
+      - name: Remove private grant metadata after current verification
+        if: always() && needs.review.outputs.route == 'review-copy'
+        run: python3 -B scripts/workflow_review_copy.py cleanup-grant
