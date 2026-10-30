@@ -22,12 +22,12 @@ The source modules implement the following boundaries:
 - `workflow_review_copy_grant.cjs`: observe the unchanged pinned App action's
   native grant response and retain only an allowlisted, token-bound receipt.
 
-At the current Draft stage, common-control and YAML hooks are qualified in an
-isolated integration patch against frozen prerequisite
-`fee7fd5b62258c18e6469319840b5b9ab7dc1d98`. They must follow the actual protected
-Develop integration of the concurrent source repair before being included in
-the same complete review package. There are no live common-control hooks in
-this Draft yet. `workflow_codex.py` and its native artifact reader are unchanged.
+The complete local candidate includes common-control and YAML hooks composed
+on protected Develop `498ad94e16dc852672c671e89f0c7acc7db57bc3`, preserving the
+integrated Supplementary, Root ancestry and retained Source015 lineage repairs.
+The hooks require current native identity and normal approval; their presence
+does not activate a scope. `workflow_codex.py` and its native artifact reader are
+unchanged. The candidate remains unpublished pending its complete code review.
 No source PR, local test, locator or custody plan selects a verifier or grants a
 release approval. Operational effects remain held by the central owner.
 

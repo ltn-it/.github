@@ -1583,8 +1583,11 @@ def check_native_control(api, repo, pull, config):
     record = artifact_record(api, repo, selected, f"control-proof-{selected['run_attempt']}", "control-proof.json")
     require(record.get("version") == 1 and record.get("source_sha") in sources
             and historical_binding_matches(api, repo, pull, record.get("binding"))
-            and record.get("route") in {"copilot", "renovate", "ancestry", "distribution", "codex"},
+            and record.get("route") in {"copilot", "renovate", "ancestry", "distribution", "codex", "review-copy"},
             "ingress-protected-proof-binding")
+    if record.get("route") == "review-copy":
+        from workflow_review_copy import validate_native_proof
+        validate_native_proof(repo, pull, record, selected, gate[0])
     result = {"run": selected["id"], "attempt": selected["run_attempt"], "job": gate[0]["id"],
             "head": pull["head"]["sha"], "source_sha": record["source_sha"],
             "route": record.get("route"), "artifact": f"control-proof-{selected['run_attempt']}",
@@ -1714,7 +1717,12 @@ def distribution_evidence(api, repo, pull, config):
     return {"source_run": run["id"], "source_sha": receipt["source_sha"], "manifest_sha256": digest(manifest)}
 
 
-def verify_existing_route(api, repo, pull, config, route):
+def verify_existing_route(api, repo, pull, config, route, *, copy_token=None):
+    if route == "review-copy":
+        import workflow_review_copy
+        source = source_identity(json.loads(os.environ["NATIVE_JOB"]))
+        locator = workflow_review_copy.locate(api, repo, pull, source)
+        return workflow_review_copy.evidence(api, repo, pull, source, locator, private_token=copy_token)
     if route == "copilot":
         result = copilot_review(api, repo, pull)
         require(result is not None, "current-copilot-review-missing")
@@ -1741,7 +1749,7 @@ def verify_existing_route(api, repo, pull, config, route):
 def normal_approval_required(pull, repo, route, security=None):
     """Only Source determines whether an independently verified route needs approval."""
     from workflow_collection_release import normal_release
-    return route == "promotion" or (route == "codex" and security is None and normal_release(pull, repo))
+    return route == "promotion" or (route in {"codex", "review-copy"} and security is None and normal_release(pull, repo))
 
 
 def output(name, value):
@@ -1771,6 +1779,8 @@ def reserve_or_defer(api, repo, pull, source, native, operation, step):
 
 
 def main():
+    # Remove private custody credentials before any generic public API child.
+    copy_token = os.environ.pop("REVIEW_COPY_TOKEN", "")
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("operation", choices=("classify", "review", "finalize", "funding-generation", "request-copilot", "prepare-codex", "reserve-codex", "verify-codex"))
     args = parser.parse_args()
@@ -1804,14 +1814,19 @@ def main():
         from workflow_security_profile import authorize
         security = authorize(api, repo, pull, config)
     route = classify(pull, repo, security=security)
+    from workflow_review_copy import select_route
+    route, review_copy = select_route(api, repo, pull, source_sha, route, security)
     approval_required = normal_approval_required(pull, repo, route, security)
-    normal_collection = approval_required and route == "codex"
+    normal_collection = approval_required and route in {"codex", "review-copy"}
     security_summary = security.summary() if security is not None else None
     operation = {"version": 1, "source_sha": source_sha, "binding": expected}
+    if review_copy is not None:
+        operation["review_copy"] = review_copy
     if security_summary is not None:
         operation["security"] = security_summary
     if record is not None:
         require(record.get("security") == security_summary, "security-operation-proof-drift")
+        require(record.get("review_copy") == review_copy, "copy-operation-locator-drift")
     snapshot = canonical(operation)
     require(len(snapshot) <= MAX_OPERATION_BYTES, "operation-snapshot-size-before-funding")
     if args.operation == "classify":
@@ -1915,6 +1930,9 @@ def main():
             review = ancestry_evidence(api, repo, pull, config)
         elif route == "distribution":
             review = distribution_evidence(api, repo, pull, config)
+        elif route == "review-copy":
+            import workflow_review_copy
+            review = workflow_review_copy.evidence(api, repo, pull, source_sha, review_copy, private_token=copy_token)
         else:
             raise ControlError("unclassified-review-route")
         require(len(canonical(review)) <= MAX_PROOF_BYTES, "native-proof-resource-bound")
@@ -1927,6 +1945,8 @@ def main():
         require(os.environ.get("REVIEW_DEFERRED") != "true", "deferred-invocation-cannot-produce-acceptance")
         require(os.environ.get("REVIEW_RESULT") in {"success", "skipped"}, "supplementary-review-job-not-successful")
     authorization = None
+    if route == "review-copy":
+        require(os.environ.get("REVIEW_RESULT") == "success", "copy-current-review-job-not-successful")
     if route == "codex":
         require(os.environ.get("REVIEW_RESULT") in {"success", "skipped"}, "codex-review-job-not-successful")
     if approval_required:
@@ -1960,7 +1980,8 @@ def main():
     current = live_pull(api, repo, number, expected)
     validate_signal(api, repo, current)
     conversation_guard = native_conversation_guard(api, repo, current)
-    evidence = verify_existing_route(api, repo, current, config, route)
+    evidence = (verify_existing_route(api, repo, current, config, route, copy_token=copy_token)
+                if route == "review-copy" else verify_existing_route(api, repo, current, config, route))
     if route == "copilot":
         complete_generated_lock_quality(evidence, config, quality_proof, current)
     live_pull(api, repo, number, expected)
