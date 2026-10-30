@@ -1021,11 +1021,62 @@ def slot_consumed_before(api, repo, run, attempt):
         require(request_slot_started(api, repo, run, attempt=previous) is not True, "funded-effect-rerun-forbidden")
 
 
+def supplementary_consumed_candidate(api, repo, head, current_run):
+    """A Sup legacy claim belongs to the candidate, not its PR/base/input hash.
+
+    This read-only deny does not settle historical cost or provider outcome.
+    In particular a neutral reservation is consumed even if no result arrived.
+    Other independently admitted repositories keep their existing contract.
+    """
+    if repo != "ltn-it/ansible-collection-supplementary":
+        return
+    sha(head)
+    checks = api.pages(f"repos/{repo}/commits/{head}/check-runs?filter=all", "check_runs")
+    for check in checks:
+        if (check.get("name") != "Protected Exact-Revision Codex result"
+                or check.get("app", {}).get("id") != 15368
+                or check.get("app", {}).get("slug") != "github-actions"):
+            continue
+        require(check.get("head_sha") == head, "supplementary-legacy-claim-head-drift")
+        marker = re.fullmatch(r"mlx90-exact-revision:v5:[0-9a-f]{64}:([1-9][0-9]*)",
+                              check.get("external_id") or "")
+        require(marker is not None, "supplementary-legacy-claim-unknown")
+        producer = api.call(f"repos/{repo}/actions/runs/{marker[1]}")
+        title = re.fullmatch(r"Exact-Revision Codex PR #[1-9][0-9]* ([0-9a-f]{40})\.\." + head,
+                             producer.get("display_title") or "")
+        require(producer.get("id") == int(marker[1])
+                and producer.get("repository", {}).get("id") == 1103407173
+                and producer.get("workflow_id") == 332570404
+                and producer.get("path") == ".github/workflows/release-bot-exact-head-review.yml"
+                and producer.get("event") == "workflow_dispatch"
+                and producer.get("head_branch") in {"main", "develop"}
+                and identity(producer.get("actor", {})) == RELEASE
+                and identity(producer.get("triggering_actor", {})) == RELEASE
+                and title is not None and producer.get("head_sha") == title[1],
+                "supplementary-legacy-claim-origin-unknown")
+        raise ControlError("supplementary-candidate-consumed-legacy-outcome-not-retried")
+    # Native Common run.head_sha is the candidate. A changed PR/base/source or
+    # recovery locator must not discard a previously reached funding boundary.
+    runs = api.pages(f"repos/{repo}/actions/runs?head_sha={head}", "workflow_runs")
+    for owner in runs:
+        if not native_required(owner, repo) or owner.get("id") == current_run:
+            continue
+        require(owner.get("head_sha") == head and type(owner.get("run_attempt")) is int
+                and 1 <= owner["run_attempt"] <= 32 and owner.get("status") == "completed",
+                "supplementary-native-history-unknown")
+        for attempt in range(1, owner["run_attempt"] + 1):
+            require(request_slot_started(api, repo, owner, attempt=attempt) is not True,
+                    "supplementary-candidate-consumed-native-request")
+
+
 def reserve_request(api, repo, pull, source_sha, run_id, attempt):
     run = api.call(f"repos/{repo}/actions/runs/{run_id}")
     require(run.get("id") == run_id and native_required(run, repo)
             and run["head_sha"] == pull["head"]["sha"], "request-origin")
     require(run["run_attempt"] == attempt, "request-attempt-drift")
+    supplementary_consumed_candidate(api, repo, pull["head"]["sha"], run_id)
+    if repo == "ltn-it/ansible-collection-supplementary":
+        slot_consumed_before(api, repo, run, attempt)
     recovery = os.environ.get("REVIEW_RECOVERY_PLAN_SHA256", "")
     if recovery:
         require(classify(pull, repo) == "codex", "recovery-codex-only")
