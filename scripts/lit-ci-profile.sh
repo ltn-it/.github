@@ -150,9 +150,22 @@ workflow_paths=(
 shopt -u nullglob
 [ "${#workflow_paths[@]}" -gt 0 ] \
   || fail_closed "no GitHub Actions workflows were found for actionlint"
+# Use the canonical manifest-bound schema extension for GitHub's native queue.
+# Every queue scalar and location is validated before the one old-linter error
+# is delegated. All remaining actionlint checks still run on original YAML.
+actionlint_args=()
+queue_policy=.lit/workflow-queue-policy.json
+if [ -e "$queue_policy" ] || [ -L "$queue_policy" ]; then
+  [ -f scripts/validate-actionlint-queue-policy.py ] \
+    && [ ! -L scripts/validate-actionlint-queue-policy.py ] \
+    || fail_closed "queue validator must be a regular file"
+  run_devtools none timeout -k 5s "${ACTIONLINT_TIMEOUT_SECONDS}s" \
+    python3 scripts/validate-actionlint-queue-policy.py --root .
+  actionlint_args=(-ignore 'unexpected key "queue" for "concurrency" section')
+fi
 for workflow in "${workflow_paths[@]}"; do
   run_devtools none timeout -k 5s "${ACTIONLINT_TIMEOUT_SECONDS}s" \
-    actionlint "$workflow"
+    actionlint "${actionlint_args[@]}" "$workflow"
 done
 
 printf '==> Validate committed and local diffs\n'

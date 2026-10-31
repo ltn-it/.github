@@ -1,0 +1,809 @@
+{
+  "notice": "Inert original public native captures. Transport-only projections; no execution or admission proof.",
+  "captured_raw_sha256": {
+    "repos/ltn-it/.github/pulls/989": "fa3f6bfd264b1285814e3c881f47b213bd43f253097dd3c7fdf0f98d19fabe1c",
+    "repos/ltn-it/.github/git/commits/198f11c00825a52c0ebc53d3a5e4ff0bb4b4b9a4": "5654e41b02992aaf4566d3de17e776c68781f8cd50588930c587a42835c4c5d3",
+    "repos/ltn-it/.github/compare/84aec48f715a93d2e1e4e819aa16f5a591d79e29...795c73444ffc1eb46b2fb3c501edbf8caa48aeec": "67658f7d8d7abdc67b6f12aa1950116541c7ca1b16b62a6a0735e721c9bbf184",
+    "repos/ltn-it/.github/actions/runs?head_sha=795c73444ffc1eb46b2fb3c501edbf8caa48aeec": "df27b0a4446f38f2d22789623c67305cc665d7b5e150ee15ff2e40f05ebd0077",
+    "repos/ltn-it/.github/actions/runs/41031455732": "878cd6fecc4939f83bf7b463cb3ce0ec839191b3c4c8d5d7ccea98f9e01e2346",
+    "repos/ltn-it/.github/actions/runs/41031455732/attempts/5": "ec56f881893dc56ca4903d9b9c791590ab9249f81b8141c61e46f8d7ec1b7ebf",
+    "repos/ltn-it/.github/actions/runs/41031455732/attempts/5/jobs": "d1bf621f7d1abafb7f18b761b8206ee657fff94d32071828068ac45bd10040d2",
+    "repos/ltn-it/.github/actions/runs/41031455732/artifacts": "1a84a93db98719b6938eddd60689787acc6dc23cdac98763da30a10319852bc4",
+    "repos/ltn-it/.github/commits/795c73444ffc1eb46b2fb3c501edbf8caa48aeec/check-runs?filter=latest": "f19381f4bee00429e21ca32e50368e01c5dcb96713873335a8d2bc7579b08703",
+    "repos/ltn-it/.github/actions/runs/41031455575": "3e913e71f42d2bece99823047d9a99261b0d4fd33ffb8a921f8af99d75b73bdd",
+    "repos/ltn-it/.github/actions/runs/41031455575/attempts/1/jobs": "e3ef2c8149546643eb347cc449bcd48e377dd058f7a7ec826922ef108f9d9eab"
+  },
+  "records": {
+    "repos/ltn-it/.github/pulls/989": {
+      "number": 989,
+      "state": "closed",
+      "merged": true,
+      "draft": false,
+      "merge_commit_sha": "198f11c00825a52c0ebc53d3a5e4ff0bb4b4b9a4",
+      "merged_at": "2026-10-30T09:22:56Z",
+      "created_at": "2026-10-30T08:41:28Z",
+      "user": {
+        "login": "litroc",
+        "id": 76040632,
+        "type": "User"
+      },
+      "head": {
+        "sha": "795c73444ffc1eb46b2fb3c501edbf8caa48aeec",
+        "ref": "codex/root-ancestry-admission-986",
+        "repo": {
+          "id": 1112629689,
+          "full_name": "ltn-it/.github",
+          "visibility": "public",
+          "archived": false,
+          "disabled": false
+        }
+      },
+      "base": {
+        "sha": "84aec48f715a93d2e1e4e819aa16f5a591d79e29",
+        "ref": "develop",
+        "repo": {
+          "id": 1112629689,
+          "full_name": "ltn-it/.github",
+          "visibility": "public",
+          "archived": false,
+          "disabled": false
+        }
+      },
+      "title": "fix(control): authenticate the fixed Root Main ancestry baseline",
+      "body": "Root Main preparation stops on historical PR #986: its only native run failed after merge and never produced a completion proof. That PR copied exactly the already accepted Main tree from #985 into Develop. A retry or another review of #987 cannot supply the missing historical acceptance.\n\nThis separate repair authenticates only repository 1112629689, the exact #985/#986 commits and parents, the identical protected Main tree, #985's original successful native run/proof/normal approval, and #986's exact post-merge closed-subject failures. A typed already-accepted-Main ancestry disposition retains #986 as failure and its allocation history unchanged. Every real code ingress, including #987 and this PR, continues through the ordinary complete native reader.\n\nThe correction after first review 5710014984 addresses comments 4421922470 and 4421922532. Both subjects now authenticate complete native run inventories with the existing binding-aware ingress_candidates and revalidate_native_generation. A read-only fence checks every inventory read, including the final generation selector, rejecting newer bound or unidentified native runs while allowing known foreign subjects through the ordinary selector. Repository archived/disabled flags must explicitly be false. Final original artifact/approval and protected-ref reads reject drift.\n\nThe public capture fixture is inert data with original native capture digests. Real RED cases on the prior head reproduce new run IDs for both subjects, late-arriving and unknown runs, and missing/null/nonboolean lifecycle flags. The corrected tests also preserve actual #987 acceptance through the ordinary reader, known foreign-subject exclusion, and denial after proof/tree/identity/approval changes or artifact expiry.\n\nValidation on 795c73444ffc1eb46b2fb3c501edbf8caa48aeec: the complete official digest-pinned Push-Ready gate passes, including all 850 unit tests, repository/instruction/target checks, exact queue validation, all workflow actionlint checks, diff checks and deterministic secret review. Evidence verifies; the worktree is clean. No local AI was invoked. Current-head native code CI and the one specifically authorized second native review remain required.\n\nThe installed Source 015 cannot consume this new disposition. The documented bootstrap cycle requires a separately reviewed, narrowly typed Management consumer: genuine evaluation of the actual App Main request, existing normal Main approval, and a separately bound Root-only source activation preserving Active/no-bypass protections. That consumer and operational plans are not implemented or authorized by this PR. No source selection, rule, Main merge, model funding, collection activation or publication is granted here. No retired controller is reactivated.\n\nFirst review 5710014984 remains consumed. Exactly one correction review of this bound head is authorized after code CI passes; a new finding, missing verdict or unknown request stops automatic allocation. All four reviews of completed #987 remain consumed and unchanged; this is a distinct historical acceptance defect.",
+      "labels": []
+    },
+    "repos/ltn-it/.github/git/commits/198f11c00825a52c0ebc53d3a5e4ff0bb4b4b9a4": {
+      "sha": "198f11c00825a52c0ebc53d3a5e4ff0bb4b4b9a4",
+      "tree": {
+        "sha": "df74982fa92c6a15c1b5ef9840e9d22c2c927070"
+      },
+      "parents": [
+        {
+          "sha": "84aec48f715a93d2e1e4e819aa16f5a591d79e29"
+        },
+        {
+          "sha": "795c73444ffc1eb46b2fb3c501edbf8caa48aeec"
+        }
+      ]
+    },
+    "repos/ltn-it/.github/compare/84aec48f715a93d2e1e4e819aa16f5a591d79e29...795c73444ffc1eb46b2fb3c501edbf8caa48aeec": {
+      "status": "ahead",
+      "files": [
+        {
+          "filename": "docs/root-ancestry-986-repair-plan.md",
+          "sha": "bd256a451c339851a2c07f4c901632356aca8a8b"
+        },
+        {
+          "filename": "scripts/workflow_control.py",
+          "sha": "63571a0d52e337bae12d2db797eb55b0151d8e20"
+        },
+        {
+          "filename": "scripts/workflow_root_ancestry.py",
+          "sha": "1df9c7d51bfb1e43a23962f63dc64cacb20ba905"
+        },
+        {
+          "filename": "tests/fixtures/root-ancestry-985-986.json",
+          "sha": "57a1792f6d540186852bc334c7fae30afabb868b"
+        },
+        {
+          "filename": "tests/test_root_ancestry.py",
+          "sha": "97e4af7fb4102069f0a417018ed37b409b37660c"
+        }
+      ]
+    },
+    "repos/ltn-it/.github/actions/runs?head_sha=795c73444ffc1eb46b2fb3c501edbf8caa48aeec": {
+      "total_count": 11,
+      "workflow_runs": [
+        {
+          "id": 41032437315,
+          "workflow_id": 385174462,
+          "workflow_url": "https://api.github.com/repos/ltn-it/.github/actions/workflows/385174462",
+          "path": ".github/workflows/review-events.yml",
+          "head_sha": "795c73444ffc1eb46b2fb3c501edbf8caa48aeec",
+          "head_branch": "codex/root-ancestry-admission-986",
+          "status": "completed",
+          "conclusion": "failure",
+          "run_attempt": 1,
+          "event": "pull_request_review",
+          "created_at": "2026-10-30T09:18:14Z",
+          "run_started_at": "2026-10-30T09:18:14Z",
+          "updated_at": "2026-10-30T09:22:57Z",
+          "pull_requests": [],
+          "repository": {
+            "id": 1112629689,
+            "full_name": "ltn-it/.github"
+          }
+        },
+        {
+          "id": 41032107200,
+          "workflow_id": 314416353,
+          "workflow_url": "https://api.github.com/repos/ltn-it/.github/actions/workflows/314416353",
+          "path": "dynamic/agents/copilot-pull-request-reviewer",
+          "head_sha": "795c73444ffc1eb46b2fb3c501edbf8caa48aeec",
+          "head_branch": "codex/root-ancestry-admission-986",
+          "status": "completed",
+          "conclusion": "success",
+          "run_attempt": 1,
+          "event": "dynamic",
+          "created_at": "2026-10-30T09:15:29Z",
+          "run_started_at": "2026-10-30T09:15:29Z",
+          "updated_at": "2026-10-30T09:18:14Z",
+          "pull_requests": [],
+          "repository": {
+            "id": 1112629689,
+            "full_name": "ltn-it/.github"
+          }
+        },
+        {
+          "id": 41032012153,
+          "workflow_id": 385149091,
+          "workflow_url": "https://api.github.com/repos/ltn-it/.github/actions/workflows/385149091",
+          "path": ".github/workflows/delivery-operations.yml",
+          "head_sha": "795c73444ffc1eb46b2fb3c501edbf8caa48aeec",
+          "head_branch": "codex/root-ancestry-admission-986",
+          "status": "completed",
+          "conclusion": "success",
+          "run_attempt": 1,
+          "event": "pull_request_target",
+          "created_at": "2026-10-30T09:14:46Z",
+          "run_started_at": "2026-10-30T09:14:46Z",
+          "updated_at": "2026-10-30T09:15:00Z",
+          "pull_requests": [],
+          "repository": {
+            "id": 1112629689,
+            "full_name": "ltn-it/.github"
+          }
+        },
+        {
+          "id": 41031682720,
+          "workflow_id": 385174462,
+          "workflow_url": "https://api.github.com/repos/ltn-it/.github/actions/workflows/385174462",
+          "path": ".github/workflows/review-events.yml",
+          "head_sha": "795c73444ffc1eb46b2fb3c501edbf8caa48aeec",
+          "head_branch": "codex/root-ancestry-admission-986",
+          "status": "completed",
+          "conclusion": "success",
+          "run_attempt": 1,
+          "event": "pull_request_review",
+          "created_at": "2026-10-30T09:12:03Z",
+          "run_started_at": "2026-10-30T09:12:03Z",
+          "updated_at": "2026-10-30T09:12:09Z",
+          "pull_requests": [],
+          "repository": {
+            "id": 1112629689,
+            "full_name": "ltn-it/.github"
+          }
+        },
+        {
+          "id": 41031683186,
+          "workflow_id": 385174462,
+          "workflow_url": "https://api.github.com/repos/ltn-it/.github/actions/workflows/385174462",
+          "path": ".github/workflows/review-events.yml",
+          "head_sha": "795c73444ffc1eb46b2fb3c501edbf8caa48aeec",
+          "head_branch": "codex/root-ancestry-admission-986",
+          "status": "completed",
+          "conclusion": "success",
+          "run_attempt": 1,
+          "event": "pull_request_review_comment",
+          "created_at": "2026-10-30T09:12:03Z",
+          "run_started_at": "2026-10-30T09:12:03Z",
+          "updated_at": "2026-10-30T09:12:09Z",
+          "pull_requests": [],
+          "repository": {
+            "id": 1112629689,
+            "full_name": "ltn-it/.github"
+          }
+        },
+        {
+          "id": 41031677631,
+          "workflow_id": 385174462,
+          "workflow_url": "https://api.github.com/repos/ltn-it/.github/actions/workflows/385174462",
+          "path": ".github/workflows/review-events.yml",
+          "head_sha": "795c73444ffc1eb46b2fb3c501edbf8caa48aeec",
+          "head_branch": "codex/root-ancestry-admission-986",
+          "status": "completed",
+          "conclusion": "success",
+          "run_attempt": 1,
+          "event": "pull_request_review",
+          "created_at": "2026-10-30T09:12:01Z",
+          "run_started_at": "2026-10-30T09:12:01Z",
+          "updated_at": "2026-10-30T09:12:07Z",
+          "pull_requests": [],
+          "repository": {
+            "id": 1112629689,
+            "full_name": "ltn-it/.github"
+          }
+        },
+        {
+          "id": 41031678475,
+          "workflow_id": 385174462,
+          "workflow_url": "https://api.github.com/repos/ltn-it/.github/actions/workflows/385174462",
+          "path": ".github/workflows/review-events.yml",
+          "head_sha": "795c73444ffc1eb46b2fb3c501edbf8caa48aeec",
+          "head_branch": "codex/root-ancestry-admission-986",
+          "status": "completed",
+          "conclusion": "success",
+          "run_attempt": 1,
+          "event": "pull_request_review_comment",
+          "created_at": "2026-10-30T09:12:01Z",
+          "run_started_at": "2026-10-30T09:12:01Z",
+          "updated_at": "2026-10-30T09:12:09Z",
+          "pull_requests": [],
+          "repository": {
+            "id": 1112629689,
+            "full_name": "ltn-it/.github"
+          }
+        },
+        {
+          "id": 41031530037,
+          "workflow_id": 385149091,
+          "workflow_url": "https://api.github.com/repos/ltn-it/.github/actions/workflows/385149091",
+          "path": ".github/workflows/delivery-operations.yml",
+          "head_sha": "795c73444ffc1eb46b2fb3c501edbf8caa48aeec",
+          "head_branch": "codex/root-ancestry-admission-986",
+          "status": "completed",
+          "conclusion": "success",
+          "run_attempt": 1,
+          "event": "pull_request_target",
+          "created_at": "2026-10-30T09:10:46Z",
+          "run_started_at": "2026-10-30T09:10:46Z",
+          "updated_at": "2026-10-30T09:12:06Z",
+          "pull_requests": [],
+          "repository": {
+            "id": 1112629689,
+            "full_name": "ltn-it/.github"
+          }
+        },
+        {
+          "id": 41031455575,
+          "workflow_id": 307348678,
+          "workflow_url": "https://api.github.com/repos/ltn-it/.github/actions/workflows/307348678",
+          "path": ".github/workflows/repository-quality.yml",
+          "head_sha": "795c73444ffc1eb46b2fb3c501edbf8caa48aeec",
+          "head_branch": "codex/root-ancestry-admission-986",
+          "status": "completed",
+          "conclusion": "success",
+          "run_attempt": 1,
+          "event": "pull_request",
+          "created_at": "2026-10-30T09:10:11Z",
+          "run_started_at": "2026-10-30T09:10:11Z",
+          "updated_at": "2026-10-30T09:12:08Z",
+          "pull_requests": [],
+          "repository": {
+            "id": 1112629689,
+            "full_name": "ltn-it/.github"
+          }
+        },
+        {
+          "id": 41031455732,
+          "workflow_id": 385148697,
+          "workflow_url": "https://api.github.com/repos/ltn-it/.github/actions/required_workflows/385148697",
+          "path": ".github/workflows/change-control-required.yml",
+          "head_sha": "795c73444ffc1eb46b2fb3c501edbf8caa48aeec",
+          "head_branch": "codex/root-ancestry-admission-986",
+          "status": "completed",
+          "conclusion": "success",
+          "run_attempt": 5,
+          "event": "pull_request",
+          "created_at": "2026-10-30T09:10:11Z",
+          "run_started_at": "2026-10-30T09:14:57Z",
+          "updated_at": "2026-10-30T09:18:45Z",
+          "pull_requests": [],
+          "repository": {
+            "id": 1112629689,
+            "full_name": "ltn-it/.github"
+          }
+        },
+        {
+          "id": 41031448803,
+          "workflow_id": 307349848,
+          "workflow_url": "https://api.github.com/repos/ltn-it/.github/actions/workflows/307349848",
+          "path": "dynamic/github-code-scanning/codeql",
+          "head_sha": "795c73444ffc1eb46b2fb3c501edbf8caa48aeec",
+          "head_branch": "refs/pull/989/head",
+          "status": "completed",
+          "conclusion": "success",
+          "run_attempt": 1,
+          "event": "dynamic",
+          "created_at": "2026-10-30T09:10:08Z",
+          "run_started_at": "2026-10-30T09:10:08Z",
+          "updated_at": "2026-10-30T09:11:10Z",
+          "pull_requests": [],
+          "repository": {
+            "id": 1112629689,
+            "full_name": "ltn-it/.github"
+          }
+        }
+      ]
+    },
+    "repos/ltn-it/.github/actions/runs/41031455732": {
+      "id": 41031455732,
+      "workflow_id": 385148697,
+      "workflow_url": "https://api.github.com/repos/ltn-it/.github/actions/required_workflows/385148697",
+      "path": ".github/workflows/change-control-required.yml",
+      "head_sha": "795c73444ffc1eb46b2fb3c501edbf8caa48aeec",
+      "head_branch": "codex/root-ancestry-admission-986",
+      "status": "completed",
+      "conclusion": "success",
+      "run_attempt": 5,
+      "event": "pull_request",
+      "created_at": "2026-10-30T09:10:11Z",
+      "run_started_at": "2026-10-30T09:14:57Z",
+      "updated_at": "2026-10-30T09:18:45Z",
+      "pull_requests": [],
+      "repository": {
+        "id": 1112629689,
+        "full_name": "ltn-it/.github"
+      }
+    },
+    "repos/ltn-it/.github/actions/runs/41031455732/attempts/5": {
+      "id": 41031455732,
+      "workflow_id": 385148697,
+      "workflow_url": "https://api.github.com/repos/ltn-it/.github/actions/required_workflows/385148697",
+      "path": ".github/workflows/change-control-required.yml",
+      "head_sha": "795c73444ffc1eb46b2fb3c501edbf8caa48aeec",
+      "head_branch": "codex/root-ancestry-admission-986",
+      "status": "completed",
+      "conclusion": "success",
+      "run_attempt": 5,
+      "event": "pull_request",
+      "created_at": "2026-10-30T09:14:59Z",
+      "run_started_at": "2026-10-30T09:14:57Z",
+      "updated_at": "2026-10-30T09:18:45Z",
+      "pull_requests": [],
+      "repository": {
+        "id": 1112629689,
+        "full_name": "ltn-it/.github"
+      }
+    },
+    "repos/ltn-it/.github/actions/runs/41031455732/attempts/5/jobs": {
+      "total_count": 4,
+      "jobs": [
+        {
+          "id": 123983822125,
+          "run_id": 41031455732,
+          "run_attempt": 5,
+          "name": "Protected current revision",
+          "status": "completed",
+          "conclusion": "success",
+          "head_sha": "795c73444ffc1eb46b2fb3c501edbf8caa48aeec",
+          "check_run_url": "https://api.github.com/repos/ltn-it/.github/check-runs/123983822125",
+          "started_at": "2026-10-30T09:15:02Z",
+          "completed_at": "2026-10-30T09:18:27Z"
+        },
+        {
+          "id": 123983823284,
+          "run_id": 41031455732,
+          "run_attempt": 5,
+          "name": "Source common quality",
+          "status": "completed",
+          "conclusion": "success",
+          "head_sha": "795c73444ffc1eb46b2fb3c501edbf8caa48aeec",
+          "check_run_url": "https://api.github.com/repos/ltn-it/.github/check-runs/123983823284",
+          "started_at": "2026-10-30T09:10:14Z",
+          "completed_at": "2026-10-30T09:11:21Z"
+        },
+        {
+          "id": 123985218006,
+          "run_id": 41031455732,
+          "run_attempt": 5,
+          "name": "Current revision review",
+          "status": "completed",
+          "conclusion": "success",
+          "head_sha": "795c73444ffc1eb46b2fb3c501edbf8caa48aeec",
+          "check_run_url": "https://api.github.com/repos/ltn-it/.github/check-runs/123985218006",
+          "started_at": "2026-10-30T09:18:30Z",
+          "completed_at": "2026-10-30T09:18:44Z"
+        },
+        {
+          "id": 123985219535,
+          "run_id": 41031455732,
+          "run_attempt": 5,
+          "name": "Approve exact main promotion",
+          "status": "completed",
+          "conclusion": "skipped",
+          "head_sha": "795c73444ffc1eb46b2fb3c501edbf8caa48aeec",
+          "check_run_url": "https://api.github.com/repos/ltn-it/.github/check-runs/123985219535",
+          "started_at": "2026-10-30T09:18:28Z",
+          "completed_at": "2026-10-30T09:18:27Z"
+        }
+      ]
+    },
+    "repos/ltn-it/.github/actions/runs/41031455732/artifacts": {
+      "total_count": 2,
+      "artifacts": [
+        {
+          "id": 12966796576,
+          "name": "control-proof-5",
+          "expired": false,
+          "size_in_bytes": 2106,
+          "digest": "sha256:b11a80e4f51e9410cc3b7fcd234b3f393c054c61e9bd2cc1bea4b17b3d022f9d",
+          "workflow_run": {
+            "id": 41031455732,
+            "repository_id": 1112629689,
+            "head_repository_id": 1112629689,
+            "head_branch": "codex/root-ancestry-admission-986",
+            "head_sha": "795c73444ffc1eb46b2fb3c501edbf8caa48aeec"
+          }
+        },
+        {
+          "id": 12965473559,
+          "name": "control-operation-5",
+          "expired": false,
+          "size_in_bytes": 1881,
+          "digest": "sha256:bc80bf51cdf27f73c16cf7af97d9e07f2eb1cd3ca3394a757d41e058ca98ddec",
+          "workflow_run": {
+            "id": 41031455732,
+            "repository_id": 1112629689,
+            "head_repository_id": 1112629689,
+            "head_branch": "codex/root-ancestry-admission-986",
+            "head_sha": "795c73444ffc1eb46b2fb3c501edbf8caa48aeec"
+          }
+        }
+      ]
+    },
+    "repos/ltn-it/.github/commits/795c73444ffc1eb46b2fb3c501edbf8caa48aeec/check-runs?filter=latest": {
+      "total_count": 18,
+      "check_runs": [
+        {
+          "id": 123985219535,
+          "name": "Approve exact main promotion",
+          "status": "completed",
+          "conclusion": "skipped",
+          "details_url": "https://github.com/ltn-it/.github/actions/runs/41031455732/job/123985219535",
+          "head_sha": "795c73444ffc1eb46b2fb3c501edbf8caa48aeec",
+          "started_at": "2026-10-30T09:18:28Z",
+          "completed_at": "2026-10-30T09:18:27Z",
+          "app": {
+            "id": 15368
+          }
+        },
+        {
+          "id": 123985218006,
+          "name": "Current revision review",
+          "status": "completed",
+          "conclusion": "success",
+          "details_url": "https://github.com/ltn-it/.github/actions/runs/41031455732/job/123985218006",
+          "head_sha": "795c73444ffc1eb46b2fb3c501edbf8caa48aeec",
+          "started_at": "2026-10-30T09:18:30Z",
+          "completed_at": "2026-10-30T09:18:44Z",
+          "app": {
+            "id": 15368
+          }
+        },
+        {
+          "id": 123984037449,
+          "name": "copilot-pull-request-reviewer",
+          "status": "completed",
+          "conclusion": "success",
+          "details_url": "https://github.com/ltn-it/.github/actions/runs/41032107200/job/123984037449",
+          "head_sha": "795c73444ffc1eb46b2fb3c501edbf8caa48aeec",
+          "started_at": "2026-10-30T09:15:34Z",
+          "completed_at": "2026-10-30T09:18:13Z",
+          "app": {
+            "id": 15368
+          }
+        },
+        {
+          "id": 123983823284,
+          "name": "Source common quality",
+          "status": "completed",
+          "conclusion": "success",
+          "details_url": "https://github.com/ltn-it/.github/actions/runs/41031455732/job/123983823284",
+          "head_sha": "795c73444ffc1eb46b2fb3c501edbf8caa48aeec",
+          "started_at": "2026-10-30T09:10:14Z",
+          "completed_at": "2026-10-30T09:11:21Z",
+          "app": {
+            "id": 15368
+          }
+        },
+        {
+          "id": 123983822125,
+          "name": "Protected current revision",
+          "status": "completed",
+          "conclusion": "success",
+          "details_url": "https://github.com/ltn-it/.github/actions/runs/41031455732/job/123983822125",
+          "head_sha": "795c73444ffc1eb46b2fb3c501edbf8caa48aeec",
+          "started_at": "2026-10-30T09:15:02Z",
+          "completed_at": "2026-10-30T09:18:27Z",
+          "app": {
+            "id": 15368
+          }
+        },
+        {
+          "id": 123983735395,
+          "name": "Prepare one admitted promotion",
+          "status": "completed",
+          "conclusion": "skipped",
+          "details_url": "https://github.com/ltn-it/.github/actions/runs/41032012153/job/123983735395",
+          "head_sha": "795c73444ffc1eb46b2fb3c501edbf8caa48aeec",
+          "started_at": "2026-10-30T09:14:47Z",
+          "completed_at": "2026-10-30T09:14:46Z",
+          "app": {
+            "id": 15368
+          }
+        },
+        {
+          "id": 123983734106,
+          "name": "Refresh protected verifier",
+          "status": "completed",
+          "conclusion": "success",
+          "details_url": "https://github.com/ltn-it/.github/actions/runs/41032012153/job/123983734106",
+          "head_sha": "795c73444ffc1eb46b2fb3c501edbf8caa48aeec",
+          "started_at": "2026-10-30T09:14:48Z",
+          "completed_at": "2026-10-30T09:14:59Z",
+          "app": {
+            "id": 15368
+          }
+        },
+        {
+          "id": 123982681845,
+          "name": "Prepare one promotion after current native quality",
+          "status": "completed",
+          "conclusion": "skipped",
+          "details_url": "https://github.com/ltn-it/.github/actions/runs/41031455575/job/123982681845",
+          "head_sha": "795c73444ffc1eb46b2fb3c501edbf8caa48aeec",
+          "started_at": "2026-10-30T09:12:08Z",
+          "completed_at": "2026-10-30T09:12:07Z",
+          "app": {
+            "id": 15368
+          }
+        },
+        {
+          "id": 123982656581,
+          "name": "Record review event",
+          "status": "completed",
+          "conclusion": "success",
+          "details_url": "https://github.com/ltn-it/.github/actions/runs/41031683186/job/123982656581",
+          "head_sha": "795c73444ffc1eb46b2fb3c501edbf8caa48aeec",
+          "started_at": "2026-10-30T09:12:06Z",
+          "completed_at": "2026-10-30T09:12:09Z",
+          "app": {
+            "id": 15368
+          }
+        },
+        {
+          "id": 123982655154,
+          "name": "Record review event",
+          "status": "completed",
+          "conclusion": "success",
+          "details_url": "https://github.com/ltn-it/.github/actions/runs/41031682720/job/123982655154",
+          "head_sha": "795c73444ffc1eb46b2fb3c501edbf8caa48aeec",
+          "started_at": "2026-10-30T09:12:06Z",
+          "completed_at": "2026-10-30T09:12:09Z",
+          "app": {
+            "id": 15368
+          }
+        },
+        {
+          "id": 123982642685,
+          "name": "Record review event",
+          "status": "completed",
+          "conclusion": "success",
+          "details_url": "https://github.com/ltn-it/.github/actions/runs/41031678475/job/123982642685",
+          "head_sha": "795c73444ffc1eb46b2fb3c501edbf8caa48aeec",
+          "started_at": "2026-10-30T09:12:04Z",
+          "completed_at": "2026-10-30T09:12:08Z",
+          "app": {
+            "id": 15368
+          }
+        },
+        {
+          "id": 123982638659,
+          "name": "Record review event",
+          "status": "completed",
+          "conclusion": "success",
+          "details_url": "https://github.com/ltn-it/.github/actions/runs/41031677631/job/123982638659",
+          "head_sha": "795c73444ffc1eb46b2fb3c501edbf8caa48aeec",
+          "started_at": "2026-10-30T09:12:03Z",
+          "completed_at": "2026-10-30T09:12:06Z",
+          "app": {
+            "id": 15368
+          }
+        },
+        {
+          "id": 123982155888,
+          "name": "Prepare one admitted promotion",
+          "status": "completed",
+          "conclusion": "skipped",
+          "details_url": "https://github.com/ltn-it/.github/actions/runs/41031530037/job/123982155888",
+          "head_sha": "795c73444ffc1eb46b2fb3c501edbf8caa48aeec",
+          "started_at": "2026-10-30T09:10:47Z",
+          "completed_at": "2026-10-30T09:10:46Z",
+          "app": {
+            "id": 15368
+          }
+        },
+        {
+          "id": 123982153637,
+          "name": "Refresh protected verifier",
+          "status": "completed",
+          "conclusion": "success",
+          "details_url": "https://github.com/ltn-it/.github/actions/runs/41031530037/job/123982153637",
+          "head_sha": "795c73444ffc1eb46b2fb3c501edbf8caa48aeec",
+          "started_at": "2026-10-30T09:10:49Z",
+          "completed_at": "2026-10-30T09:12:06Z",
+          "app": {
+            "id": 15368
+          }
+        },
+        {
+          "id": 123982109185,
+          "name": "CodeQL",
+          "status": "completed",
+          "conclusion": "success",
+          "details_url": "https://github.com/ltn-it/.github/runs/123982109185",
+          "head_sha": "795c73444ffc1eb46b2fb3c501edbf8caa48aeec",
+          "started_at": "2026-10-30T09:10:40Z",
+          "completed_at": "2026-10-30T09:10:43Z",
+          "app": {
+            "id": 57789
+          }
+        },
+        {
+          "id": 123981909096,
+          "name": "repository / quality",
+          "status": "completed",
+          "conclusion": "success",
+          "details_url": "https://github.com/ltn-it/.github/actions/runs/41031455575/job/123981909096",
+          "head_sha": "795c73444ffc1eb46b2fb3c501edbf8caa48aeec",
+          "started_at": "2026-10-30T09:10:13Z",
+          "completed_at": "2026-10-30T09:12:07Z",
+          "app": {
+            "id": 15368
+          }
+        },
+        {
+          "id": 123981896644,
+          "name": "Analyze (python)",
+          "status": "completed",
+          "conclusion": "success",
+          "details_url": "https://github.com/ltn-it/.github/actions/runs/41031448803/job/123981896644",
+          "head_sha": "795c73444ffc1eb46b2fb3c501edbf8caa48aeec",
+          "started_at": "2026-10-30T09:10:11Z",
+          "completed_at": "2026-10-30T09:11:09Z",
+          "app": {
+            "id": 15368
+          }
+        },
+        {
+          "id": 123981896136,
+          "name": "Analyze (actions)",
+          "status": "completed",
+          "conclusion": "success",
+          "details_url": "https://github.com/ltn-it/.github/actions/runs/41031448803/job/123981896136",
+          "head_sha": "795c73444ffc1eb46b2fb3c501edbf8caa48aeec",
+          "started_at": "2026-10-30T09:10:11Z",
+          "completed_at": "2026-10-30T09:10:50Z",
+          "app": {
+            "id": 15368
+          }
+        }
+      ]
+    },
+    "repos/ltn-it/.github/actions/runs/41031455575": {
+      "id": 41031455575,
+      "workflow_id": 307348678,
+      "workflow_url": "https://api.github.com/repos/ltn-it/.github/actions/workflows/307348678",
+      "path": ".github/workflows/repository-quality.yml",
+      "head_sha": "795c73444ffc1eb46b2fb3c501edbf8caa48aeec",
+      "head_branch": "codex/root-ancestry-admission-986",
+      "status": "completed",
+      "conclusion": "success",
+      "run_attempt": 1,
+      "event": "pull_request",
+      "created_at": "2026-10-30T09:10:11Z",
+      "run_started_at": "2026-10-30T09:10:11Z",
+      "updated_at": "2026-10-30T09:12:08Z",
+      "pull_requests": [],
+      "repository": {
+        "id": 1112629689,
+        "full_name": "ltn-it/.github"
+      }
+    },
+    "repos/ltn-it/.github/actions/runs/41031455575/attempts/1/jobs": {
+      "total_count": 2,
+      "jobs": [
+        {
+          "id": 123981909096,
+          "run_id": 41031455575,
+          "run_attempt": 1,
+          "name": "repository / quality",
+          "status": "completed",
+          "conclusion": "success",
+          "head_sha": "795c73444ffc1eb46b2fb3c501edbf8caa48aeec",
+          "check_run_url": "https://api.github.com/repos/ltn-it/.github/check-runs/123981909096",
+          "started_at": "2026-10-30T09:10:13Z",
+          "completed_at": "2026-10-30T09:12:07Z"
+        },
+        {
+          "id": 123982681845,
+          "run_id": 41031455575,
+          "run_attempt": 1,
+          "name": "Prepare one promotion after current native quality",
+          "status": "completed",
+          "conclusion": "skipped",
+          "head_sha": "795c73444ffc1eb46b2fb3c501edbf8caa48aeec",
+          "check_run_url": "https://api.github.com/repos/ltn-it/.github/check-runs/123982681845",
+          "started_at": "2026-10-30T09:12:08Z",
+          "completed_at": "2026-10-30T09:12:07Z"
+        }
+      ]
+    }
+  },
+  "policy_file": {
+    "path": ".lit/workflow-control.json",
+    "at": "84aec48f715a93d2e1e4e819aa16f5a591d79e29",
+    "git_blob": "38ff3b866d3f41b2900d82e757ddb6bfda236b20",
+    "bytes": "{\n  \"version\": 1,\n  \"repository\": \"ltn-it/.github\",\n  \"mode\": \"reference\",\n  \"quality\": [\n    {\n      \"workflow\": \".github/workflows/repository-quality.yml\",\n      \"job\": \"repository / quality\"\n    }\n  ],\n  \"accepted_sources\": [],\n  \"distribution_sources\": [],\n  \"artifact_publication\": false\n}\n"
+  },
+  "decoded_artifacts": {
+    "control-proof-5": {
+      "authorization": null,
+      "binding": {
+        "author": [
+          "litroc",
+          76040632,
+          "User"
+        ],
+        "base": "84aec48f715a93d2e1e4e819aa16f5a591d79e29",
+        "base_ref": "develop",
+        "body": "Root Main preparation stops on historical PR #986: its only native run failed after merge and never produced a completion proof. That PR copied exactly the already accepted Main tree from #985 into Develop. A retry or another review of #987 cannot supply the missing historical acceptance.\n\nThis separate repair authenticates only repository 1112629689, the exact #985/#986 commits and parents, the identical protected Main tree, #985's original successful native run/proof/normal approval, and #986's exact post-merge closed-subject failures. A typed already-accepted-Main ancestry disposition retains #986 as failure and its allocation history unchanged. Every real code ingress, including #987 and this PR, continues through the ordinary complete native reader.\n\nThe correction after first review 5710014984 addresses comments 4421922470 and 4421922532. Both subjects now authenticate complete native run inventories with the existing binding-aware ingress_candidates and revalidate_native_generation. A read-only fence checks every inventory read, including the final generation selector, rejecting newer bound or unidentified native runs while allowing known foreign subjects through the ordinary selector. Repository archived/disabled flags must explicitly be false. Final original artifact/approval and protected-ref reads reject drift.\n\nThe public capture fixture is inert data with original native capture digests. Real RED cases on the prior head reproduce new run IDs for both subjects, late-arriving and unknown runs, and missing/null/nonboolean lifecycle flags. The corrected tests also preserve actual #987 acceptance through the ordinary reader, known foreign-subject exclusion, and denial after proof/tree/identity/approval changes or artifact expiry.\n\nValidation on 795c73444ffc1eb46b2fb3c501edbf8caa48aeec: the complete official digest-pinned Push-Ready gate passes, including all 850 unit tests, repository/instruction/target checks, exact queue validation, all workflow actionlint checks, diff checks and deterministic secret review. Evidence verifies; the worktree is clean. No local AI was invoked. Current-head native code CI and the one specifically authorized second native review remain required.\n\nThe installed Source 015 cannot consume this new disposition. The documented bootstrap cycle requires a separately reviewed, narrowly typed Management consumer: genuine evaluation of the actual App Main request, existing normal Main approval, and a separately bound Root-only source activation preserving Active/no-bypass protections. That consumer and operational plans are not implemented or authorized by this PR. No source selection, rule, Main merge, model funding, collection activation or publication is granted here. No retired controller is reactivated.\n\nFirst review 5710014984 remains consumed. Exactly one correction review of this bound head is authorized after code CI passes; a new finding, missing verdict or unknown request stops automatic allocation. All four reviews of completed #987 remain consumed and unchanged; this is a distinct historical acceptance defect.",
+        "draft": false,
+        "head": "795c73444ffc1eb46b2fb3c501edbf8caa48aeec",
+        "head_ref": "codex/root-ancestry-admission-986",
+        "head_repository": "ltn-it/.github",
+        "labels": [],
+        "number": 989,
+        "title": "fix(control): authenticate the fixed Root Main ancestry baseline"
+      },
+      "evidence": {
+        "finding_comment_ids": [],
+        "frame": {
+          "finding_comment_ids": null,
+          "historical_findings_count": 0,
+          "review_body_sha256": "2c64019dd45e0ae3abfd632b884b826955736e7e11a33a206123b63b01e7cee5",
+          "review_database_id": 5710282475,
+          "review_id": "PRR_kwDOQlFhuc8AAAABVFv-6w"
+        },
+        "head": "795c73444ffc1eb46b2fb3c501edbf8caa48aeec",
+        "id": 5710282475,
+        "service_run": 41032107200,
+        "state": "COMMENTED"
+      },
+      "native_conversation_guard": [
+        19045511
+      ],
+      "route": "copilot",
+      "source_sha": "015233f4dfe0f95a6df0ea8a9e4ef8150dadc19f",
+      "version": 1
+    },
+    "control-operation-5": {
+      "binding": {
+        "author": [
+          "litroc",
+          76040632,
+          "User"
+        ],
+        "base": "84aec48f715a93d2e1e4e819aa16f5a591d79e29",
+        "base_ref": "develop",
+        "body": "Root Main preparation stops on historical PR #986: its only native run failed after merge and never produced a completion proof. That PR copied exactly the already accepted Main tree from #985 into Develop. A retry or another review of #987 cannot supply the missing historical acceptance.\n\nThis separate repair authenticates only repository 1112629689, the exact #985/#986 commits and parents, the identical protected Main tree, #985's original successful native run/proof/normal approval, and #986's exact post-merge closed-subject failures. A typed already-accepted-Main ancestry disposition retains #986 as failure and its allocation history unchanged. Every real code ingress, including #987 and this PR, continues through the ordinary complete native reader.\n\nThe correction after first review 5710014984 addresses comments 4421922470 and 4421922532. Both subjects now authenticate complete native run inventories with the existing binding-aware ingress_candidates and revalidate_native_generation. A read-only fence checks every inventory read, including the final generation selector, rejecting newer bound or unidentified native runs while allowing known foreign subjects through the ordinary selector. Repository archived/disabled flags must explicitly be false. Final original artifact/approval and protected-ref reads reject drift.\n\nThe public capture fixture is inert data with original native capture digests. Real RED cases on the prior head reproduce new run IDs for both subjects, late-arriving and unknown runs, and missing/null/nonboolean lifecycle flags. The corrected tests also preserve actual #987 acceptance through the ordinary reader, known foreign-subject exclusion, and denial after proof/tree/identity/approval changes or artifact expiry.\n\nValidation on 795c73444ffc1eb46b2fb3c501edbf8caa48aeec: the complete official digest-pinned Push-Ready gate passes, including all 850 unit tests, repository/instruction/target checks, exact queue validation, all workflow actionlint checks, diff checks and deterministic secret review. Evidence verifies; the worktree is clean. No local AI was invoked. Current-head native code CI and the one specifically authorized second native review remain required.\n\nThe installed Source 015 cannot consume this new disposition. The documented bootstrap cycle requires a separately reviewed, narrowly typed Management consumer: genuine evaluation of the actual App Main request, existing normal Main approval, and a separately bound Root-only source activation preserving Active/no-bypass protections. That consumer and operational plans are not implemented or authorized by this PR. No source selection, rule, Main merge, model funding, collection activation or publication is granted here. No retired controller is reactivated.\n\nFirst review 5710014984 remains consumed. Exactly one correction review of this bound head is authorized after code CI passes; a new finding, missing verdict or unknown request stops automatic allocation. All four reviews of completed #987 remain consumed and unchanged; this is a distinct historical acceptance defect.",
+        "draft": false,
+        "head": "795c73444ffc1eb46b2fb3c501edbf8caa48aeec",
+        "head_ref": "codex/root-ancestry-admission-986",
+        "head_repository": "ltn-it/.github",
+        "labels": [],
+        "number": 989,
+        "title": "fix(control): authenticate the fixed Root Main ancestry baseline"
+      },
+      "source_sha": "015233f4dfe0f95a6df0ea8a9e4ef8150dadc19f",
+      "version": 1
+    }
+  },
+  "final_job_log": {
+    "id": 123985218006,
+    "raw_sha256": "1bf8e61741be3581364cc900c5d7cf1cf8ef8ffd22227398e5f0192669ad07bf",
+    "projection": "  NATIVE_JOB: {\"check_run_id\": 123985218006, \"workflow_file_path\": \".github/workflows/change-control-required.yml\", \"workflow_repository\": \"ltn-it/.github\", \"workflow_sha\": \"015233f4dfe0f95a6df0ea8a9e4ef8150dadc19f\"}\n  NATIVE_JOB: {\"check_run_id\": 123985218006, \"workflow_file_path\": \".github/workflows/change-control-required.yml\", \"workflow_repository\": \"ltn-it/.github\", \"workflow_sha\": \"015233f4dfe0f95a6df0ea8a9e4ef8150dadc19f\"}"
+  }
+}

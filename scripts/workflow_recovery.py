@@ -14,7 +14,7 @@ LEGACY_SOURCE = "b815cefb4a5f18cd97b3947c789b6db59fedf991"
 require = control.require
 
 
-def history(api, repo, pull, native):
+def history(api, repo, pull, native, *, source=None):
     """Count reserved effects across every native workflow generation/source."""
     reserved, delivered = [], False
     runs = api.pages(f"repos/{repo}/actions/runs?head_sha={pull['head']['sha']}", "workflow_runs")
@@ -40,6 +40,11 @@ def history(api, repo, pull, native):
                     "recovery-native-job-provenance")
             if job.get("status") == "completed" and job.get("conclusion") == "skipped" \
                     and all(s.get("conclusion") == "skipped" for s in job["steps"]):
+                continue
+            if repo == "ltn-it/ansible-collection-supplementary" and any(
+                    step.get("name") == "Preserve Supplementary pre-funding deferral"
+                    and step.get("conclusion") == "success" for step in job["steps"]):
+                control.supplementary_no_effect(api, repo, run, attempt, job, source)
                 continue
             delivered |= job.get("conclusion") == "success"
             steps = [s for s in job.get("steps", []) if s.get("name") == "Reserve protected Codex request"]
@@ -97,7 +102,8 @@ def plan(api, repo, pull, source, native):
     wanted = request(api, repo, pull)
     if wanted is None:
         return None
-    reserved, delivered = history(api, repo, pull, native)
+    control.supplementary_legacy_consumed(api, repo, pull["head"]["sha"])
+    reserved, delivered = history(api, repo, pull, native, source=source)
     # This grants no funding: prepare-codex must still authenticate the complete
     # cached request, and ordinary cross-generation reservation blocks a miss.
     if delivered:

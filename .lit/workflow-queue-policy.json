@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "locations": {
+    ".github/workflows/change-control-required.yml#concurrency": {
+      "group": "${{ github.repository_id == '1103407173' && format('sup-funded-review-{0}-{1}', github.repository_id, github.event.pull_request.head.sha) || format('protected-control-{0}-{1}', github.repository_id, github.event.pull_request.number) }}",
+      "queue": "${{ github.repository_id == '1103407173' && 'max' || 'single' }}",
+      "cancel-in-progress": "${{ github.repository_id != '1103407173' }}"
+    }
+  }
+}
