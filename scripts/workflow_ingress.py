@@ -83,6 +83,39 @@ def merged_lifecycle(api, repo, pull, attempt):
     return {"merge_event": merge["id"], "closed_event": closed[0]}
 
 
+def normal_merge_parent(api, repo, revision, branch, repository_id):
+    """Authenticate a two-parent native integration; dates never create lineage."""
+    commit = api.call(f"repos/{repo}/git/commits/{sha(revision)}")
+    require(commit.get("sha") == revision, "native-parent-commit-required")
+    parents = [sha(parent.get("sha")) for parent in commit.get("parents", [])]
+    require(len(parents) == 2 and len(set(parents)) == 2, "native-normal-merge-parents-required")
+    associations = api.pages(f"repos/{repo}/commits/{revision}/pulls")
+    matches = [item for item in associations if item.get("merge_commit_sha") == revision
+               and item.get("base", {}).get("ref") == branch and item.get("merged_at")]
+    require(len(matches) == 1, "native-parent-merge-association-required")
+    number = matches[0].get("number")
+    require(type(number) is int and number > 0, "native-parent-pull-required")
+    pull = api.call(f"repos/{repo}/pulls/{number}")
+    require(pull.get("number") == number and pull.get("state") == "closed" and pull.get("merged") is True
+            and pull.get("merge_commit_sha") == revision and pull.get("base", {}).get("ref") == branch
+            and [pull.get("base", {}).get("sha"), pull.get("head", {}).get("sha")] == parents
+            and all(pull.get(side, {}).get("repo", {}).get("id") == repository_id for side in ("base", "head"))
+            and pull.get("merged_at") == matches[0].get("merged_at"), "native-parent-base-head-drift")
+    merged_by = pull.get("merged_by") or {}
+    actor = identity(merged_by)
+    require(type(actor[0]) is str and actor[0] and type(actor[1]) is int and actor[1] > 0
+            and actor[2] in {"User", "Bot"}, "native-parent-merge-identity-required")
+    events = api.pages(f"repos/{repo}/issues/{number}/events")
+    merges = [event for event in events if event.get("event") == "merged"]
+    require(len(merges) == 1 and identity(merges[0].get("actor", {})) == actor
+            and merges[0].get("commit_id") == revision and merges[0].get("created_at") == pull.get("merged_at"),
+            "native-parent-merge-actor-drift")
+    # Reuse the established native merge/closure binding. This timestamp scopes
+    # only that closure observation; it is not a fabricated review execution.
+    lifecycle = merged_lifecycle(api, repo, pull, {"run_started_at": pull["merged_at"]})
+    return {"commit": commit, "pull": pull, "lifecycle": lifecycle, "merged_at": pull["merged_at"]}
+
+
 def paired_closure_jobs(jobs):
     """Admit only the observed classifier/finalizer closure topology."""
     expected = {"Protected current revision": "failure", "Source common quality": "success",
