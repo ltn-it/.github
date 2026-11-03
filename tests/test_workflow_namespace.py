@@ -28,12 +28,14 @@ class NamespaceIdentityTests(unittest.TestCase):
         import yaml
         root = Path(__file__).resolve().parents[1]
         workflow = yaml.safe_load((root / ".github/workflows/delivery-operations.yml").read_bytes())
-        revisions = {workflow["jobs"][job]["steps"][0]["with"]["ref"] for job in ("refresh", "prepare")}
-        for revision in revisions:
-            source = "530b8fb175b7fccf238b03aab652bd5ee2ad2a41"
-            changes = subprocess.check_output(["git", "-c", f"safe.directory={root}", "diff",
-                "--name-only", source, revision], cwd=root, text=True).splitlines()
-            self.assertEqual([".lit/promotion-event-targets.json", "scripts/workflow_promotion_event.py"], changes)
+        for job in ("refresh", "prepare"):
+            revision = workflow["jobs"][job]["steps"][0]["with"]["ref"]
+            source = ("530b8fb175b7fccf238b03aab652bd5ee2ad2a41" if job == "refresh"
+                      else "498ad94e16dc852672c671e89f0c7acc7db57bc3")
+            if job == "refresh":
+                changes = subprocess.check_output(["git", "-c", f"safe.directory={root}", "diff",
+                    "--name-only", source, revision], cwd=root, text=True).splitlines()
+                self.assertEqual([".lit/promotion-event-targets.json", "scripts/workflow_promotion_event.py"], changes)
             subprocess.run(["git", "-c", f"safe.directory={root}", "merge-base",
                             "--is-ancestor", source, revision], cwd=root, check=True)
             payload = subprocess.check_output(["git", "-c", f"safe.directory={root}",
@@ -48,6 +50,8 @@ from unittest.mock import patch
 sys.path.insert(0, sys.argv[1] + "/scripts")
 import workflow_events as events
 import workflow_promotion_event as promotion
+if sys.argv[4] == "prepare":
+    promotion.admitted_reader()
 for repository in ("ltn-it/shared-assets-lit", "ltn-it/ansible-collection-supplementary"):
     assert promotion.target(repository)["repository"] == repository
     assert promotion.target(repository)["source_sha"] == sys.argv[3]
@@ -61,7 +65,7 @@ for repository in ("ltn-it/shared-assets-lit", "ltn-it/ansible-collection-supple
         events.main()
         assert refresh.call_args.args[1] == repository
 '''
-                subprocess.run([sys.executable, "-IB", "-c", program, temp, revision, source],
+                subprocess.run([sys.executable, "-IB", "-c", program, temp, revision, source, job],
                                check=True, capture_output=True)
 
     def test_unchanged_historical_native_proof_survives_authenticated_rename(self):
