@@ -2,14 +2,32 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import sys
 from pathlib import Path
 
+import workflow_control as control
 from workflow_control import API, ControlError, SOURCE, check_native_control, policy, require, sha, source_identity
 
 DELIVERY = ".github/workflows/delivery-operations.yml"
+ADMITTED_SOURCE = "498ad94e16dc852672c671e89f0c7acc7db57bc3"
+READER_ASSETS = {
+    "scripts/workflow_control.py": "82d01e82f6bf97a87f90b92bba9af2a548dc59a47dbf4c6cb4c1c0b24befd65b",
+    "scripts/workflow_ingress.py": "a01c445c1efd647d448805005d3aa065fb9bbbc5966b6cdbe4c1a4f398140582",
+    ".lit/workflow-source-lineage.json": "2d578582f05999e5e5484e020f7f0f9d85c4a665dfa01de2d040735aded49191",
+}
+
+
+def admitted_reader():
+    """The reviewed helper must use the actual498 reader and its own lineage."""
+    root = Path(__file__).resolve().parents[1]
+    require(Path(control.__file__).resolve() == root / "scripts/workflow_control.py",
+            "promotion-event-reader-location-drift")
+    for path, expected in READER_ASSETS.items():
+        require(hashlib.sha256((root / path).read_bytes()).hexdigest() == expected,
+                "promotion-event-admitted-reader-drift")
 
 
 def target(repository):
@@ -34,7 +52,7 @@ def target(repository):
                 and entry["repository"] in profiles and entry["repository"] not in entries,
                 "promotion-event-target-identity")
         expected = profiles[entry["repository"]] | {
-            "repository": entry["repository"], "source_sha": "530b8fb175b7fccf238b03aab652bd5ee2ad2a41"}
+            "repository": entry["repository"], "source_sha": ADMITTED_SOURCE}
         require(entry == expected and type(entry.get("private")) is bool
                 and type(entry.get("repository_id")) is int and type(entry.get("workflow_id")) is int,
                 "promotion-event-target-identity")
@@ -45,6 +63,7 @@ def target(repository):
 
 def current_head(api, event, env):
     entry = target(env.get("GITHUB_REPOSITORY"))
+    admitted_reader()
     repository, identifier = entry["repository"], entry["repository_id"]
     require(env.get("GITHUB_REPOSITORY_ID") == str(identifier)
             and env.get("GITHUB_EVENT_NAME") == "workflow_run"
