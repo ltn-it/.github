@@ -44,6 +44,40 @@ SUPPLEMENTARY_SHAPE = {'description': 'Anonymized API shape from public Collecti
 
 
 class PromotionEventTests(unittest.TestCase):
+    def test_fixed_current_profiles_use498_without_expanding_dispatch_scope(self):
+        for repository in (REPO, SUPPLEMENTARY):
+            self.assertEqual("498ad94e16dc852672c671e89f0c7acc7db57bc3",
+                             event.target(repository)["source_sha"])
+        with self.assertRaisesRegex(event.ControlError, "not-admitted"):
+            event.target("ltn-it/github-management-lit")
+
+    def test_helper_loads_exact_admitted498_reader_ingress_and_lineage(self):
+        event.admitted_reader()
+        self.assertEqual("82d01e82f6bf97a87f90b92bba9af2a548dc59a47dbf4c6cb4c1c0b24befd65b",
+                         event.READER_ASSETS["scripts/workflow_control.py"])
+        self.assertEqual("a01c445c1efd647d448805005d3aa065fb9bbbc5966b6cdbe4c1a4f398140582",
+                         event.READER_ASSETS["scripts/workflow_ingress.py"])
+        self.assertEqual("2d578582f05999e5e5484e020f7f0f9d85c4a665dfa01de2d040735aded49191",
+                         event.READER_ASSETS[".lit/workflow-source-lineage.json"])
+
+    def test_old_or_mixed_reader_assets_stop_before_any_native_access(self):
+        root = Path(event.__file__).resolve().parents[1]
+        original = Path.read_bytes
+        for filename in event.READER_ASSETS:
+            api, signal, env, _ = self.fixture()
+            def read(path, filename=filename):
+                return b"old or foreign reader\n" if path == root / filename else original(path)
+            with self.subTest(filename=filename), patch.object(Path, "read_bytes", read), \
+                    self.assertRaisesRegex(event.ControlError, "admitted-reader-drift"):
+                event.current_head(api, signal, env)
+            api.call.assert_not_called()
+            api.pages.assert_not_called()
+        api, signal, env, _ = self.fixture()
+        with patch.object(event.control, "__file__", str(root / "foreign/workflow_control.py")), \
+                self.assertRaisesRegex(event.ControlError, "reader-location-drift"):
+            event.current_head(api, signal, env)
+        api.call.assert_not_called()
+
     def test_private_receiver_checks_the_proof_before_its_only_management_token(self):
         import yaml
         value = yaml.safe_load((Path(__file__).resolve().parents[1] / event.DELIVERY).read_bytes())
@@ -119,6 +153,50 @@ class PromotionEventTests(unittest.TestCase):
         policy.assert_called_once_with(api, REPO, BASE, event.target(REPO)["source_sha"])
         verify.assert_called_once_with(api, REPO, state["pull"], {})
         self.assertTrue(all("method" not in call.kwargs for call in api.call.call_args_list))
+
+    def test_real498_policy_and_native_ingress_reader_accept_only_current_source_proof(self):
+        """Synthetic native transport; real policy/lineage/ingress predicates run."""
+        for repository in (REPO, SUPPLEMENTARY):
+            for proof_source in (event.ADMITTED_SOURCE, "530b8fb175b7fccf238b03aab652bd5ee2ad2a41"):
+                api, signal, env, state = self.fixture(repository)
+                subject = state["pull"]
+                subject.update(draft=False, title="Synthetic accepted ancestry", body="Fixture only",
+                    labels=[], user={"login": "lightning-it-release-automation[bot]", "id": 307565056, "type": "Bot"},
+                    head={"sha": "e" * 40, "ref": "backmerge/synthetic-main", "repo": {"full_name": repository}})
+                subject["base"]["repo"]["full_name"] = repository
+                native = {"id": 77, "run_attempt": 1, "head_sha": subject["head"]["sha"],
+                    "path": event.control.WORKFLOW, "workflow_id": 88,
+                    "workflow_url": f"https://api.github.com/repos/{repository}/actions/required_workflows/88",
+                    "pull_requests": [{"number": 9, "base": {"sha": BASE}, "head": {"sha": subject["head"]["sha"]}}],
+                    "status": "completed", "conclusion": "success"}
+                original_call, original_pages = api.call.side_effect, api.pages.side_effect
+                def call(path):
+                    return copy.deepcopy(native) if path.endswith('/actions/runs/77') else original_call(path)
+                def pages(path, key=None):
+                    if path == f'repos/{repository}/actions/runs?head_sha={subject["head"]["sha"]}':
+                        return [copy.deepcopy(native)]
+                    if path == f'repos/{repository}/actions/runs/77/attempts/1/jobs':
+                        return [{"id": 201, "run_id": 77, "name": "Current revision review", "conclusion": "success"}]
+                    return original_pages(path, key)
+                api.call.side_effect, api.pages.side_effect = call, pages
+                policy = {"version": 1, "repository": repository, "mode": "enforce",
+                    "quality": [{"workflow": ".github/workflows/fixture.yml", "job": "Fixture quality"}],
+                    "accepted_sources": [], "distribution_sources": [], "artifact_publication": False}
+                def file(_repository, path, _revision):
+                    if path == ".lit/workflow-control.json": return json.dumps(policy).encode()
+                    return f"uses: {event.SOURCE}/{event.DELIVERY}@{ADAPTER}".encode()
+                api.file.side_effect = file
+                record = {"version": 1, "source_sha": proof_source,
+                    "binding": event.control.binding(subject), "route": "ancestry"}
+                with self.subTest(repository=repository, source=proof_source), \
+                        patch.object(event.control, "artifact_record", return_value=record) as artifact:
+                    if proof_source == event.ADMITTED_SOURCE:
+                        self.assertEqual(HEAD, event.current_head(api, signal, env))
+                    else:
+                        with self.assertRaisesRegex(event.ControlError, "ingress-source-drift"):
+                            event.current_head(api, signal, env)
+                artifact.assert_called_once_with(api, repository, native, "control-proof-1", "control-proof.json")
+                self.assertTrue(all("method" not in item.kwargs for item in api.call.call_args_list))
 
     def test_unprojected_evaluate_rule_does_not_replace_actual_native_ingress(self):
         api, signal, env, _ = self.fixture()
