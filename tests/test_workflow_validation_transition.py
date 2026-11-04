@@ -193,7 +193,8 @@ class ValidationTransitionTests(unittest.TestCase):
                 patch.object(transition, "git", side_effect=api.integration_git), \
                 patch.object(subject, "fetch_objects"), \
                 patch.object(control, "artifact_record", side_effect=api.artifact):
-            result = control.promotion_ingress(api, REPOSITORY, api.promotion, api.config)
+            configuration = control.policy(api, REPOSITORY, MAIN, SOURCE, pull=api.promotion)
+            result = control.promotion_ingress(api, REPOSITORY, api.promotion, configuration)
         self.assertEqual(14, len(result["ingress"]))
         self.assertEqual(BASELINE, result["head"])
         self.assertEqual("1e08adea12bbb60160dcb62604f943f60ce26a580fc836f0bfee487c86eb0150",
@@ -221,6 +222,26 @@ class ValidationTransitionTests(unittest.TestCase):
                 self.assertRaises(control.ControlError):
             control.promotion_ingress(api, REPOSITORY, api.promotion, api.config)
         self.assertEqual([True], changed)
+
+    def test_initial_policy_is_fixed_to_the_actual_pre_policy_main_subject(self):
+        for defect in ("missing-subject", "author", "head-ref", "identity", "bytes"):
+            api = NativeCapture()
+            pull = copy.deepcopy(api.promotion)
+            if defect == "missing-subject":
+                pull = None
+            elif defect == "author":
+                pull["user"]["id"] = 1
+            elif defect == "head-ref":
+                pull["head"]["ref"] = "unreviewed-candidate"
+            elif defect == "identity":
+                api.records[PREFIX]["id"] = 1
+            else:
+                key = f"{REPOSITORY}:{BASELINE}:.lit/workflow-control.json"
+                api.value["files"][key] += "\nBorrowed policy\n"
+            with self.subTest(defect=defect), self.assertRaises(control.ControlError):
+                control.policy(api, REPOSITORY, MAIN, SOURCE, pull=pull)
+        self.assertIsNone(transition.policy(None, "ltn-it/foreign", MAIN, SOURCE, None))
+        self.assertIsNone(transition.policy(None, REPOSITORY, BASELINE, SOURCE, None))
 
     def test_other_repositories_cannot_use_the_validation_history(self):
         api = NativeCapture()

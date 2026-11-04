@@ -1205,5 +1205,10 @@
       "file_sha256": "f64ec2fba08ca8f38b9f7accc5ed613fc6c8af7d769ea0aaba84a0e1eda40a50",
       "applicable_before_bootstrap": "PR451 created2026-10-17T22:19:41Z; actualMain native merges and immutable firstparentpolicy are earlier."
     }
-  ]
+  ],
+  "initial_policy": {
+    "path": ".lit/workflow-control.json",
+    "ref": "4af68360a5d5625f9407e3f91b0549b33994f5d3",
+    "sha256": "162e99eb4ab6caf969c356cde23d741d5919b2629ecae67a22748b98f7c2cfdd"
+  }
 }

@@ -56,3 +56,9 @@ native reads. No current event target or receiver is activated by this change.
 
 Historical legacy proofs also reject newer policy producer runs and reruns,
 including queued or failed producers that have not published replacement checks.
+
+The exact historical Main predates the policy file. Only its actual App-authored
+Develop-to-Main subject may read the byte-bound policy adopted at baseline4af.
+The ordinary namespace/identity and source-lineage validator still judges that
+input. This neither catches arbitrary missing files nor selects native authority.
+The production-entry regression starts with this real policy lookup.

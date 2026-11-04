@@ -52,6 +52,43 @@ def descriptor():
     return value
 
 
+def policy(api, repo, base, source_sha, pull):
+    """Only the immutable pre-policy Main may use its exact adopted profile.
+
+    The actual protected Main Git subject predates PR451's three-file adoption.
+    This is a typed source-owned input; no missing-file exception or fallback.
+    Ordinary policy_value still validates namespace, identity and source lineage.
+    """
+    if repo != REPOSITORY or base != MAIN:
+        return None
+    require(type(pull) is dict
+            and pull.get("base", {}).get("sha") == MAIN
+            and pull.get("base", {}).get("ref") == "main"
+            and pull.get("head", {}).get("ref") == "develop"
+            and identity(pull.get("user", {})) == RELEASE,
+            "validation-transition-initial-policy-subject")
+    current = api.call(f"repos/{REPOSITORY}")
+    require(current.get("full_name") == REPOSITORY
+            and type(current.get("id")) is int and current["id"] == REPOSITORY_ID
+            and current.get("private") is False and current.get("archived") is False
+            and current.get("disabled") is False,
+            "validation-transition-initial-policy-identity")
+    expected = descriptor()["initial_policy"]
+    require(expected.get("path") == ".lit/workflow-control.json"
+            and expected.get("ref") == BASELINE,
+            "validation-transition-initial-policy-reference")
+    raw = api.file(REPOSITORY, expected["path"], BASELINE)
+    require(hashlib.sha256(raw).hexdigest() == expected["sha256"],
+            "validation-transition-initial-policy-bytes")
+    value = json.loads(raw)
+    require(value == {"version": 1, "repository": "lightning-it/modulix-validation",
+                     "mode": "reference", "quality": QUALITY["quality"],
+                     "accepted_sources": [], "distribution_sources": [],
+                     "artifact_publication": False},
+            "validation-transition-initial-policy-profile")
+    return value
+
+
 def legacy_required(run):
     """Do not widen the ordinary Common native_required predicate."""
     return (run.get("workflow_id") == LEGACY_WORKFLOW

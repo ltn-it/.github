@@ -265,6 +265,9 @@ def policy(api, repo, base, source_sha, *, pull=None):
     from workflow_devtools_bootstrap import policy as first_policy
     value = first_policy(api, repo, base, source_sha, pull)
     if value is None:
+        from workflow_validation_transition import policy as validation_policy
+        value = validation_policy(api, repo, base, source_sha, pull)
+    if value is None:
         value = json.loads(api.file(repo, ".lit/workflow-control.json", base))
     # A namespace repair must still judge the installed protected base before
     # a consumer can merge its own metadata update. Authenticate the unchanged
