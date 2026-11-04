@@ -1622,6 +1622,8 @@ def promotion_ingress(api, repo, pull, config):
             commits = commits[1:]
             require(commits, "devtools-first-main-needs-new-reviewed-ingress")
         proof = References(MAX_PROOF_BYTES)
+        from workflow_validation_transition import prepare as validation_transition
+        historical = validation_transition(api, repo, pull, config, objects, commits)
         for commit in commits:
             pulls = api.pages(f"repos/{repo}/commits/{commit}/pulls")
             matches = [p for p in pulls if p.get("merged_at") and p.get("merge_commit_sha") == commit
@@ -1632,11 +1634,15 @@ def promotion_ingress(api, repo, pull, config):
             # Verify one native proof under fresh process/cgroup admission,
             # discard its full decoded content and retain only its digest/ref.
             from workflow_root_ancestry import control_for_ingress
+            historical_control = historical.control(ingress, commit) if historical is not None else None
             proof.append({"pull": ingress["number"], "merge": commit,
-                          "control": control_for_ingress(api, repo, pull, ingress, config)})
+                          "control": historical_control if historical_control is not None else
+                          control_for_ingress(api, repo, pull, ingress, config)})
         tree = sha(git(objects, "merge-tree", "--write-tree", base, head))
         payload = git(objects, "diff", "--binary", "--full-index", "--no-ext-diff", "--no-textconv",
                       f"{base}^{{tree}}", tree, binary=True)
+        if historical is not None:
+            historical.finalize()
     require(payload and any(item["control"]["route"] != "ancestry" for item in proof.items), "promotion-no-reviewed-change")
     result = {"base": base, "head": head, "integration_tree": tree,
               "diff_sha256": hashlib.sha256(payload).hexdigest(), "ingress": proof.items}
@@ -1644,6 +1650,12 @@ def promotion_ingress(api, repo, pull, config):
         result["pre_admission_metadata_baseline"] = {
             "main": bootstrap["main"], "develop": bootstrap["develop"],
             "historical_graph": bootstrap["historical_metadata_graph"],
+        }
+    if historical is not None:
+        result["validation_historical_transition"] = {
+            "baseline": historical.value["baseline"],
+            "descriptor_sha256": digest(historical.value),
+            "scope": "historical-native-decisions-only",
         }
     return result
 

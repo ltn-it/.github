@@ -1,0 +1,1209 @@
+{
+  "version": 1,
+  "repository": "ltn-it/modulix-validation",
+  "repository_id": 1269461997,
+  "main": "c2a251041b121e59809b06e158b52dc6df81a0a3",
+  "baseline": "4af68360a5d5625f9407e3f91b0549b33994f5d3",
+  "baseline_tree": "b612f23aad5c48804b863af228e3afebd4a5905e",
+  "baseline_diff_sha256": "1e08adea12bbb60160dcb62604f943f60ce26a580fc836f0bfee487c86eb0150",
+  "rows": [
+    {
+      "pr": 409,
+      "base": "b109c29f82374a2d2289e8ac5c4935acb7b5a63a",
+      "head": "9619b3a12cd1a5ed8dfab40a3c6a80180da2ed8d",
+      "merge": "f186c37c068e004f178784655e8961a6899aa1cd",
+      "author": [
+        "lightning-it-release-automation[bot]",
+        307565056,
+        "Bot"
+      ],
+      "kind": "legacy",
+      "tree": "f05ee57313faf9db991b9a11eb77b17db62b54f3",
+      "parents": [
+        "b109c29f82374a2d2289e8ac5c4935acb7b5a63a",
+        "9619b3a12cd1a5ed8dfab40a3c6a80180da2ed8d"
+      ],
+      "legacy": {
+        "required_run": 33972354349,
+        "attempt": 1,
+        "schema4": {
+          "schema": 4,
+          "base_sha": "b109c29f82374a2d2289e8ac5c4935acb7b5a63a",
+          "head_sha": "9619b3a12cd1a5ed8dfab40a3c6a80180da2ed8d",
+          "head_repository": "lightning-it/modulix-validation",
+          "controller_sha": "b109c29f82374a2d2289e8ac5c4935acb7b5a63a",
+          "controller_ref": "develop",
+          "pull_request_number": 409,
+          "producer_run_id": 33972354510,
+          "pull_request_last_edited_at": null,
+          "pull_request_labels_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "review_id": null,
+          "review_path": "deterministic evidence-bound ancestry exemption",
+          "run_url": "https://github.com/lightning-it/modulix-validation/actions/runs/33972354510"
+        },
+        "checks": [
+          {
+            "id": 101323014916,
+            "name": "Current revision review",
+            "external_id": "mlx90-current-revision:ancestry-backmerge:v6:409:33972354510:b109c29f82374a2d2289e8ac5c4935acb7b5a63a:9619b3a12cd1a5ed8dfab40a3c6a80180da2ed8d",
+            "output": {
+              "title": "Current revision deterministic exemption passed",
+              "summary": "{\"schema\":4,\"base_sha\":\"b109c29f82374a2d2289e8ac5c4935acb7b5a63a\",\"head_sha\":\"9619b3a12cd1a5ed8dfab40a3c6a80180da2ed8d\",\"head_repository\":\"lightning-it/modulix-validation\",\"controller_sha\":\"b109c29f82374a2d2289e8ac5c4935acb7b5a63a\",\"controller_ref\":\"develop\",\"pull_request_number\":409,\"producer_run_id\":33972354510,\"pull_request_last_edited_at\":null,\"pull_request_labels_sha256\":\"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\",\"review_id\":null,\"review_path\":\"deterministic evidence-bound ancestry exemption\",\"run_url\":\"https://github.com/lightning-it/modulix-validation/actions/runs/33972354510\"}",
+              "text": null,
+              "annotations_count": 0,
+              "annotations_url": "https://api.github.com/repos/ltn-it/modulix-validation/check-runs/101323014916/annotations"
+            }
+          },
+          {
+            "id": 101323023440,
+            "name": "Protected current-revision verifier",
+            "external_id": "rep60-required-workflow:v3:33972354349:409:b109c29f82374a2d2289e8ac5c4935acb7b5a63a:9619b3a12cd1a5ed8dfab40a3c6a80180da2ed8d",
+            "output": {
+              "title": "Protected current-revision evidence verified",
+              "summary": "PR #409; base b109c29f82374a2d2289e8ac5c4935acb7b5a63a; head 9619b3a12cd1a5ed8dfab40a3c6a80180da2ed8d; producer https://github.com/lightning-it/modulix-validation/actions/runs/33972354510.",
+              "text": null,
+              "annotations_count": 0,
+              "annotations_url": "https://api.github.com/repos/ltn-it/modulix-validation/check-runs/101323023440/annotations"
+            }
+          },
+          {
+            "id": 101322987243,
+            "name": "Required current-revision workflow",
+            "external_id": "9dbd226f-38e5-522b-93b1-7e872ebf66f1",
+            "output": {
+              "title": null,
+              "summary": null,
+              "text": null,
+              "annotations_count": 0,
+              "annotations_url": "https://api.github.com/repos/ltn-it/modulix-validation/check-runs/101322987243/annotations"
+            }
+          }
+        ],
+        "producer": {
+          "id": 33972354510,
+          "path": ".github/workflows/copilot-review.yml",
+          "event": "pull_request_target",
+          "head_branch": "backmerge/modulix-validation-c2a251041b12-b109c29f8237-main",
+          "run_attempt": 1,
+          "conclusion": "success",
+          "updated_at": "2026-09-05T14:37:31Z"
+        }
+      },
+      "quality": [
+        {
+          "id": 101322986550,
+          "name": "validation / contracts",
+          "details_url": "https://github.com/ltn-it/modulix-validation/actions/runs/33972354293/job/101322986550",
+          "check_suite": {
+            "id": 92061054941
+          }
+        },
+        {
+          "id": 101322986367,
+          "name": "repository / quality",
+          "details_url": "https://github.com/ltn-it/modulix-validation/actions/runs/33972354287/job/101322986367",
+          "check_suite": {
+            "id": 92061054863
+          }
+        }
+      ]
+    },
+    {
+      "pr": 411,
+      "base": "f186c37c068e004f178784655e8961a6899aa1cd",
+      "head": "9808b055963ee579f1534a9cf85dbd99e75c9541",
+      "merge": "3ac47d76b1d32daa24b2d758a28bee74fbb73943",
+      "author": [
+        "lightning-it-shared-assets-sync[bot]",
+        307342877,
+        "Bot"
+      ],
+      "kind": "legacy",
+      "tree": "db88fcd86f17de1ef26e1343d5bc2c5b6dfa298d",
+      "parents": [
+        "f186c37c068e004f178784655e8961a6899aa1cd",
+        "9808b055963ee579f1534a9cf85dbd99e75c9541"
+      ],
+      "legacy": {
+        "required_run": 34542434916,
+        "attempt": 1,
+        "schema4": {
+          "schema": 4,
+          "base_sha": "f186c37c068e004f178784655e8961a6899aa1cd",
+          "head_sha": "9808b055963ee579f1534a9cf85dbd99e75c9541",
+          "head_repository": "lightning-it/modulix-validation",
+          "controller_sha": "f186c37c068e004f178784655e8961a6899aa1cd",
+          "controller_ref": "develop",
+          "pull_request_number": 411,
+          "producer_run_id": 34542437583,
+          "pull_request_last_edited_at": null,
+          "pull_request_labels_sha256": "e878452d34dad213bd5f72fdd4c036952ea0b25d5a8c552fa9d973cfdf1c34ee",
+          "review_id": null,
+          "review_path": "deterministic provenance-bound managed distribution exemption",
+          "run_url": "https://github.com/lightning-it/modulix-validation/actions/runs/34542437583"
+        },
+        "checks": [
+          {
+            "id": 103087844250,
+            "name": "Current revision review",
+            "external_id": "mlx90-current-revision:managed-sync:v6:411:34542437583:f186c37c068e004f178784655e8961a6899aa1cd:9808b055963ee579f1534a9cf85dbd99e75c9541",
+            "output": {
+              "title": "Current revision managed distribution exemption passed",
+              "summary": "{\"schema\":4,\"base_sha\":\"f186c37c068e004f178784655e8961a6899aa1cd\",\"head_sha\":\"9808b055963ee579f1534a9cf85dbd99e75c9541\",\"head_repository\":\"lightning-it/modulix-validation\",\"controller_sha\":\"f186c37c068e004f178784655e8961a6899aa1cd\",\"controller_ref\":\"develop\",\"pull_request_number\":411,\"producer_run_id\":34542437583,\"pull_request_last_edited_at\":null,\"pull_request_labels_sha256\":\"e878452d34dad213bd5f72fdd4c036952ea0b25d5a8c552fa9d973cfdf1c34ee\",\"review_id\":null,\"review_path\":\"deterministic provenance-bound managed distribution exemption\",\"run_url\":\"https://github.com/lightning-it/modulix-validation/actions/runs/34542437583\"}",
+              "text": null,
+              "annotations_count": 0,
+              "annotations_url": "https://api.github.com/repos/ltn-it/modulix-validation/check-runs/103087844250/annotations"
+            }
+          },
+          {
+            "id": 103087868510,
+            "name": "Protected current-revision verifier",
+            "external_id": "rep60-required-workflow:v3:34542434916:411:f186c37c068e004f178784655e8961a6899aa1cd:9808b055963ee579f1534a9cf85dbd99e75c9541",
+            "output": {
+              "title": "Protected current-revision evidence verified",
+              "summary": "PR #411; base f186c37c068e004f178784655e8961a6899aa1cd; head 9808b055963ee579f1534a9cf85dbd99e75c9541; producer https://github.com/lightning-it/shared-assets-lit/actions/runs/34542401912.",
+              "text": null,
+              "annotations_count": 0,
+              "annotations_url": "https://api.github.com/repos/ltn-it/modulix-validation/check-runs/103087868510/annotations"
+            }
+          },
+          {
+            "id": 103087802606,
+            "name": "Required current-revision workflow",
+            "external_id": "9a034d3b-0c5d-57db-9e64-85dc3575556b",
+            "output": {
+              "title": null,
+              "summary": null,
+              "text": null,
+              "annotations_count": 0,
+              "annotations_url": "https://api.github.com/repos/ltn-it/modulix-validation/check-runs/103087802606/annotations"
+            }
+          }
+        ],
+        "producer": {
+          "id": 34542437583,
+          "path": ".github/workflows/copilot-review.yml",
+          "event": "pull_request_target",
+          "head_branch": "chore/sync-repository-quality-modulix-validation-34542401912-1",
+          "run_attempt": 1,
+          "conclusion": "success",
+          "updated_at": "2026-09-10T23:31:20Z"
+        }
+      },
+      "source_producer": {
+        "id": 34542401912
+      },
+      "quality": [
+        {
+          "id": 103087801561,
+          "name": "repository / quality",
+          "details_url": "https://github.com/ltn-it/modulix-validation/actions/runs/34542434881/job/103087801561",
+          "check_suite": {
+            "id": 93577308359
+          }
+        },
+        {
+          "id": 103087801297,
+          "name": "validation / contracts",
+          "details_url": "https://github.com/ltn-it/modulix-validation/actions/runs/34542434832/job/103087801297",
+          "check_suite": {
+            "id": 93577308240
+          }
+        }
+      ]
+    },
+    {
+      "pr": 413,
+      "base": "3ac47d76b1d32daa24b2d758a28bee74fbb73943",
+      "head": "f960d3dd786ccfe421822aa8a6b4f8040592af09",
+      "merge": "9510d245999b2bc8d6a46be096615136df1a7595",
+      "author": [
+        "lightning-it-shared-assets-sync[bot]",
+        307342877,
+        "Bot"
+      ],
+      "kind": "legacy",
+      "tree": "d0e32d9d03bbae3180008e604b4356b5e4a6d4df",
+      "parents": [
+        "3ac47d76b1d32daa24b2d758a28bee74fbb73943",
+        "f960d3dd786ccfe421822aa8a6b4f8040592af09"
+      ],
+      "legacy": {
+        "required_run": 34682334963,
+        "attempt": 1,
+        "schema4": {
+          "schema": 4,
+          "base_sha": "3ac47d76b1d32daa24b2d758a28bee74fbb73943",
+          "head_sha": "f960d3dd786ccfe421822aa8a6b4f8040592af09",
+          "head_repository": "lightning-it/modulix-validation",
+          "controller_sha": "3ac47d76b1d32daa24b2d758a28bee74fbb73943",
+          "controller_ref": "develop",
+          "pull_request_number": 413,
+          "producer_run_id": 34682336587,
+          "pull_request_last_edited_at": null,
+          "pull_request_labels_sha256": "e878452d34dad213bd5f72fdd4c036952ea0b25d5a8c552fa9d973cfdf1c34ee",
+          "review_id": null,
+          "review_path": "deterministic provenance-bound managed distribution exemption",
+          "run_url": "https://github.com/lightning-it/modulix-validation/actions/runs/34682336587"
+        },
+        "checks": [
+          {
+            "id": 103523158392,
+            "name": "Current revision review",
+            "external_id": "mlx90-current-revision:managed-sync:v6:413:34682336587:3ac47d76b1d32daa24b2d758a28bee74fbb73943:f960d3dd786ccfe421822aa8a6b4f8040592af09",
+            "output": {
+              "title": "Current revision managed distribution exemption passed",
+              "summary": "{\"schema\":4,\"base_sha\":\"3ac47d76b1d32daa24b2d758a28bee74fbb73943\",\"head_sha\":\"f960d3dd786ccfe421822aa8a6b4f8040592af09\",\"head_repository\":\"lightning-it/modulix-validation\",\"controller_sha\":\"3ac47d76b1d32daa24b2d758a28bee74fbb73943\",\"controller_ref\":\"develop\",\"pull_request_number\":413,\"producer_run_id\":34682336587,\"pull_request_last_edited_at\":null,\"pull_request_labels_sha256\":\"e878452d34dad213bd5f72fdd4c036952ea0b25d5a8c552fa9d973cfdf1c34ee\",\"review_id\":null,\"review_path\":\"deterministic provenance-bound managed distribution exemption\",\"run_url\":\"https://github.com/lightning-it/modulix-validation/actions/runs/34682336587\"}",
+              "text": null,
+              "annotations_count": 0,
+              "annotations_url": "https://api.github.com/repos/ltn-it/modulix-validation/check-runs/103523158392/annotations"
+            }
+          },
+          {
+            "id": 103523169554,
+            "name": "Protected current-revision verifier",
+            "external_id": "rep60-required-workflow:v3:34682334963:413:3ac47d76b1d32daa24b2d758a28bee74fbb73943:f960d3dd786ccfe421822aa8a6b4f8040592af09",
+            "output": {
+              "title": "Protected current-revision evidence verified",
+              "summary": "PR #413; base 3ac47d76b1d32daa24b2d758a28bee74fbb73943; head f960d3dd786ccfe421822aa8a6b4f8040592af09; producer https://github.com/lightning-it/shared-assets-lit/actions/runs/34682319431.",
+              "text": null,
+              "annotations_count": 0,
+              "annotations_url": "https://api.github.com/repos/ltn-it/modulix-validation/check-runs/103523169554/annotations"
+            }
+          },
+          {
+            "id": 103523137202,
+            "name": "Required current-revision workflow",
+            "external_id": "ae2e0c99-80e5-57ed-a520-28dc470efb3f",
+            "output": {
+              "title": null,
+              "summary": null,
+              "text": null,
+              "annotations_count": 0,
+              "annotations_url": "https://api.github.com/repos/ltn-it/modulix-validation/check-runs/103523137202/annotations"
+            }
+          }
+        ],
+        "producer": {
+          "id": 34682336587,
+          "path": ".github/workflows/copilot-review.yml",
+          "event": "pull_request_target",
+          "head_branch": "chore/sync-repository-quality-modulix-validation-34682319431-1",
+          "run_attempt": 1,
+          "conclusion": "failure",
+          "updated_at": "2026-09-12T08:06:03Z"
+        }
+      },
+      "source_producer": {
+        "id": 34682319431
+      },
+      "quality": [
+        {
+          "id": 103523137078,
+          "name": "validation / contracts",
+          "details_url": "https://github.com/ltn-it/modulix-validation/actions/runs/34682334974/job/103523137078",
+          "check_suite": {
+            "id": 93948439758
+          }
+        },
+        {
+          "id": 103523136825,
+          "name": "repository / quality",
+          "details_url": "https://github.com/ltn-it/modulix-validation/actions/runs/34682334932/job/103523136825",
+          "check_suite": {
+            "id": 93948439651
+          }
+        }
+      ]
+    },
+    {
+      "pr": 415,
+      "base": "9510d245999b2bc8d6a46be096615136df1a7595",
+      "head": "efbae1fc33c88c022d0d5caf199ca59286f5354b",
+      "merge": "b79c56b1b379e0ebc504271a922eb2419153b77e",
+      "author": [
+        "lightning-it-shared-assets-sync[bot]",
+        307342877,
+        "Bot"
+      ],
+      "kind": "legacy",
+      "tree": "0b9d674680de7c84bc494ac5bb001bb741e79a84",
+      "parents": [
+        "9510d245999b2bc8d6a46be096615136df1a7595",
+        "efbae1fc33c88c022d0d5caf199ca59286f5354b"
+      ],
+      "legacy": {
+        "required_run": 34691013840,
+        "attempt": 1,
+        "schema4": {
+          "schema": 4,
+          "base_sha": "9510d245999b2bc8d6a46be096615136df1a7595",
+          "head_sha": "efbae1fc33c88c022d0d5caf199ca59286f5354b",
+          "head_repository": "lightning-it/modulix-validation",
+          "controller_sha": "9510d245999b2bc8d6a46be096615136df1a7595",
+          "controller_ref": "develop",
+          "pull_request_number": 415,
+          "producer_run_id": 34691016282,
+          "pull_request_last_edited_at": null,
+          "pull_request_labels_sha256": "e878452d34dad213bd5f72fdd4c036952ea0b25d5a8c552fa9d973cfdf1c34ee",
+          "review_id": null,
+          "review_path": "deterministic provenance-bound managed distribution exemption",
+          "run_url": "https://github.com/lightning-it/modulix-validation/actions/runs/34691016282"
+        },
+        "checks": [
+          {
+            "id": 103546155400,
+            "name": "Current revision review",
+            "external_id": "mlx90-current-revision:managed-sync:v6:415:34691016282:9510d245999b2bc8d6a46be096615136df1a7595:efbae1fc33c88c022d0d5caf199ca59286f5354b",
+            "output": {
+              "title": "Current revision managed distribution exemption passed",
+              "summary": "{\"schema\":4,\"base_sha\":\"9510d245999b2bc8d6a46be096615136df1a7595\",\"head_sha\":\"efbae1fc33c88c022d0d5caf199ca59286f5354b\",\"head_repository\":\"lightning-it/modulix-validation\",\"controller_sha\":\"9510d245999b2bc8d6a46be096615136df1a7595\",\"controller_ref\":\"develop\",\"pull_request_number\":415,\"producer_run_id\":34691016282,\"pull_request_last_edited_at\":null,\"pull_request_labels_sha256\":\"e878452d34dad213bd5f72fdd4c036952ea0b25d5a8c552fa9d973cfdf1c34ee\",\"review_id\":null,\"review_path\":\"deterministic provenance-bound managed distribution exemption\",\"run_url\":\"https://github.com/lightning-it/modulix-validation/actions/runs/34691016282\"}",
+              "text": null,
+              "annotations_count": 0,
+              "annotations_url": "https://api.github.com/repos/ltn-it/modulix-validation/check-runs/103546155400/annotations"
+            }
+          },
+          {
+            "id": 103546165686,
+            "name": "Protected current-revision verifier",
+            "external_id": "rep60-required-workflow:v3:34691013840:415:9510d245999b2bc8d6a46be096615136df1a7595:efbae1fc33c88c022d0d5caf199ca59286f5354b",
+            "output": {
+              "title": "Protected current-revision evidence verified",
+              "summary": "PR #415; base 9510d245999b2bc8d6a46be096615136df1a7595; head efbae1fc33c88c022d0d5caf199ca59286f5354b; producer https://github.com/lightning-it/shared-assets-lit/actions/runs/34691001515.",
+              "text": null,
+              "annotations_count": 0,
+              "annotations_url": "https://api.github.com/repos/ltn-it/modulix-validation/check-runs/103546165686/annotations"
+            }
+          },
+          {
+            "id": 103546126287,
+            "name": "Required current-revision workflow",
+            "external_id": "689ce2e5-74c8-5678-9246-8ee64c1a83d9",
+            "output": {
+              "title": null,
+              "summary": null,
+              "text": null,
+              "annotations_count": 0,
+              "annotations_url": "https://api.github.com/repos/ltn-it/modulix-validation/check-runs/103546126287/annotations"
+            }
+          }
+        ],
+        "producer": {
+          "id": 34691016282,
+          "path": ".github/workflows/copilot-review.yml",
+          "event": "pull_request_target",
+          "head_branch": "chore/sync-repository-quality-modulix-validation-34691001515-1",
+          "run_attempt": 1,
+          "conclusion": "success",
+          "updated_at": "2026-09-12T11:26:33Z"
+        }
+      },
+      "source_producer": {
+        "id": 34691001515
+      },
+      "quality": [
+        {
+          "id": 103546125574,
+          "name": "repository / quality",
+          "details_url": "https://github.com/ltn-it/modulix-validation/actions/runs/34691013779/job/103546125574",
+          "check_suite": {
+            "id": 93970035624
+          }
+        },
+        {
+          "id": 103546125525,
+          "name": "validation / contracts",
+          "details_url": "https://github.com/ltn-it/modulix-validation/actions/runs/34691013749/job/103546125525",
+          "check_suite": {
+            "id": 93970035569
+          }
+        }
+      ]
+    },
+    {
+      "pr": 416,
+      "base": "b79c56b1b379e0ebc504271a922eb2419153b77e",
+      "head": "114473daf202c42c1119d178f0931c85b1a90307",
+      "merge": "4237a082bcc2cd0e9eb0675b0d85e09e77ffc263",
+      "author": [
+        "lightning-it-shared-assets-sync[bot]",
+        307342877,
+        "Bot"
+      ],
+      "kind": "legacy",
+      "tree": "a4e678328d1807df75b3156a5d28e1b757abfbf2",
+      "parents": [
+        "b79c56b1b379e0ebc504271a922eb2419153b77e",
+        "114473daf202c42c1119d178f0931c85b1a90307"
+      ],
+      "legacy": {
+        "required_run": 34691734926,
+        "attempt": 1,
+        "schema4": {
+          "schema": 4,
+          "base_sha": "b79c56b1b379e0ebc504271a922eb2419153b77e",
+          "head_sha": "114473daf202c42c1119d178f0931c85b1a90307",
+          "head_repository": "lightning-it/modulix-validation",
+          "controller_sha": "b79c56b1b379e0ebc504271a922eb2419153b77e",
+          "controller_ref": "develop",
+          "pull_request_number": 416,
+          "producer_run_id": 34691736114,
+          "pull_request_last_edited_at": null,
+          "pull_request_labels_sha256": "e878452d34dad213bd5f72fdd4c036952ea0b25d5a8c552fa9d973cfdf1c34ee",
+          "review_id": null,
+          "review_path": "deterministic provenance-bound managed distribution exemption",
+          "run_url": "https://github.com/lightning-it/modulix-validation/actions/runs/34691736114"
+        },
+        "checks": [
+          {
+            "id": 103548092296,
+            "name": "Current revision review",
+            "external_id": "mlx90-current-revision:managed-sync:v6:416:34691736114:b79c56b1b379e0ebc504271a922eb2419153b77e:114473daf202c42c1119d178f0931c85b1a90307",
+            "output": {
+              "title": "Current revision managed distribution exemption passed",
+              "summary": "{\"schema\":4,\"base_sha\":\"b79c56b1b379e0ebc504271a922eb2419153b77e\",\"head_sha\":\"114473daf202c42c1119d178f0931c85b1a90307\",\"head_repository\":\"lightning-it/modulix-validation\",\"controller_sha\":\"b79c56b1b379e0ebc504271a922eb2419153b77e\",\"controller_ref\":\"develop\",\"pull_request_number\":416,\"producer_run_id\":34691736114,\"pull_request_last_edited_at\":null,\"pull_request_labels_sha256\":\"e878452d34dad213bd5f72fdd4c036952ea0b25d5a8c552fa9d973cfdf1c34ee\",\"review_id\":null,\"review_path\":\"deterministic provenance-bound managed distribution exemption\",\"run_url\":\"https://github.com/lightning-it/modulix-validation/actions/runs/34691736114\"}",
+              "text": null,
+              "annotations_count": 0,
+              "annotations_url": "https://api.github.com/repos/ltn-it/modulix-validation/check-runs/103548092296/annotations"
+            }
+          },
+          {
+            "id": 103548101904,
+            "name": "Protected current-revision verifier",
+            "external_id": "rep60-required-workflow:v3:34691734926:416:b79c56b1b379e0ebc504271a922eb2419153b77e:114473daf202c42c1119d178f0931c85b1a90307",
+            "output": {
+              "title": "Protected current-revision evidence verified",
+              "summary": "PR #416; base b79c56b1b379e0ebc504271a922eb2419153b77e; head 114473daf202c42c1119d178f0931c85b1a90307; producer https://github.com/lightning-it/shared-assets-lit/actions/runs/34691721304.",
+              "text": null,
+              "annotations_count": 0,
+              "annotations_url": "https://api.github.com/repos/ltn-it/modulix-validation/check-runs/103548101904/annotations"
+            }
+          },
+          {
+            "id": 103548068895,
+            "name": "Required current-revision workflow",
+            "external_id": "2c2cbd40-df1f-5244-a903-67b155286cce",
+            "output": {
+              "title": null,
+              "summary": null,
+              "text": null,
+              "annotations_count": 0,
+              "annotations_url": "https://api.github.com/repos/ltn-it/modulix-validation/check-runs/103548068895/annotations"
+            }
+          }
+        ],
+        "producer": {
+          "id": 34691736114,
+          "path": ".github/workflows/copilot-review.yml",
+          "event": "pull_request_target",
+          "head_branch": "chore/sync-repository-quality-modulix-validation-34691721304-1",
+          "run_attempt": 1,
+          "conclusion": "success",
+          "updated_at": "2026-09-12T11:42:56Z"
+        }
+      },
+      "source_producer": {
+        "id": 34691721304
+      },
+      "quality": [
+        {
+          "id": 103548068480,
+          "name": "validation / contracts",
+          "details_url": "https://github.com/ltn-it/modulix-validation/actions/runs/34691734733/job/103548068480",
+          "check_suite": {
+            "id": 93971858528
+          }
+        },
+        {
+          "id": 103548068380,
+          "name": "repository / quality",
+          "details_url": "https://github.com/ltn-it/modulix-validation/actions/runs/34691734728/job/103548068380",
+          "check_suite": {
+            "id": 93971858514
+          }
+        }
+      ]
+    },
+    {
+      "pr": 437,
+      "base": "4237a082bcc2cd0e9eb0675b0d85e09e77ffc263",
+      "head": "c7e1c84c07206d56115e27c6aa41ed29364b3be7",
+      "merge": "60a0bf7a364eba38f66191f0813fdfa2eb30ce2c",
+      "author": [
+        "litroc",
+        76040632,
+        "User"
+      ],
+      "kind": "legacy",
+      "tree": "3700c7aa46a26de2a9ca4e642fe6ff020818acce",
+      "parents": [
+        "4237a082bcc2cd0e9eb0675b0d85e09e77ffc263",
+        "c7e1c84c07206d56115e27c6aa41ed29364b3be7"
+      ],
+      "legacy": {
+        "required_run": 37079851420,
+        "attempt": 1,
+        "schema4": {
+          "schema": 4,
+          "base_sha": "4237a082bcc2cd0e9eb0675b0d85e09e77ffc263",
+          "head_sha": "c7e1c84c07206d56115e27c6aa41ed29364b3be7",
+          "head_repository": "lightning-it/modulix-validation",
+          "controller_sha": "4237a082bcc2cd0e9eb0675b0d85e09e77ffc263",
+          "controller_ref": "develop",
+          "pull_request_number": 437,
+          "producer_run_id": 37079851629,
+          "pull_request_last_edited_at": null,
+          "pull_request_labels_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "review_id": "PRR_kwDOS6pz7c8AAAABQb6IHg",
+          "review_path": "applicable Copilot or governed automation exemption",
+          "run_url": "https://github.com/lightning-it/modulix-validation/actions/runs/37079851629"
+        },
+        "checks": [
+          {
+            "id": 111078040419,
+            "name": "Current revision review",
+            "external_id": "mlx90-current-revision:copilot:v6:437:37079851629:4237a082bcc2cd0e9eb0675b0d85e09e77ffc263:c7e1c84c07206d56115e27c6aa41ed29364b3be7",
+            "output": {
+              "title": "Current revision review passed",
+              "summary": "{\"schema\":4,\"base_sha\":\"4237a082bcc2cd0e9eb0675b0d85e09e77ffc263\",\"head_sha\":\"c7e1c84c07206d56115e27c6aa41ed29364b3be7\",\"head_repository\":\"lightning-it/modulix-validation\",\"controller_sha\":\"4237a082bcc2cd0e9eb0675b0d85e09e77ffc263\",\"controller_ref\":\"develop\",\"pull_request_number\":437,\"producer_run_id\":37079851629,\"pull_request_last_edited_at\":null,\"pull_request_labels_sha256\":\"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\",\"review_id\":\"PRR_kwDOS6pz7c8AAAABQb6IHg\",\"review_path\":\"applicable Copilot or governed automation exemption\",\"run_url\":\"https://github.com/lightning-it/modulix-validation/actions/runs/37079851629\"}",
+              "text": null,
+              "annotations_count": 0,
+              "annotations_url": "https://api.github.com/repos/ltn-it/modulix-validation/check-runs/111078040419/annotations"
+            }
+          },
+          {
+            "id": 111078066869,
+            "name": "Protected current-revision verifier",
+            "external_id": "rep60-required-workflow:v3:37079851420:437:4237a082bcc2cd0e9eb0675b0d85e09e77ffc263:c7e1c84c07206d56115e27c6aa41ed29364b3be7",
+            "output": {
+              "title": "Protected current-revision evidence verified",
+              "summary": "PR #437; base 4237a082bcc2cd0e9eb0675b0d85e09e77ffc263; head c7e1c84c07206d56115e27c6aa41ed29364b3be7; producer https://github.com/lightning-it/modulix-validation/actions/runs/37079851629.",
+              "text": null,
+              "annotations_count": 0,
+              "annotations_url": "https://api.github.com/repos/ltn-it/modulix-validation/check-runs/111078066869/annotations"
+            }
+          },
+          {
+            "id": 111078099297,
+            "name": "Required current-revision workflow",
+            "external_id": "642159bf-3502-565c-8c7d-4909076f1de0",
+            "output": {
+              "title": null,
+              "summary": null,
+              "text": null,
+              "annotations_count": 1,
+              "annotations_url": "https://api.github.com/repos/ltn-it/modulix-validation/check-runs/111078099297/annotations"
+            }
+          }
+        ],
+        "producer": {
+          "id": 37079851629,
+          "path": ".github/workflows/copilot-review.yml",
+          "event": "pull_request_target",
+          "head_branch": "li-150/bound-incus-artifact-retries",
+          "run_attempt": 1,
+          "conclusion": "success",
+          "updated_at": "2026-10-02T23:57:53Z"
+        }
+      },
+      "review": {
+        "id": 5397973022,
+        "body_sha256": "d05fbb53714e00ba7f9857c33063021cf03c7ecdc078d1956b3691df333e33e7",
+        "service_run": 37079873750,
+        "body": "<!-- ccr-overview-v2 -->\n\n## Copilot review overview\n\n### \ud83d\udfe2 Approval recommended\n\nThe focused change correctly implements LI-150 without altering existing verification or timeout safeguards.\n\n**Review effort:** Balanced  \n**Findings:** None\n\n<details>\n<summary><strong>What changed in this PR</strong></summary>\n\nBounds RHEL Incus artifact downloads to two retries while preserving integrity verification and the 60-minute job timeout.\n\n**Changes:**\n- Reduces both artifact download retry counts from three to two.\n\n| File | Description |\r\n| ---- | ----------- |\r\n| `.github/\u200bworkflows/\u200bpush-ready-host-parity.yml` | Bounds metadata and QCOW2 download retries. |\n</details>\n\n---\n\n\ud83d\udca1 <a href=\"/lightning-it/modulix-validation/new/develop?filename=.github/skills/code-review/SKILL.md\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Add a `code-review` agent skill</a> or configure MCP servers for context-aware, tailored reviews. <a href=\"https://docs.github.com/copilot/how-tos/use-copilot-agents/request-a-code-review/use-code-review?tool=webui#mcp-servers-and-agent-skills\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Learn more in the docs.</a>"
+      },
+      "quality": [
+        {
+          "id": 111077732584,
+          "name": "validation / contracts",
+          "details_url": "https://github.com/ltn-it/modulix-validation/actions/runs/37079851400/job/111077732584",
+          "check_suite": {
+            "id": 100440550479
+          }
+        },
+        {
+          "id": 111077732428,
+          "name": "repository / quality",
+          "details_url": "https://github.com/ltn-it/modulix-validation/actions/runs/37079851399/job/111077732428",
+          "check_suite": {
+            "id": 100440550478
+          }
+        }
+      ]
+    },
+    {
+      "pr": 439,
+      "base": "60a0bf7a364eba38f66191f0813fdfa2eb30ce2c",
+      "head": "c35f31996a6e64ef83902736e15191b68377ef63",
+      "merge": "72dbb6071fff02d6ddf521fa2275b1ba29d30d18",
+      "author": [
+        "litroc",
+        76040632,
+        "User"
+      ],
+      "kind": "legacy",
+      "tree": "502f78c7cc8fe767ade4920fed78f262cc497ce5",
+      "parents": [
+        "60a0bf7a364eba38f66191f0813fdfa2eb30ce2c",
+        "c35f31996a6e64ef83902736e15191b68377ef63"
+      ],
+      "legacy": {
+        "required_run": 37080719837,
+        "attempt": 1,
+        "schema4": {
+          "schema": 4,
+          "base_sha": "60a0bf7a364eba38f66191f0813fdfa2eb30ce2c",
+          "head_sha": "c35f31996a6e64ef83902736e15191b68377ef63",
+          "head_repository": "lightning-it/modulix-validation",
+          "controller_sha": "60a0bf7a364eba38f66191f0813fdfa2eb30ce2c",
+          "controller_ref": "develop",
+          "pull_request_number": 439,
+          "producer_run_id": 37080720061,
+          "pull_request_last_edited_at": null,
+          "pull_request_labels_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "review_id": "PRR_kwDOS6pz7c8AAAABQb-T3Q",
+          "review_path": "applicable Copilot or governed automation exemption",
+          "run_url": "https://github.com/lightning-it/modulix-validation/actions/runs/37080720061"
+        },
+        "checks": [
+          {
+            "id": 111080982814,
+            "name": "Current revision review",
+            "external_id": "mlx90-current-revision:copilot:v6:439:37080720061:60a0bf7a364eba38f66191f0813fdfa2eb30ce2c:c35f31996a6e64ef83902736e15191b68377ef63",
+            "output": {
+              "title": "Current revision review passed",
+              "summary": "{\"schema\":4,\"base_sha\":\"60a0bf7a364eba38f66191f0813fdfa2eb30ce2c\",\"head_sha\":\"c35f31996a6e64ef83902736e15191b68377ef63\",\"head_repository\":\"lightning-it/modulix-validation\",\"controller_sha\":\"60a0bf7a364eba38f66191f0813fdfa2eb30ce2c\",\"controller_ref\":\"develop\",\"pull_request_number\":439,\"producer_run_id\":37080720061,\"pull_request_last_edited_at\":null,\"pull_request_labels_sha256\":\"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\",\"review_id\":\"PRR_kwDOS6pz7c8AAAABQb-T3Q\",\"review_path\":\"applicable Copilot or governed automation exemption\",\"run_url\":\"https://github.com/lightning-it/modulix-validation/actions/runs/37080720061\"}",
+              "text": null,
+              "annotations_count": 0,
+              "annotations_url": "https://api.github.com/repos/ltn-it/modulix-validation/check-runs/111080982814/annotations"
+            }
+          },
+          {
+            "id": 111081002412,
+            "name": "Protected current-revision verifier",
+            "external_id": "rep60-required-workflow:v3:37080719837:439:60a0bf7a364eba38f66191f0813fdfa2eb30ce2c:c35f31996a6e64ef83902736e15191b68377ef63",
+            "output": {
+              "title": "Protected current-revision evidence verified",
+              "summary": "PR #439; base 60a0bf7a364eba38f66191f0813fdfa2eb30ce2c; head c35f31996a6e64ef83902736e15191b68377ef63; producer https://github.com/lightning-it/modulix-validation/actions/runs/37080720061.",
+              "text": null,
+              "annotations_count": 0,
+              "annotations_url": "https://api.github.com/repos/ltn-it/modulix-validation/check-runs/111081002412/annotations"
+            }
+          },
+          {
+            "id": 111081032344,
+            "name": "Required current-revision workflow",
+            "external_id": "dac80396-d315-53b9-a5a0-d47105441f17",
+            "output": {
+              "title": null,
+              "summary": null,
+              "text": null,
+              "annotations_count": 1,
+              "annotations_url": "https://api.github.com/repos/ltn-it/modulix-validation/check-runs/111081032344/annotations"
+            }
+          }
+        ],
+        "producer": {
+          "id": 37080720061,
+          "path": ".github/workflows/copilot-review.yml",
+          "event": "pull_request_target",
+          "head_branch": "li-150/modulix-local-timeouts",
+          "run_attempt": 1,
+          "conclusion": "success",
+          "updated_at": "2026-10-03T00:10:40Z"
+        }
+      },
+      "review": {
+        "id": 5398041565,
+        "body_sha256": "e7416167aeda36d151ca1857dc0967664c4e595aea82152ea5b33f95db179a04",
+        "service_run": 37080739729,
+        "body": "<!-- ccr-overview-v2 -->\n\n## Copilot review overview\n\n### \ud83d\udfe2 Approval recommended\n\nThe timeout-only changes match the stated scope, preserve infrastructure limits, and have no identified blocking issues.\n\n**Review effort:** Balanced  \n**Findings:** None\n\n<details>\n<summary><strong>What changed in this PR</strong></summary>\n\nBounds twelve validation support jobs across seven workflows with explicit LI-150 timeouts, while preserving infrastructure execution and cleanup windows.\n\n**Changes:**\n- Sets nine validation, transition, and aggregate jobs to 10 minutes.\n- Sets two preparation/runtime-lock jobs to 30 minutes and one candidate build to 60 minutes.\n- Leaves six 180\u2013360-minute infrastructure jobs unchanged.\n\n| File | Description |\r\n| ---- | ----------- |\r\n| `.github/\u200bworkflows/\u200bvalidation-contracts.yml` | Bounds Packer runtime-lock validation. |\r\n| `.github/\u200bworkflows/\u200bpacker-nested-esxi-profile.yml` | Bounds contract validation and aggregation. |\r\n| `.github/\u200bworkflows/\u200blit-cloud-hetzner-object-storage-heavy.yml` | Bounds preparation, candidate build, and aggregation. |\r\n| `.github/\u200bworkflows/\u200bcollection-release-transition.yml` | Bounds transition validation. |\r\n| `.github/\u200bworkflows/\u200bcollection-quality-profile.yml` | Bounds delegated input validation. |\r\n| `.github/\u200bworkflows/\u200bcollection-molecule-profile.yml` | Bounds contract validation and aggregation. |\r\n| `.github/\u200bworkflows/\u200bansible-runbook-heavy-profile.yml` | Bounds contract validation and aggregation. |\n</details>\n\n---\n\n\ud83d\udca1 <a href=\"/lightning-it/modulix-validation/new/develop?filename=.github/skills/code-review/SKILL.md\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Add a `code-review` agent skill</a> or configure MCP servers for context-aware, tailored reviews. <a href=\"https://docs.github.com/copilot/how-tos/use-copilot-agents/request-a-code-review/use-code-review?tool=webui#mcp-servers-and-agent-skills\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Learn more in the docs.</a>"
+      },
+      "quality": [
+        {
+          "id": 111080403665,
+          "name": "repository / quality",
+          "details_url": "https://github.com/ltn-it/modulix-validation/actions/runs/37080719670/job/111080403665",
+          "check_suite": {
+            "id": 100442900928
+          }
+        },
+        {
+          "id": 111080403655,
+          "name": "validation / contracts",
+          "details_url": "https://github.com/ltn-it/modulix-validation/actions/runs/37080719624/job/111080403655",
+          "check_suite": {
+            "id": 100442900826
+          }
+        }
+      ]
+    },
+    {
+      "pr": 441,
+      "base": "72dbb6071fff02d6ddf521fa2275b1ba29d30d18",
+      "head": "ff0b0864d06318e803cbda3fb83aef82435a571c",
+      "merge": "38919a4333bbefc2243bf33712f7a5d3fcd9c4ce",
+      "author": [
+        "litroc",
+        76040632,
+        "User"
+      ],
+      "kind": "legacy",
+      "tree": "12f788910c9db8aa264cb94574ab43c721869c11",
+      "parents": [
+        "72dbb6071fff02d6ddf521fa2275b1ba29d30d18",
+        "ff0b0864d06318e803cbda3fb83aef82435a571c"
+      ],
+      "legacy": {
+        "required_run": 37183102153,
+        "attempt": 1,
+        "schema4": {
+          "schema": 4,
+          "base_sha": "72dbb6071fff02d6ddf521fa2275b1ba29d30d18",
+          "head_sha": "ff0b0864d06318e803cbda3fb83aef82435a571c",
+          "head_repository": "lightning-it/modulix-validation",
+          "controller_sha": "72dbb6071fff02d6ddf521fa2275b1ba29d30d18",
+          "controller_ref": "develop",
+          "pull_request_number": 441,
+          "producer_run_id": 37183102272,
+          "pull_request_last_edited_at": null,
+          "pull_request_labels_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "review_id": "PRR_kwDOS6pz7c8AAAABQiREcA",
+          "review_path": "applicable Copilot or governed automation exemption",
+          "run_url": "https://github.com/lightning-it/modulix-validation/actions/runs/37183102272"
+        },
+        "checks": [
+          {
+            "id": 111379722433,
+            "name": "Current revision review",
+            "external_id": "mlx90-current-revision:copilot:v6:441:37183102272:72dbb6071fff02d6ddf521fa2275b1ba29d30d18:ff0b0864d06318e803cbda3fb83aef82435a571c",
+            "output": {
+              "title": "Current revision review passed",
+              "summary": "{\"schema\":4,\"base_sha\":\"72dbb6071fff02d6ddf521fa2275b1ba29d30d18\",\"head_sha\":\"ff0b0864d06318e803cbda3fb83aef82435a571c\",\"head_repository\":\"lightning-it/modulix-validation\",\"controller_sha\":\"72dbb6071fff02d6ddf521fa2275b1ba29d30d18\",\"controller_ref\":\"develop\",\"pull_request_number\":441,\"producer_run_id\":37183102272,\"pull_request_last_edited_at\":null,\"pull_request_labels_sha256\":\"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\",\"review_id\":\"PRR_kwDOS6pz7c8AAAABQiREcA\",\"review_path\":\"applicable Copilot or governed automation exemption\",\"run_url\":\"https://github.com/lightning-it/modulix-validation/actions/runs/37183102272\"}",
+              "text": null,
+              "annotations_count": 0,
+              "annotations_url": "https://api.github.com/repos/ltn-it/modulix-validation/check-runs/111379722433/annotations"
+            }
+          },
+          {
+            "id": 111379740165,
+            "name": "Protected current-revision verifier",
+            "external_id": "rep60-required-workflow:v3:37183102153:441:72dbb6071fff02d6ddf521fa2275b1ba29d30d18:ff0b0864d06318e803cbda3fb83aef82435a571c",
+            "output": {
+              "title": "Protected current-revision evidence verified",
+              "summary": "PR #441; base 72dbb6071fff02d6ddf521fa2275b1ba29d30d18; head ff0b0864d06318e803cbda3fb83aef82435a571c; producer https://github.com/lightning-it/modulix-validation/actions/runs/37183102272.",
+              "text": null,
+              "annotations_count": 0,
+              "annotations_url": "https://api.github.com/repos/ltn-it/modulix-validation/check-runs/111379740165/annotations"
+            }
+          },
+          {
+            "id": 111379758108,
+            "name": "Required current-revision workflow",
+            "external_id": "90cb37fd-f3b3-54b7-8bf5-5da3bc3ea364",
+            "output": {
+              "title": null,
+              "summary": null,
+              "text": null,
+              "annotations_count": 1,
+              "annotations_url": "https://api.github.com/repos/ltn-it/modulix-validation/check-runs/111379758108/annotations"
+            }
+          }
+        ],
+        "producer": {
+          "id": 37183102272,
+          "path": ".github/workflows/copilot-review.yml",
+          "event": "pull_request_target",
+          "head_branch": "li-150/bounded-quality-phases",
+          "run_attempt": 1,
+          "conclusion": "success",
+          "updated_at": "2026-10-04T06:34:55Z"
+        }
+      },
+      "review": {
+        "id": 5404640368,
+        "body_sha256": "e877f5f9f7a664ca6847e846f31752076cd4a66e1e3a0ba3c4bedb741749b0ae",
+        "service_run": 37183115982,
+        "body": "<!-- ccr-overview-v2 -->\n\n## Copilot review overview\n\n### \ud83d\udfe2 Approval recommended\n\nThe timeout behavior, exit-code propagation, unconditional finalizers, regression coverage, and immutable action pin are consistent and complete.\n\n**Review effort:** Balanced  \n**Findings:** None\n\n<details>\n<summary><strong>What changed in this PR</strong></summary>\n\nBounds Molecule phases so cleanup and destruction can run before the profile job timeout.\n\n**Changes:**\n- Adds reusable timeout handling with preserved exit codes.\n- Applies 60/10/10-minute phase budgets.\n- Adds regression tests and pins the workflow to the containing commit.\n\n| File | Description |\r\n| ---- | ----------- |\r\n| `.github/\u200bactions/\u200brun-quality-profile/\u200brun-phase.sh` | Implements bounded phase execution. |\r\n| `.github/\u200bactions/\u200brun-quality-profile/\u200baction.yml` | Applies phase-specific timeouts. |\r\n| `.github/\u200bworkflows/\u200bcollection-quality-profile.yml` | Pins the updated action revision. |\r\n| `tests/\u200btest_quality_phase_timeout.py` | Tests timeout and finalizer behavior. |\r\n| `tests/\u200btest_workbench_public_acceptance.py` | Updates the expected action pin. |\n</details>\n\n---\n\n\ud83d\udca1 <a href=\"/lightning-it/modulix-validation/new/develop?filename=.github/skills/code-review/SKILL.md\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Add a `code-review` agent skill</a> or configure MCP servers for context-aware, tailored reviews. <a href=\"https://docs.github.com/copilot/how-tos/use-copilot-agents/request-a-code-review/use-code-review?tool=webui#mcp-servers-and-agent-skills\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Learn more in the docs.</a>"
+      },
+      "quality": [
+        {
+          "id": 111379441573,
+          "name": "validation / contracts",
+          "details_url": "https://github.com/ltn-it/modulix-validation/actions/runs/37183102317/job/111379441573",
+          "check_suite": {
+            "id": 100716610203
+          }
+        },
+        {
+          "id": 111379441513,
+          "name": "repository / quality",
+          "details_url": "https://github.com/ltn-it/modulix-validation/actions/runs/37183102358/job/111379441513",
+          "check_suite": {
+            "id": 100716610336
+          }
+        }
+      ]
+    },
+    {
+      "pr": 444,
+      "base": "38919a4333bbefc2243bf33712f7a5d3fcd9c4ce",
+      "head": "d4b5ab5e0651353100b54984c11f6deb743b4b4c",
+      "merge": "ecb966269d7a7a64caee2d465c86af912ec9ba05",
+      "author": [
+        "litroc",
+        76040632,
+        "User"
+      ],
+      "kind": "legacy",
+      "tree": "2b424e1f9d19f41cf50889e2c7ff9a0f73ef19bc",
+      "parents": [
+        "38919a4333bbefc2243bf33712f7a5d3fcd9c4ce",
+        "d4b5ab5e0651353100b54984c11f6deb743b4b4c"
+      ],
+      "legacy": {
+        "required_run": 37812919973,
+        "attempt": 1,
+        "schema4": {
+          "schema": 4,
+          "base_sha": "38919a4333bbefc2243bf33712f7a5d3fcd9c4ce",
+          "head_sha": "d4b5ab5e0651353100b54984c11f6deb743b4b4c",
+          "head_repository": "lightning-it/modulix-validation",
+          "controller_sha": "38919a4333bbefc2243bf33712f7a5d3fcd9c4ce",
+          "controller_ref": "develop",
+          "pull_request_number": 444,
+          "producer_run_id": 37813160057,
+          "pull_request_last_edited_at": "2026-10-08T17:00:02Z",
+          "pull_request_labels_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "review_id": "PRR_kwDOS6pz7c8AAAABRXPpMA",
+          "review_path": "applicable Copilot or governed automation exemption",
+          "run_url": "https://github.com/lightning-it/modulix-validation/actions/runs/37813160057"
+        },
+        "checks": [
+          {
+            "id": 113435915567,
+            "name": "Current revision review",
+            "external_id": "mlx90-current-revision:copilot:v6:444:37813160057:38919a4333bbefc2243bf33712f7a5d3fcd9c4ce:d4b5ab5e0651353100b54984c11f6deb743b4b4c",
+            "output": {
+              "title": "Current revision review passed",
+              "summary": "{\"schema\":4,\"base_sha\":\"38919a4333bbefc2243bf33712f7a5d3fcd9c4ce\",\"head_sha\":\"d4b5ab5e0651353100b54984c11f6deb743b4b4c\",\"head_repository\":\"lightning-it/modulix-validation\",\"controller_sha\":\"38919a4333bbefc2243bf33712f7a5d3fcd9c4ce\",\"controller_ref\":\"develop\",\"pull_request_number\":444,\"producer_run_id\":37813160057,\"pull_request_last_edited_at\":\"2026-10-08T17:00:02Z\",\"pull_request_labels_sha256\":\"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\",\"review_id\":\"PRR_kwDOS6pz7c8AAAABRXPpMA\",\"review_path\":\"applicable Copilot or governed automation exemption\",\"run_url\":\"https://github.com/lightning-it/modulix-validation/actions/runs/37813160057\"}",
+              "text": null,
+              "annotations_count": 0,
+              "annotations_url": "https://api.github.com/repos/ltn-it/modulix-validation/check-runs/113435915567/annotations"
+            }
+          },
+          {
+            "id": 113435983481,
+            "name": "Protected current-revision verifier",
+            "external_id": "rep60-required-workflow:v3:37812919973:444:38919a4333bbefc2243bf33712f7a5d3fcd9c4ce:d4b5ab5e0651353100b54984c11f6deb743b4b4c",
+            "output": {
+              "title": "Protected current-revision evidence verified",
+              "summary": "PR #444; base 38919a4333bbefc2243bf33712f7a5d3fcd9c4ce; head d4b5ab5e0651353100b54984c11f6deb743b4b4c; producer https://github.com/lightning-it/modulix-validation/actions/runs/37813160057.",
+              "text": null,
+              "annotations_count": 0,
+              "annotations_url": "https://api.github.com/repos/ltn-it/modulix-validation/check-runs/113435983481/annotations"
+            }
+          },
+          {
+            "id": 113436229236,
+            "name": "Required current-revision workflow",
+            "external_id": "c4ab38df-838f-5934-b033-1c6e6cc1ea0d",
+            "output": {
+              "title": null,
+              "summary": null,
+              "text": null,
+              "annotations_count": 1,
+              "annotations_url": "https://api.github.com/repos/ltn-it/modulix-validation/check-runs/113436229236/annotations"
+            }
+          }
+        ],
+        "producer": {
+          "id": 37813160057,
+          "path": ".github/workflows/copilot-review.yml",
+          "event": "pull_request_target",
+          "head_branch": "li-150/aap-runner-recovery",
+          "run_attempt": 1,
+          "conclusion": "success",
+          "updated_at": "2026-10-08T17:03:35Z"
+        }
+      },
+      "review": {
+        "id": 5460191536,
+        "body_sha256": "439cd1ca53cf3c519e75b59635e4e40ded9e7e44b51ca26751cb30801f8f57d9",
+        "service_run": 37813184955,
+        "body": "<!-- ccr-overview-v2 -->\n\n### \ud83d\udfe2 Approval recommended\n\nToken permissions, immutable pins, timeout calculations, documentation, and focused contract coverage are consistent with the stated scope.\n\n**0 open findings**\n\n<details>\n<summary><strong>1 resolved since last review</strong></summary>\n\n- <picture><source media=\"(prefers-color-scheme: dark)\" srcset=\"https://github.githubassets.com/static/images/icons/copilot-code-review/low-v2-dark.svg\"><source media=\"(prefers-color-scheme: light)\" srcset=\"https://github.githubassets.com/static/images/icons/copilot-code-review/low-v2-light.svg\"><img src=\"https://github.githubassets.com/static/images/icons/copilot-code-review/low-v2-light.png\" alt=\"Low severity\" width=\"62\" height=\"18\" align=\"texttop\"></picture> [Update PR evidence to the current commit head](#discussion_r4221819201)\n</details>\n\n\ud83e\udde0 **Review effort:** Balanced"
+      },
+      "quality": [
+        {
+          "id": 113434098586,
+          "name": "validation / contracts",
+          "details_url": "https://github.com/ltn-it/modulix-validation/actions/runs/37812923258/job/113434098586",
+          "check_suite": {
+            "id": 102446596452
+          }
+        },
+        {
+          "id": 113434096989,
+          "name": "repository / quality",
+          "details_url": "https://github.com/ltn-it/modulix-validation/actions/runs/37812923078/job/113434096989",
+          "check_suite": {
+            "id": 102446595984
+          }
+        }
+      ]
+    },
+    {
+      "pr": 443,
+      "base": "ecb966269d7a7a64caee2d465c86af912ec9ba05",
+      "head": "6de2874c1e00c2f46f9743ce83e60a6f211c4fda",
+      "merge": "4d4c07e323d6b2adaa36d12683a79a17d0b7788e",
+      "author": [
+        "renovate[bot]",
+        29139614,
+        "Bot"
+      ],
+      "kind": "legacy",
+      "tree": "55b35fd64fbdafe78ebbc44ecfa04d3baeb881b5",
+      "parents": [
+        "ecb966269d7a7a64caee2d465c86af912ec9ba05",
+        "6de2874c1e00c2f46f9743ce83e60a6f211c4fda"
+      ],
+      "legacy": {
+        "required_run": 37813857648,
+        "attempt": 1,
+        "schema4": {
+          "schema": 4,
+          "base_sha": "ecb966269d7a7a64caee2d465c86af912ec9ba05",
+          "head_sha": "6de2874c1e00c2f46f9743ce83e60a6f211c4fda",
+          "head_repository": "lightning-it/modulix-validation",
+          "controller_sha": "ecb966269d7a7a64caee2d465c86af912ec9ba05",
+          "controller_ref": "develop",
+          "pull_request_number": 443,
+          "producer_run_id": 37813858329,
+          "pull_request_last_edited_at": null,
+          "pull_request_labels_sha256": "16a1bd1a861891ac08a46b04dfde522e4bc41dcf48ea3977457bb8364c750e7e",
+          "review_id": null,
+          "review_path": "deterministic policy-bound Renovate exemption",
+          "run_url": "https://github.com/lightning-it/modulix-validation/actions/runs/37813858329"
+        },
+        "checks": [
+          {
+            "id": 113437427722,
+            "name": "Current revision review",
+            "external_id": "mlx90-current-revision:renovate:v6:443:37813858329:ecb966269d7a7a64caee2d465c86af912ec9ba05:6de2874c1e00c2f46f9743ce83e60a6f211c4fda",
+            "output": {
+              "title": "Current revision Renovate exemption passed",
+              "summary": "{\"schema\":4,\"base_sha\":\"ecb966269d7a7a64caee2d465c86af912ec9ba05\",\"head_sha\":\"6de2874c1e00c2f46f9743ce83e60a6f211c4fda\",\"head_repository\":\"lightning-it/modulix-validation\",\"controller_sha\":\"ecb966269d7a7a64caee2d465c86af912ec9ba05\",\"controller_ref\":\"develop\",\"pull_request_number\":443,\"producer_run_id\":37813858329,\"pull_request_last_edited_at\":null,\"pull_request_labels_sha256\":\"16a1bd1a861891ac08a46b04dfde522e4bc41dcf48ea3977457bb8364c750e7e\",\"review_id\":null,\"review_path\":\"deterministic policy-bound Renovate exemption\",\"run_url\":\"https://github.com/lightning-it/modulix-validation/actions/runs/37813858329\"}",
+              "text": null,
+              "annotations_count": 0,
+              "annotations_url": "https://api.github.com/repos/ltn-it/modulix-validation/check-runs/113437427722/annotations"
+            }
+          },
+          {
+            "id": 113437538296,
+            "name": "Protected current-revision verifier",
+            "external_id": "rep60-required-workflow:v3:37813857648:443:ecb966269d7a7a64caee2d465c86af912ec9ba05:6de2874c1e00c2f46f9743ce83e60a6f211c4fda",
+            "output": {
+              "title": "Protected current-revision evidence verified",
+              "summary": "PR #443; base ecb966269d7a7a64caee2d465c86af912ec9ba05; head 6de2874c1e00c2f46f9743ce83e60a6f211c4fda; producer https://github.com/lightning-it/modulix-validation/actions/runs/37813858329.",
+              "text": null,
+              "annotations_count": 0,
+              "annotations_url": "https://api.github.com/repos/ltn-it/modulix-validation/check-runs/113437538296/annotations"
+            }
+          },
+          {
+            "id": 113437617420,
+            "name": "Required current-revision workflow",
+            "external_id": "1c25037a-b5fe-59e4-882a-ee815ee5edc4",
+            "output": {
+              "title": null,
+              "summary": null,
+              "text": null,
+              "annotations_count": 1,
+              "annotations_url": "https://api.github.com/repos/ltn-it/modulix-validation/check-runs/113437617420/annotations"
+            }
+          }
+        ],
+        "producer": {
+          "id": 37813858329,
+          "path": ".github/workflows/copilot-review.yml",
+          "event": "pull_request_target",
+          "head_branch": "renovate/github-actions",
+          "run_attempt": 1,
+          "conclusion": "success",
+          "updated_at": "2026-10-08T17:05:51Z"
+        }
+      },
+      "quality": [
+        {
+          "id": 113437318044,
+          "name": "validation / contracts",
+          "details_url": "https://github.com/ltn-it/modulix-validation/actions/runs/37813861833/job/113437318044",
+          "check_suite": {
+            "id": 102449275018
+          }
+        },
+        {
+          "id": 113437317030,
+          "name": "repository / quality",
+          "details_url": "https://github.com/ltn-it/modulix-validation/actions/runs/37813861742/job/113437317030",
+          "check_suite": {
+            "id": 102449274728
+          }
+        }
+      ]
+    },
+    {
+      "pr": 451,
+      "base": "4d4c07e323d6b2adaa36d12683a79a17d0b7788e",
+      "head": "e00fa52730eef8f356a3dbe1c0cc2812038b98a7",
+      "merge": "fa927f0ed38ff27fefc3cb7d00c212ca450d5e81",
+      "author": [
+        "litroc",
+        76040632,
+        "User"
+      ],
+      "kind": "poc",
+      "tree": "6efcee5e04286912b592f584ac42d401c730b457",
+      "parents": [
+        "4d4c07e323d6b2adaa36d12683a79a17d0b7788e",
+        "e00fa52730eef8f356a3dbe1c0cc2812038b98a7"
+      ],
+      "files": [
+        {
+          "filename": ".github/workflows/delivery-operations.yml",
+          "sha": "a56c36a529b343052edb1e4e193b81de0d0d2c6f",
+          "status": "added",
+          "additions": 22,
+          "deletions": 0
+        },
+        {
+          "filename": ".github/workflows/review-events.yml",
+          "sha": "58db8ddb6b65b2f37773afad7aac4868effe94a0",
+          "status": "added",
+          "additions": 20,
+          "deletions": 0
+        },
+        {
+          "filename": ".lit/workflow-control.json",
+          "sha": "5724e8ddfea07ff13961743391b94ca7fbef575b",
+          "status": "added",
+          "additions": 18,
+          "deletions": 0
+        }
+      ],
+      "quality": [
+        {
+          "id": 117519082093,
+          "name": "repository / quality",
+          "details_url": "https://github.com/ltn-it/modulix-validation/actions/runs/39074611981/job/117519082093",
+          "check_suite": {
+            "id": 105892608129
+          }
+        },
+        {
+          "id": 117519081848,
+          "name": "validation / contracts",
+          "details_url": "https://github.com/ltn-it/modulix-validation/actions/runs/39074611868/job/117519081848",
+          "check_suite": {
+            "id": 105892607860
+          }
+        }
+      ]
+    },
+    {
+      "pr": 449,
+      "base": "fa927f0ed38ff27fefc3cb7d00c212ca450d5e81",
+      "head": "f4d76b02038e07705e9c2c9c9a3098d12a984ef7",
+      "merge": "49d462d86e2ab944454a466c72ed3ca0a774df14",
+      "author": [
+        "renovate[bot]",
+        29139614,
+        "Bot"
+      ],
+      "kind": "renovate",
+      "tree": "5e7a2e6967d9122dbc7cc25275ab77df72ddd511",
+      "parents": [
+        "fa927f0ed38ff27fefc3cb7d00c212ca450d5e81",
+        "f4d76b02038e07705e9c2c9c9a3098d12a984ef7"
+      ],
+      "quality": [
+        {
+          "id": 117519725450,
+          "name": "validation / contracts",
+          "details_url": "https://github.com/ltn-it/modulix-validation/actions/runs/39074840019/job/117519725450",
+          "check_suite": {
+            "id": 105893185232
+          }
+        },
+        {
+          "id": 117519725409,
+          "name": "repository / quality",
+          "details_url": "https://github.com/ltn-it/modulix-validation/actions/runs/39074840018/job/117519725409",
+          "check_suite": {
+            "id": 105893185226
+          }
+        }
+      ]
+    },
+    {
+      "pr": 452,
+      "base": "49d462d86e2ab944454a466c72ed3ca0a774df14",
+      "head": "9c950bbed72372089d5015a8ccea70e29c429ecb",
+      "merge": "a2863b8b5dcb7ff1b44418c811315a8a37b4ea86",
+      "author": [
+        "litroc",
+        76040632,
+        "User"
+      ],
+      "kind": "common",
+      "tree": "926173e13500cfda39be4cf7636b61d7b5007570",
+      "parents": [
+        "49d462d86e2ab944454a466c72ed3ca0a774df14",
+        "9c950bbed72372089d5015a8ccea70e29c429ecb"
+      ],
+      "common": {
+        "run": 40971712209,
+        "attempt": 1,
+        "source_sha": "530b8fb175b7fccf238b03aab652bd5ee2ad2a41",
+        "route": "copilot",
+        "proof_sha256": "b8941cb9f1aa21d9c50480fa4f6996312f52cd0337bd781817bab2a035588a1a"
+      }
+    },
+    {
+      "pr": 450,
+      "base": "a2863b8b5dcb7ff1b44418c811315a8a37b4ea86",
+      "head": "2b1788bec4f6dcef5fe8aa2d573fca44ae2e3a80",
+      "merge": "4af68360a5d5625f9407e3f91b0549b33994f5d3",
+      "author": [
+        "litroc",
+        76040632,
+        "User"
+      ],
+      "kind": "common",
+      "tree": "b612f23aad5c48804b863af228e3afebd4a5905e",
+      "parents": [
+        "a2863b8b5dcb7ff1b44418c811315a8a37b4ea86",
+        "2b1788bec4f6dcef5fe8aa2d573fca44ae2e3a80"
+      ],
+      "common": {
+        "run": 41016535359,
+        "attempt": 2,
+        "source_sha": "530b8fb175b7fccf238b03aab652bd5ee2ad2a41",
+        "route": "copilot",
+        "proof_sha256": "d598b019e3b5ccff825f98ea300eea656d31dbe4939f9c8471a26244d73ca537"
+      }
+    }
+  ],
+  "poc_authority": [
+    {
+      "repository": "ltn-it/.github",
+      "Main": "8f3a6e96b9ddddbd5936f1120c2e5cdf1ac1038d",
+      "pull": 914,
+      "merged_at": "2026-10-17T19:27:32Z",
+      "AGENTS_blob": "fdd83f90c606921cba2e78e6bac0aa6839ef2714",
+      "file_sha256": "f64ec2fba08ca8f38b9f7accc5ed613fc6c8af7d769ea0aaba84a0e1eda40a50",
+      "applicable_before_bootstrap": "PR451 created2026-10-17T22:19:41Z; actualMain native merges and immutable firstparentpolicy are earlier."
+    }
+  ]
+}
