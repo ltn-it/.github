@@ -45,3 +45,14 @@ effective source selection, a protected approval, a completed Main delivery,
 Incus Heavy execution or operating custody. A descriptor file or successful
 local test does not activate a target. Actual source qualification and the
 normal protected Management/consumer delivery remain required.
+
+The frozen Shared/Supplementary event path remains defining workflow
+`95f499ff8d58a74f3427d3e8234b9e6de2485958` selecting helper checkout
+`80dfd878b4ce9c4f7431f54c7188016424e8f42b`. Its Source498 reader hashes
+remain unchanged. The event regression scenarios execute in an isolated archive
+of that actual checkout with the defining workflow, while a separate negative
+case confirms that mixing this helper with the candidate reader fails before
+native reads. No current event target or receiver is activated by this change.
+
+Historical legacy proofs also reject newer policy producer runs and reruns,
+including queued or failed producers that have not published replacement checks.

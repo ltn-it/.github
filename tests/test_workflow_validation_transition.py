@@ -291,6 +291,26 @@ class ValidationTransitionTests(unittest.TestCase):
         with self.assertRaises(control.ControlError):
             context.control(api.pull(451), row["merge"])
 
+    def test_new_policy_generation_cannot_reuse_old_successful_checks(self):
+        row = transition.descriptor()["rows"][0]
+        producer_id = row["legacy"]["schema4"]["producer_run_id"]
+        for identifier, attempt, status, conclusion in [
+            (producer_id + 1, 1, "completed", "failure"),
+            (producer_id + 1, 1, "queued", None),
+            (producer_id, 2, "in_progress", None),
+        ]:
+            api = NativeCapture()
+            context = api.prepare()
+            newer = copy.deepcopy(api.records[f"{PREFIX}/actions/runs/{producer_id}"])
+            newer.update(id=identifier, run_attempt=attempt, status=status, conclusion=conclusion)
+            inventory = api.records[f"{PREFIX}/actions/runs?head_sha={row['head']}"]
+            inventory["workflow_runs"].append(newer)
+            inventory["total_count"] += 1
+            with patch.object(transition, "git", side_effect=api.git), \
+                    self.subTest(run=identifier, attempt=attempt), self.assertRaisesRegex(
+                    control.ControlError, "new-policy-generation"):
+                context.control(api.pull(row["pr"]), row["merge"])
+
     def test_ordinary_copilot_reader_keeps_denial_for_missing_native_pr_locators(self):
         for number in [437, 439, 441, 444]:
             api = NativeCapture()

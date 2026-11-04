@@ -328,6 +328,15 @@ class Transition:
         require(latest.get("merged_at") == pull["merged_at"], "validation-transition-merge-drift")
         runs = self.api.pages(f"repos/{REPOSITORY}/actions/runs?head_sha={row['head']}", "workflow_runs")
         if row["kind"] == "legacy":
+            producer = row["legacy"]["producer"]
+            expected_id = row["legacy"]["schema4"]["producer_run_id"]
+            require(not any(r.get("path") == ".github/workflows/copilot-review.yml"
+                            and (type(r.get("id")) is not int
+                                 or r["id"] > expected_id
+                                 or r["id"] == expected_id
+                                 and r.get("run_attempt") != producer["run_attempt"])
+                            for r in runs),
+                    "validation-transition-new-policy-generation")
             require(not any(native_required(r, REPOSITORY) or legacy_required(r)
                             and (r.get("id"), r.get("run_attempt")) !=
                             (row["legacy"]["required_run"], row["legacy"]["attempt"])
