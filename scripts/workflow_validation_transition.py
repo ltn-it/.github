@@ -191,11 +191,18 @@ class Transition:
                     and run.get("check_suite_id") == check["check_suite"]["id"],
                     "validation-transition-quality-run")
             associated = run.get("pull_requests")
-            require(type(associated) is list and (not associated or len(associated) == 1
+            require(type(associated) is list, "validation-transition-quality-association-drift")
+            original_locator = not associated or (len(associated) == 1
                     and associated[0].get("number") == row["pr"]
                     and associated[0].get("base", {}).get("sha") == row["base"]
-                    and associated[0].get("head", {}).get("sha") == row["head"]),
-                    "validation-transition-quality-association-drift")
+                    and associated[0].get("head", {}).get("sha") == row["head"])
+            if not original_locator:
+                # These two frozen Renovate ingresses reuse the same branch.
+                # The later locator cannot replace any original check/run/job
+                # proof above or below; authenticate only its branch alias.
+                require(row["pr"] in {443, 449}, "validation-transition-quality-association-drift")
+                from workflow_ingress import reused_branch_locator
+                reused_branch_locator(self.api, REPOSITORY, pull, associated)
             jobs = native_jobs(self.api, REPOSITORY, run)
             require(any(j.get("id") == int(match[2]) and j.get("conclusion") == "success"
                         and j.get("completed_at", "~") < pull["merged_at"]
