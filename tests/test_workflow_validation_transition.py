@@ -170,6 +170,90 @@ def isolated_git_environment():
 
 
 class ValidationTransitionTests(unittest.TestCase):
+    def alias_quality_runs(self, api, number):
+        """Model GitHub's current later Renovate branch locator, not old evidence."""
+        original = api.pull(number)
+        later = copy.deepcopy(original)
+        later.update(number=454, state="open", merged=False,
+                     created_at="2026-11-10T20:00:00Z", merge_commit_sha=None)
+        later["head"]["sha"] = "e" * 40
+        later["base"]["sha"] = BASELINE
+        api.records[f"{PREFIX}/pulls/454"] = later
+        row = next(r for r in transition.descriptor()["rows"] if r["pr"] == number)
+        for check in row["quality"]:
+            run = check["details_url"].split("/runs/", 1)[1].split("/", 1)[0]
+            api.records[f"{PREFIX}/actions/runs/{run}"]["pull_requests"] = [
+                {"number": 454, "head": copy.deepcopy(later["head"]),
+                 "base": copy.deepcopy(later["base"])}]
+        return row, later
+
+    def test_frozen_quality_accepts_authenticated_later_branch_locator(self):
+        for number in (443, 449):
+            api = NativeCapture()
+            row, _ = self.alias_quality_runs(api, number)
+            context = api.prepare()
+            proof = context.quality(api.pull(number), row)
+            self.assertEqual(2, len(proof))
+            self.assertEqual({q["id"] for q in row["quality"]}, {q["check"] for q in proof})
+
+    def test_frozen_alias_never_substitutes_for_original_quality(self):
+        api = NativeCapture()
+        row, _ = self.alias_quality_runs(api, 449)
+        run = row["quality"][0]["details_url"].split("/runs/", 1)[1].split("/", 1)[0]
+        api.records[f"{PREFIX}/actions/runs/{run}"]["head_sha"] = "e" * 40
+        with self.assertRaises(control.ControlError):
+            api.prepare().quality(api.pull(449), row)
+
+    def test_frozen_alias_rejects_wrong_later_author_branch_repository_or_tuple(self):
+        for mutate in (
+            lambda later: later["user"].update(id=1),
+            lambda later: later["head"].update(ref="foreign-branch"),
+            lambda later: later["head"]["repo"].update(full_name="foreign/repository"),
+            lambda later: later["head"].update(sha="f" * 40),
+            lambda later: later.update(created_at="2020-01-01T00:00:00Z"),
+        ):
+            api = NativeCapture()
+            row, later = self.alias_quality_runs(api, 443)
+            mutate(later)
+            with self.subTest(mutation=mutate), self.assertRaises(control.ControlError):
+                api.prepare().quality(api.pull(443), row)
+
+    def test_other_frozen_rows_do_not_gain_later_locator_exception(self):
+        api = NativeCapture()
+        row, _ = self.alias_quality_runs(api, 437)
+        with self.assertRaises(control.ControlError):
+            api.prepare().quality(api.pull(437), row)
+
+    def test_complete_promotion_reader_accepts_both_frozen_branch_aliases(self):
+        api = NativeCapture()
+        for number in (443, 449):
+            self.alias_quality_runs(api, number)
+        with isolated_git_environment(), \
+                patch.object(subject, "git", side_effect=api.integration_git), \
+                patch.object(transition, "git", side_effect=api.integration_git), \
+                patch.object(subject, "fetch_objects"), \
+                patch.object(control, "artifact_record", side_effect=api.artifact):
+            configuration = control.policy(api, REPOSITORY, MAIN, SOURCE, pull=api.promotion)
+            result = control.promotion_ingress(api, REPOSITORY, api.promotion, configuration)
+        self.assertEqual(14, len(result["ingress"]))
+        self.assertEqual(BASELINE, result["head"])
+        self.assertEqual("1e08adea12bbb60160dcb62604f943f60ce26a580fc836f0bfee487c86eb0150",
+                         result["diff_sha256"])
+        expected = {q["id"] for row in transition.descriptor()["rows"] for q in row.get("quality", [])}
+        observed = {q["check"] for row in result["ingress"]
+                    for q in row["control"].get("quality", [])}
+        self.assertEqual(24, len(expected))
+        self.assertEqual(expected, observed)
+
+    def test_frozen_alias_rejects_unavailable_or_multiple_locator_inventory(self):
+        for associated in (None, [{"number": 454}, {"number": 455}]):
+            api = NativeCapture()
+            row, _ = self.alias_quality_runs(api, 443)
+            run = row["quality"][0]["details_url"].split("/runs/", 1)[1].split("/", 1)[0]
+            api.records[f"{PREFIX}/actions/runs/{run}"]["pull_requests"] = associated
+            with self.subTest(associated=associated), self.assertRaises(control.ControlError):
+                api.prepare().quality(api.pull(443), row)
+
     def test_all_fourteen_real_ingresses_have_a_bounded_historical_disposition(self):
         api = NativeCapture()
         context = api.prepare()
