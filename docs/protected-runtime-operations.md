@@ -186,6 +186,20 @@ A merely evaluated ruleset cannot enforce this procedure. A deliberately admitte
 scope needs an active native requirement bound to an immutable, previously
 qualified central source. Candidate code must not select its own verifier.
 
+## Missing historical merge associations
+
+A Main promotion still verifies every first-parent Develop ingress and its
+original native control proof. If GitHub returns an entirely empty commit-to-PR
+association, the verifier reads the complete closed-Develop PR inventory once
+for that invocation. Pagination must finish within the existing 100-page bound,
+and the snapshot must fit the existing 50 MiB proof resource ceiling. Duplicate
+PR identities, a missing or ambiguous exact merge match, or a contradictory
+nonempty commit association block acceptance. The direct merged PR must match
+the repository and both actual merge parents before the ordinary native
+proof reader runs. A candidate PR number, comment or copied proof cannot supply
+attribution. This lookup grants no review, approval, source selection or release
+authority, and does not reset a consumed request.
+
 ## Handle a blocked operation
 
 Use the actual current run and failure category to identify the failed condition.

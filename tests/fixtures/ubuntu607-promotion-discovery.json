@@ -1,0 +1,249 @@
+{
+  "associations": {
+    "0f486a210bc8dcddb92c39765e420d33bc29bca5": [
+      {
+        "base": {
+          "ref": "develop",
+          "repo": {
+            "full_name": "ltn-it/ansible-collection-ubuntu",
+            "id": 1268102957
+          },
+          "sha": "6caa372ac440b7cb3663478247c0d0e866a0d198"
+        },
+        "head": {
+          "repo": {
+            "full_name": "ltn-it/ansible-collection-ubuntu",
+            "id": 1268102957
+          },
+          "sha": "d4fdde55c51829154d97443c1ceae75a31427027"
+        },
+        "id": 5303069298,
+        "merge_commit_sha": "0f486a210bc8dcddb92c39765e420d33bc29bca5",
+        "merged_at": "2026-11-13T22:06:59Z",
+        "number": 606,
+        "state": "closed"
+      }
+    ],
+    "20083a4ebe4e4a2d30bec2013a366a4b54894e12": [],
+    "6caa372ac440b7cb3663478247c0d0e866a0d198": [
+      {
+        "base": {
+          "ref": "develop",
+          "repo": {
+            "full_name": "ltn-it/ansible-collection-ubuntu",
+            "id": 1268102957
+          },
+          "sha": "20083a4ebe4e4a2d30bec2013a366a4b54894e12"
+        },
+        "head": {
+          "repo": {
+            "full_name": "ltn-it/ansible-collection-ubuntu",
+            "id": 1268102957
+          },
+          "sha": "01498201daaf48ac2d519b1e2294a45ac7abe3ff"
+        },
+        "id": 5302865314,
+        "merge_commit_sha": "6caa372ac440b7cb3663478247c0d0e866a0d198",
+        "merged_at": "2026-11-13T21:15:14Z",
+        "number": 605,
+        "state": "closed"
+      }
+    ]
+  },
+  "base": "d02e2368611d932cffb66b3f0b9fd4cf8c5bd50f",
+  "closed": [
+    {
+      "base": {
+        "ref": "develop",
+        "repo": {
+          "full_name": "ltn-it/ansible-collection-ubuntu",
+          "id": 1268102957
+        },
+        "sha": "6caa372ac440b7cb3663478247c0d0e866a0d198"
+      },
+      "head": {
+        "repo": {
+          "full_name": "ltn-it/ansible-collection-ubuntu",
+          "id": 1268102957
+        },
+        "sha": "d4fdde55c51829154d97443c1ceae75a31427027"
+      },
+      "id": 5303069298,
+      "merge_commit_sha": "0f486a210bc8dcddb92c39765e420d33bc29bca5",
+      "merged_at": "2026-11-13T22:06:59Z",
+      "number": 606,
+      "state": "closed"
+    },
+    {
+      "base": {
+        "ref": "develop",
+        "repo": {
+          "full_name": "ltn-it/ansible-collection-ubuntu",
+          "id": 1268102957
+        },
+        "sha": "20083a4ebe4e4a2d30bec2013a366a4b54894e12"
+      },
+      "head": {
+        "repo": {
+          "full_name": "ltn-it/ansible-collection-ubuntu",
+          "id": 1268102957
+        },
+        "sha": "01498201daaf48ac2d519b1e2294a45ac7abe3ff"
+      },
+      "id": 5302865314,
+      "merge_commit_sha": "6caa372ac440b7cb3663478247c0d0e866a0d198",
+      "merged_at": "2026-11-13T21:15:14Z",
+      "number": 605,
+      "state": "closed"
+    },
+    {
+      "base": {
+        "ref": "develop",
+        "repo": {
+          "full_name": "ltn-it/ansible-collection-ubuntu",
+          "id": 1268102957
+        },
+        "sha": "5e83155bb3149666de70b5108b78260ede2ab4e5"
+      },
+      "head": {
+        "repo": {
+          "full_name": "ltn-it/ansible-collection-ubuntu",
+          "id": 1268102957
+        },
+        "sha": "35df21768a4793e6d11f00f56ae03b908e1659a4"
+      },
+      "id": 5298850486,
+      "merge_commit_sha": "20083a4ebe4e4a2d30bec2013a366a4b54894e12",
+      "merged_at": "2026-11-13T16:20:47Z",
+      "number": 604,
+      "state": "closed"
+    }
+  ],
+  "closed_inventory_observed": {
+    "canonical_bytes": 8315030,
+    "complete": true,
+    "count": 422,
+    "page_count": 5
+  },
+  "commits": [
+    "20083a4ebe4e4a2d30bec2013a366a4b54894e12",
+    "6caa372ac440b7cb3663478247c0d0e866a0d198",
+    "0f486a210bc8dcddb92c39765e420d33bc29bca5"
+  ],
+  "direct": {
+    "604": {
+      "base": {
+        "ref": "develop",
+        "repo": {
+          "full_name": "ltn-it/ansible-collection-ubuntu",
+          "id": 1268102957
+        },
+        "sha": "5e83155bb3149666de70b5108b78260ede2ab4e5"
+      },
+      "head": {
+        "repo": {
+          "full_name": "ltn-it/ansible-collection-ubuntu",
+          "id": 1268102957
+        },
+        "sha": "35df21768a4793e6d11f00f56ae03b908e1659a4"
+      },
+      "id": 5298850486,
+      "merge_commit_sha": "20083a4ebe4e4a2d30bec2013a366a4b54894e12",
+      "merged": true,
+      "merged_at": "2026-11-13T16:20:47Z",
+      "number": 604,
+      "state": "closed"
+    },
+    "605": {
+      "base": {
+        "ref": "develop",
+        "repo": {
+          "full_name": "ltn-it/ansible-collection-ubuntu",
+          "id": 1268102957
+        },
+        "sha": "20083a4ebe4e4a2d30bec2013a366a4b54894e12"
+      },
+      "head": {
+        "repo": {
+          "full_name": "ltn-it/ansible-collection-ubuntu",
+          "id": 1268102957
+        },
+        "sha": "01498201daaf48ac2d519b1e2294a45ac7abe3ff"
+      },
+      "id": 5302865314,
+      "merge_commit_sha": "6caa372ac440b7cb3663478247c0d0e866a0d198",
+      "merged": true,
+      "merged_at": "2026-11-13T21:15:14Z",
+      "number": 605,
+      "state": "closed"
+    },
+    "606": {
+      "base": {
+        "ref": "develop",
+        "repo": {
+          "full_name": "ltn-it/ansible-collection-ubuntu",
+          "id": 1268102957
+        },
+        "sha": "6caa372ac440b7cb3663478247c0d0e866a0d198"
+      },
+      "head": {
+        "repo": {
+          "full_name": "ltn-it/ansible-collection-ubuntu",
+          "id": 1268102957
+        },
+        "sha": "d4fdde55c51829154d97443c1ceae75a31427027"
+      },
+      "id": 5303069298,
+      "merge_commit_sha": "0f486a210bc8dcddb92c39765e420d33bc29bca5",
+      "merged": true,
+      "merged_at": "2026-11-13T22:06:59Z",
+      "number": 606,
+      "state": "closed"
+    },
+    "607": {
+      "base": {
+        "ref": "main",
+        "repo": {
+          "full_name": "ltn-it/ansible-collection-ubuntu",
+          "id": 1268102957
+        },
+        "sha": "d02e2368611d932cffb66b3f0b9fd4cf8c5bd50f"
+      },
+      "head": {
+        "repo": {
+          "full_name": "ltn-it/ansible-collection-ubuntu",
+          "id": 1268102957
+        },
+        "sha": "0f486a210bc8dcddb92c39765e420d33bc29bca5"
+      },
+      "id": 5303854155,
+      "merge_commit_sha": "78dddb91b364da088c61f34cb37b14186d1a751c",
+      "merged": false,
+      "merged_at": null,
+      "number": 607,
+      "state": "open"
+    }
+  },
+  "head": "0f486a210bc8dcddb92c39765e420d33bc29bca5",
+  "parents": {
+    "0f486a210bc8dcddb92c39765e420d33bc29bca5": [
+      "6caa372ac440b7cb3663478247c0d0e866a0d198",
+      "d4fdde55c51829154d97443c1ceae75a31427027"
+    ],
+    "20083a4ebe4e4a2d30bec2013a366a4b54894e12": [
+      "5e83155bb3149666de70b5108b78260ede2ab4e5",
+      "35df21768a4793e6d11f00f56ae03b908e1659a4"
+    ],
+    "6caa372ac440b7cb3663478247c0d0e866a0d198": [
+      "20083a4ebe4e4a2d30bec2013a366a4b54894e12",
+      "01498201daaf48ac2d519b1e2294a45ac7abe3ff"
+    ]
+  },
+  "provenance": {
+    "association_sha256": "bc299009652171007bb1ce084e2fcedefdecddfd7d0423f5c3894d26b4522c48",
+    "closed_inventory_sha256": "550ea7e7022fe002a0475f200a245e51252745fa41f99f8ceaf7e7ef94b847c7",
+    "kind": "sanitized-provider-DTO-projection",
+    "note": "Only public PR identity/merge/branch fields; native proofs are not replaced by this fixture."
+  },
+  "repo": "ltn-it/ansible-collection-ubuntu"
+}
