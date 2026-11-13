@@ -1598,6 +1598,58 @@ def check_native_control(api, repo, pull, config):
     return result
 
 
+def promotion_ingress_pull(api, repo, commit, objects, fallback):
+    """Discover a merged ingress; native proof authentication stays separate.
+
+    A provider may omit an old merge from commit associations. Only a wholly
+    empty association permits one complete bounded closed-Develop inventory.
+    Neither ambiguous associations nor caller-authored locators grant fallback.
+    """
+    pulls = api.pages(f"repos/{repo}/commits/{commit}/pulls")
+    empty = not pulls
+    if empty:
+        if "closed" not in fallback:
+            closed = api.pages(f"repos/{repo}/pulls?state=closed&base=develop")
+            require(closed, "promotion-unattributed-ingress")
+            require(len(canonical(closed)) <= MAX_PROOF_BYTES, "promotion-pull-inventory-size")
+            identifier = current_repository(api, repo)
+            ids, numbers = set(), set()
+            for item in closed:
+                require(type(item) is dict and type(item.get("id")) is int and item["id"] > 0
+                        and type(item.get("number")) is int and item["number"] > 0
+                        and item["id"] not in ids and item["number"] not in numbers
+                        and item.get("state") == "closed"
+                        and item.get("base", {}).get("ref") == "develop"
+                        and item.get("base", {}).get("repo", {}).get("id") == identifier
+                        and item["base"]["repo"].get("full_name") == repo,
+                        "promotion-pull-inventory-shape")
+                ids.add(item["id"])
+                numbers.add(item["number"])
+            fallback.update(closed=closed, repository_id=identifier)
+        pulls = fallback["closed"]
+    matches = [p for p in pulls if p.get("merged_at") and p.get("merge_commit_sha") == commit
+               and p.get("base", {}).get("ref") == "develop"]
+    require(len(matches) == 1, "promotion-unattributed-ingress")
+    selected = matches[0]
+    ingress = api.call(f"repos/{repo}/pulls/{selected['number']}")
+    require(ingress["merged_at"] and ingress["merge_commit_sha"] == commit, "ingress-association-drift")
+    if empty:
+        from workflow_subject import git
+        parents = git(objects, "show", "-s", "--format=%P", commit).split()
+        require(len(parents) == 2 and all(sha(parent) for parent in parents)
+                and ingress.get("id") == selected["id"] and ingress.get("number") == selected["number"]
+                and ingress.get("state") == "closed" and ingress.get("merged") is True
+                and ingress.get("base", {}).get("ref") == "develop"
+                and ingress.get("base", {}).get("repo", {}).get("id") == fallback["repository_id"]
+                and ingress["base"]["repo"].get("full_name") == repo
+                and ingress["base"].get("sha") == selected.get("base", {}).get("sha") == parents[0]
+                and ingress.get("head", {}).get("sha") == selected.get("head", {}).get("sha") == parents[1]
+                and ingress.get("head", {}).get("repo", {}).get("id") == fallback["repository_id"]
+                and ingress["head"]["repo"].get("full_name") == repo,
+                "promotion-fallback-parent-or-identity-drift")
+    return ingress
+
+
 def promotion_ingress(api, repo, pull, config):
     # Full first-parent graph avoids GitHub compare's display truncation and
     # duplicate PR attribution of feature commits. Every integration has one PR.
@@ -1627,13 +1679,9 @@ def promotion_ingress(api, repo, pull, config):
         proof = References(MAX_PROOF_BYTES)
         from workflow_validation_transition import prepare as validation_transition
         historical = validation_transition(api, repo, pull, config, objects, commits)
+        fallback = {}
         for commit in commits:
-            pulls = api.pages(f"repos/{repo}/commits/{commit}/pulls")
-            matches = [p for p in pulls if p.get("merged_at") and p.get("merge_commit_sha") == commit
-                       and p.get("base", {}).get("ref") == "develop"]
-            require(len(matches) == 1, "promotion-unattributed-ingress")
-            ingress = api.call(f"repos/{repo}/pulls/{matches[0]['number']}")
-            require(ingress["merged_at"] and ingress["merge_commit_sha"] == commit, "ingress-association-drift")
+            ingress = promotion_ingress_pull(api, repo, commit, objects, fallback)
             # Verify one native proof under fresh process/cgroup admission,
             # discard its full decoded content and retain only its digest/ref.
             from workflow_root_ancestry import control_for_ingress
