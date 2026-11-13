@@ -194,7 +194,8 @@ class DevtoolsBootstrapTests(unittest.TestCase):
         self.api.call.side_effect = lambda path, **kw: next(
             (p for p in ingresses.values() if path.endswith(f"/pulls/{p['number']}")),
             None) or original_call(path, **kw)
-        self.api.pages.side_effect = lambda path, *args: [ingresses[path.split("/commits/")[1].split("/")[0]]]
+        self.api.pages.side_effect = lambda path, *args: ([] if "/pulls?state=closed&base=develop" in path
+            else [ingresses[path.split("/commits/")[1].split("/")[0]]])
         def git(objects, *arguments, **kwargs):
             if arguments[0] == "merge-base": return arguments[2]
             if arguments[0] == "rev-list": return self.base + "\n" + first + "\n" + HEAD
