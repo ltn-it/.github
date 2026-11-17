@@ -194,7 +194,7 @@ jobs:
           retention-days: 90
       - name: Protected exact-revision Codex review
         if: steps.classify.outputs.route == 'codex' && steps.generation.outputs.deferred != 'true' && steps.reserve.outputs.deferred != 'true'
-        uses: openai/codex-action@bdf19a4a223ec2549a3e2274a0cf61556bc07675 # v1
+        uses: openai/codex-action@306c6a196a99dcc6582530c396a19d2672d5e9ec # v1
         with:
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
           responses-api-endpoint: ${{ steps.gateway.outputs.endpoint }}
