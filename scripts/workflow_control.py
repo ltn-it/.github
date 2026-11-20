@@ -1679,9 +1679,14 @@ def promotion_ingress(api, repo, pull, config):
         proof = References(MAX_PROOF_BYTES)
         from workflow_validation_transition import prepare as validation_transition
         historical = validation_transition(api, repo, pull, config, objects, commits)
+        from workflow_validation_restoration import applies as restoration_applies, verify as verify_restoration
+        original_restoration_pull = None
         fallback = {}
         for commit in commits:
             ingress = promotion_ingress_pull(api, repo, commit, objects, fallback)
+            if restoration_applies(repo, pull, commit):
+                original_restoration_pull = ingress
+                continue
             # Verify one native proof under fresh process/cgroup admission,
             # discard its full decoded content and retain only its digest/ref.
             from workflow_root_ancestry import control_for_ingress
@@ -1692,11 +1697,16 @@ def promotion_ingress(api, repo, pull, config):
         tree = sha(git(objects, "merge-tree", "--write-tree", base, head))
         payload = git(objects, "diff", "--binary", "--full-index", "--no-ext-diff", "--no-textconv",
                       f"{base}^{{tree}}", tree, binary=True)
+        restoration = None
+        if original_restoration_pull is not None:
+            restoration = verify_restoration(api, pull, objects, commits, original_restoration_pull, proof.items)
         if historical is not None:
             historical.finalize()
     require(payload and any(item["control"]["route"] != "ancestry" for item in proof.items), "promotion-no-reviewed-change")
     result = {"base": base, "head": head, "integration_tree": tree,
               "diff_sha256": hashlib.sha256(payload).hexdigest(), "ingress": proof.items}
+    if restoration is not None:
+        result["validation_477_restoration"] = restoration
     if bootstrap is not None:
         result["pre_admission_metadata_baseline"] = {
             "main": bootstrap["main"], "develop": bootstrap["develop"],
